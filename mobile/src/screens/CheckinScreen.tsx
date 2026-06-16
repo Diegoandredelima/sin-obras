@@ -1,0 +1,178 @@
+import { useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Alert, Platform,
+} from 'react-native';
+import MapView, { Marker, Circle } from 'react-native-maps';
+import { obterLocalizacao, calcularDistancia } from '../../services/geofencing';
+import { vistoriaAPI } from '../../services/api';
+import { salvarCheckinOffline } from '../../db/offline';
+import NetInfo from '@react-native-community/netinfo';
+
+// Mock — em produção viria de navigation params ou contexto
+const OBRA_MOCK = {
+  id: '1',
+  titulo: 'CRAS Cidade Nova',
+  latitude: -5.7945,
+  longitude: -35.2110,
+  raio_geofencing_metros: 200,
+};
+
+export default function CheckinScreen({ navigation }: any) {
+  const [loading, setLoading] = useState(false);
+  const [resultado, setResultado] = useState<{
+    dentro: boolean;
+    distancia: number;
+    vistoriaId?: string;
+  } | null>(null);
+
+  const handleCheckin = async () => {
+    setLoading(true);
+    try {
+      // Obter localização
+      const pos = await obterLocalizacao();
+      const distancia = calcularDistancia(
+        pos.latitude, pos.longitude,
+        OBRA_MOCK.latitude, OBRA_MOCK.longitude,
+      );
+      const dentro = distancia <= OBRA_MOCK.raio_geofencing_metros;
+
+      // Verificar conectividade
+      const netState = await NetInfo.fetch();
+      const online = netState.isConnected && netState.isInternetReachable;
+
+      let vistoriaId: string | undefined;
+
+      if (online) {
+        const { data } = await vistoriaAPI.checkin({
+          obra_id: OBRA_MOCK.id,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        });
+        vistoriaId = data.id;
+      } else {
+        // Salvar offline
+        const id = `offline-${Date.now()}`;
+        await salvarCheckinOffline({
+          id,
+          obra_id: OBRA_MOCK.id,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        });
+        vistoriaId = id;
+        Alert.alert('Modo Offline', 'Check-in salvo. Será sincronizado quando a conexão retornar.');
+      }
+
+      setResultado({ dentro, distancia, vistoriaId });
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Não foi possível realizar o check-in.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContinuar = () => {
+    if (resultado?.vistoriaId) {
+      navigation?.navigate('Checklist', { vistoriaId: resultado.vistoriaId });
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Mapa */}
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: OBRA_MOCK.latitude,
+          longitude: OBRA_MOCK.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        }}
+      >
+        <Marker
+          coordinate={{ latitude: OBRA_MOCK.latitude, longitude: OBRA_MOCK.longitude }}
+          title={OBRA_MOCK.titulo}
+          pinColor="#15803d"
+        />
+        <Circle
+          center={{ latitude: OBRA_MOCK.latitude, longitude: OBRA_MOCK.longitude }}
+          radius={OBRA_MOCK.raio_geofencing_metros}
+          strokeColor="#15803d"
+          fillColor="rgba(21,128,61,0.12)"
+          strokeWidth={2}
+        />
+      </MapView>
+
+      {/* Bottom Sheet */}
+      <View style={styles.bottomSheet}>
+        <Text style={styles.obraTitle}>{OBRA_MOCK.titulo}</Text>
+        <Text style={styles.obraSub}>Raio permitido: {OBRA_MOCK.raio_geofencing_metros}m</Text>
+
+        {resultado ? (
+          <View style={[styles.resultBox, resultado.dentro ? styles.resultOk : styles.resultWarn]}>
+            <Text style={[styles.resultText, { color: resultado.dentro ? '#15803d' : '#b45309' }]}>
+              {resultado.dentro ? '✓ Dentro do raio da obra' : '⚠ Fora do raio da obra'}
+            </Text>
+            <Text style={styles.distText}>
+              Distância: {resultado.distancia.toFixed(0)}m
+            </Text>
+            {!resultado.dentro && (
+              <Text style={styles.distText}>
+                Registrado com flag de "fora do raio"
+              </Text>
+            )}
+          </View>
+        ) : null}
+
+        {!resultado ? (
+          <TouchableOpacity style={styles.btnPrimary} onPress={handleCheckin} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : (
+              <Text style={styles.btnText}>📍 Fazer Check-in</Text>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.btnPrimary} onPress={handleContinuar}>
+            <Text style={styles.btnText}>Ir para Checklist →</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  map: { flex: 1 },
+  bottomSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 12,
+    gap: 12,
+  },
+  obraTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  obraSub: { fontSize: 13, color: '#64748b' },
+  resultBox: { borderRadius: 12, padding: 14, gap: 4 },
+  resultOk: { backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0' },
+  resultWarn: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a' },
+  resultText: { fontSize: 15, fontWeight: '700' },
+  distText: { fontSize: 13, color: '#64748b' },
+  btnPrimary: {
+    backgroundColor: '#15803d',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#15803d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});

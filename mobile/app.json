@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "SIN-Obras",
+    "slug": "sin-obras",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#15803d"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.gov.rn.sinobras",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "O SIN-Obras usa sua localização para verificar se você está dentro do raio da obra.",
+        "NSCameraUsageDescription": "O SIN-Obras usa a câmera para registrar fotos de vistoria com metadados georreferenciados.",
+        "NSPhotoLibraryUsageDescription": "O SIN-Obras não acessa sua galeria. Todas as fotos são capturadas diretamente pela câmera."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#15803d"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA"
+      ],
+      "package": "br.gov.rn.sinobras"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O SIN-Obras usa sua localização para verificar se você está dentro do raio da obra."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O SIN-Obras usa a câmera para registrar fotos invioláveis de vistoria."
+        }
+      ]
+    ],
+    "scheme": "sinobras",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

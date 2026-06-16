@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  # ---- PostgreSQL + PostGIS ----
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: sinobras-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sinobras}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sinobras_dev_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-sinobras}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sin-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sinobras"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---- MinIO (S3 Local) ----
+  minio:
+    image: minio/minio:latest
+    container_name: sinobras-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    networks:
+      - sin-network
+
+  # ---- Backend (FastAPI) ----
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sinobras-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras}
+      - SECRET_KEY=${SECRET_KEY:-super-secret-key-change-in-production}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BUCKET=${MINIO_BUCKET:-sinobras-fotos}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sin-network
+
+  # ---- Frontend (Vite + React) ----
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sinobras-web
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - sin-network
+
+volumes:
+  pgdata:
+  miniodata:
+
+networks:
+  sin-network:
+    driver: bridge
