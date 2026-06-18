@@ -1,3 +1,20 @@
+/**
+ * Login.jsx — Tela de Autenticação Unificada
+ *
+ * Fornece a interface de login para todos os perfis de usuário (Secretários,
+ * Engenheiros, Fiscais, Empresas, etc.), utilizando Matrícula ou CNPJ como identificador.
+ *
+ * Fluxo de Autenticação:
+ *   1. Submissão do formulário envia `matricula_cnpj` e `senha` para POST `/api/auth/login`.
+ *   2. Recebe `access_token` (JWT) e `refresh_token`.
+ *   3. Insere temporariamente o token na instância do Axios (`api.defaults.headers.common`).
+ *   4. Faz chamada GET `/api/auth/me` para capturar os detalhes do perfil do usuário logado.
+ *   5. Salva dados do usuário e tokens no store global do Zustand (com persistência local).
+ *   6. Redireciona para o `/dashboard`.
+ *
+ * Responsividade:
+ *   - Layout de 2 colunas: formulário à esquerda e banner estático institucional à direita (oculto em telas menores).
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
@@ -18,12 +35,27 @@ const Login = () => {
     setError('');
 
     try {
-      // Endpoint to be created in the backend
-      const response = await api.post('/auth/login', { identificador, senha });
-      login(response.data.user, response.data.token);
+      // 1. Autenticar e obter tokens
+      const tokenRes = await api.post('/auth/login', {
+        matricula_cnpj: identificador,
+        senha,
+      });
+      const { access_token, refresh_token } = tokenRes.data;
+
+      // Injetar token temporariamente para buscar perfil
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+      // 2. Buscar dados do usuário logado
+      const meRes = await api.get('/auth/me');
+      const usuario = meRes.data.usuario;
+
+      // 3. Salvar no store (token + dados do usuário)
+      login({ ...usuario, access_token, refresh_token }, access_token);
       navigate('/dashboard');
     } catch (err) {
-      setError('Credenciais inválidas. Tente novamente.');
+      setError(
+        err.response?.data?.detail || 'Credenciais inválidas. Tente novamente.'
+      );
     } finally {
       setLoading(false);
     }

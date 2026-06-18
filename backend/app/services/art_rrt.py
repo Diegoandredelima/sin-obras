@@ -1,5 +1,9 @@
 """
 SIN-Obras — Serviço de ART/RRT
+
+Este módulo gerencia o ciclo de vida dos registros de Anotação de Responsabilidade
+Técnica (ART) e Registro de Responsabilidade Técnica (RRT), associando engenheiros
+e empresas às respectivas obras, validando o período de vigência e ativação de termos.
 """
 
 from uuid import UUID

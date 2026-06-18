@@ -56,6 +56,9 @@ class Medicao(Base):
     obra_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False)
     empresa_usuario_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     numero_medicao: Mapped[int] = mapped_column(Integer, nullable=False)
+    valor_medido: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0.00"), nullable=False)
+    data_medicao: Mapped[date | None] = mapped_column(Date, nullable=True)
+    numero_processo_sei: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(
         Enum(StatusMedicao, name="status_medicao_enum"),
         default=StatusMedicao.RASCUNHO,

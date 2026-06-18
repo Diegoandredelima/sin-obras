@@ -6,12 +6,18 @@ uvicorn[standard]==0.30.0
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.30.0
 alembic==1.13.0
+mako==1.3.0
 geoalchemy2==0.15.0
 pydantic==2.9.0
 pydantic-settings==2.5.0
 python-jose[cryptography]==3.3.0
+# bcrypt 4.x removeu __about__ e quebra passlib — fixar em 3.x
+bcrypt==3.2.2
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.12
 httpx==0.27.0
 boto3==1.35.0
 python-dotenv==1.0.1
+# Leitura das planilhas oficiais (.xlsx) para importação de dados
+openpyxl==3.1.5
+

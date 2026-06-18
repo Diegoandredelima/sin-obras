@@ -8,7 +8,7 @@ from typing import List
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from app.models.obra import StatusObra, SaudeObra
+from app.models.obra import StatusObra, SaudeObra, SituacaoObra
 
 # ---------------------------------------------------------------------------
 # Evento
@@ -110,7 +110,19 @@ class ObraResponse(ObraBase):
     ativo: bool
     criado_em: datetime
     atualizado_em: datetime
-    
+
+    # Campos da planilha oficial
+    situacao: SituacaoObra | None = None
+    situacao_origem: str | None = None
+    ano_referencia: int | None = None
+    orgao: str | None = None
+    vigencia_inicio: date | None = None
+    vigencia_fim: date | None = None
+    execucao_inicio: date | None = None
+    execucao_fim: date | None = None
+    valor_medido: Decimal | None = None
+    saldo_a_medir: Decimal | None = None
+
     # Coordenadas extraídas do PostGIS
     latitude: float | None = None
     longitude: float | None = None
@@ -118,4 +130,10 @@ class ObraResponse(ObraBase):
     model_config = {"from_attributes": True}
 
 class ObraDetalheResponse(ObraResponse):
+    prazo_inicial_dias: int | None = None
+    vigencia_dias: int | None = None
+    execucao_dias: int | None = None
+    historico: str | None = None
+    importante: str | None = None
+    observacoes: str | None = None
     metas: List[MetaResponse] = []

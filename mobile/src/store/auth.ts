@@ -1,3 +1,10 @@
+/**
+ * auth.ts — Store Global de Autenticação Mobile (Zustand + Expo SecureStore)
+ *
+ * Armazena e gerencia o estado de autenticação e as credenciais do fiscal de obras.
+ * Utiliza o `expo-secure-store` para persistir dados sensíveis (JWT e perfil) de
+ * forma encriptada no hardware do celular.
+ */
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 

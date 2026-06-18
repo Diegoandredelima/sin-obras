@@ -1,7 +1,28 @@
-version: "3.9"
+# =============================================================================
+# SIN-Obras — Docker Compose (Ambiente de Desenvolvimento)
+# =============================================================================
+# Orquestra 4 serviços:
+#   1. postgres  — PostgreSQL 16 + PostGIS (banco de dados geoespacial)
+#   2. minio     — Armazenamento de objetos S3-compatível (fotos de vistoria)
+#   3. backend   — API FastAPI em modo de hot-reload
+#   4. frontend  — Vite + React em modo de hot-reload
+#
+# Uso: docker compose up -d
+# =============================================================================
 
 services:
-  # ---- PostgreSQL + PostGIS ----
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16 + PostGIS 3.4
+  # ---------------------------------------------------------------------------
+  # Imagem oficial postgis/postgis já inclui a extensão PostGIS habilitada.
+  # PostGIS é necessário para armazenar coordenadas das obras e calcular
+  # distâncias de geofencing (validação de check-in dos fiscais em campo).
+  #
+  # Porta: 5433 no host (evita conflito com PostgreSQL local na 5432)
+  # Volume: pgdata persiste os dados entre restarts do container
+  # Healthcheck: backend só sobe DEPOIS que o Postgres estiver pronto
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgis/postgis:16-3.4
     container_name: sinobras-db
@@ -10,18 +31,29 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sinobras_dev_2026}
       POSTGRES_DB: ${POSTGRES_DB:-sinobras}
     ports:
-      - "5432:5432"
+      - "5433:5432"   # Host:Container — acesse pelo DBeaver em localhost:5433
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data   # Dados persistentes no volume Docker
     networks:
       - sin-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sinobras"]
-      interval: 5s
+      interval: 5s    # Verifica a cada 5 segundos
       timeout: 5s
-      retries: 5
+      retries: 5      # Aguarda até 25s antes de considerar falha
 
-  # ---- MinIO (S3 Local) ----
+  # ---------------------------------------------------------------------------
+  # MinIO — Object Storage S3-compatível (armazenamento local de arquivos)
+  # ---------------------------------------------------------------------------
+  # Substitui o AWS S3 em desenvolvimento. Armazena:
+  #   - Fotos de vistorias (com hash SHA-256 para inviolabilidade - RN03)
+  #   - Documentos de ART/RRT
+  #   - PDFs de medições assinadas
+  #
+  # Porta 9000: API S3 (usada pela aplicação via boto3)
+  # Porta 9001: Console web do MinIO (http://localhost:9001)
+  #   Credenciais padrão: minioadmin / minioadmin123
+  # ---------------------------------------------------------------------------
   minio:
     image: minio/minio:latest
     container_name: sinobras-minio
@@ -30,14 +62,28 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console web
     volumes:
-      - miniodata:/data
+      - miniodata:/data   # Arquivos persistentes no volume Docker
     networks:
       - sin-network
 
-  # ---- Backend (FastAPI) ----
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI (Python 3.12)
+  # ---------------------------------------------------------------------------
+  # Servidor de API REST com hot-reload (--reload): qualquer alteração nos
+  # arquivos Python é refletida automaticamente no container.
+  #
+  # PYTHONPATH=/app: garante que o módulo 'app' seja encontrado pelo Python
+  #   e pelo Alembic ao rodar migrations com:
+  #   docker compose exec backend alembic upgrade head
+  #
+  # Volume: monta ./backend em /app — edições locais refletem no container
+  # depends_on: aguarda postgres ter saúde (healthcheck) antes de iniciar
+  #
+  # Acesso: http://localhost:8000/api/docs (Swagger UI interativo)
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -45,48 +91,67 @@ services:
     container_name: sinobras-api
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
+      - PYTHONPATH=/app   # Necessário para alembic e "python -m" encontrarem 'app'
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras}
       - SECRET_KEY=${SECRET_KEY:-super-secret-key-change-in-production}
       - ALGORITHM=${ALGORITHM:-HS256}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-minio:9000}   # Nome do serviço Docker, não localhost
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
       - MINIO_BUCKET=${MINIO_BUCKET:-sinobras-fotos}
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./backend:/app   # Hot-reload: edições locais refletem no container
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy   # Garante que o banco está pronto antes de iniciar
     networks:
       - sin-network
 
-  # ---- Frontend (Vite + React) ----
+  # ---------------------------------------------------------------------------
+  # Frontend — Vite + React 19 + Tailwind CSS v4
+  # ---------------------------------------------------------------------------
+  # Servidor de desenvolvimento Vite com hot-reload.
+  # O volume anônimo /app/node_modules evita conflito entre node_modules
+  # do host (Windows/macOS) e do container (Linux Alpine).
+  #
+  # VITE_API_URL: URL do backend acessível PELO BROWSER (não pelo container),
+  #   por isso usa localhost e não "backend" (nome do serviço Docker).
+  #
+  # Acesso: http://localhost:5173
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: sinobras-web
-    command: npm run dev -- --host 0.0.0.0
+    command: npm run dev -- --host 0.0.0.0   # Expõe o servidor para fora do container
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api}
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/app         # Hot-reload: edições locais refletem no container
+      - /app/node_modules       # Volume anônimo — preserva node_modules do container
     depends_on:
       - backend
     networks:
       - sin-network
 
+# =============================================================================
+# Volumes nomeados — dados persistidos entre sessões Docker
+# =============================================================================
 volumes:
-  pgdata:
-  miniodata:
+  pgdata:       # Dados do PostgreSQL (obras, usuários, contratos, etc.)
+  miniodata:    # Arquivos do MinIO (fotos, documentos, PDFs)
 
+# =============================================================================
+# Rede interna — todos os serviços se comunicam pelo nome do container
+# Ex: o backend acessa o banco em "postgres:5432" (não localhost)
+# =============================================================================
 networks:
   sin-network:
     driver: bridge

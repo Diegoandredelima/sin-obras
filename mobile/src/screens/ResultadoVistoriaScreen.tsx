@@ -1,3 +1,15 @@
+/**
+ * ResultadoVistoriaScreen.tsx — Tela de Finalização de Vistoria
+ *
+ * Etapa conclusiva onde o fiscal avalia o estado geral da medição como "Conforme"
+ * ou "Não Conforme" (RN02).
+ *
+ * Características:
+ *   - Cartões de seleção intuitivos e com contraste visual para escolha de conformidade.
+ *   - Campo de justificativa (obrigatório se o resultado for classificado como "Não Conforme").
+ *   - Assinatura lógica e encerramento da vistoria enviando os dados finais para a API
+ *     POST `/api/vistorias/{id}/finalizar` ou registrando localmente no fluxo offline.
+ */
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,

@@ -1,3 +1,20 @@
+/**
+ * Medicoes.jsx — Painel de Medições e Assinatura Digital (Portal da Empresa)
+ *
+ * Controla o faturamento físico-financeiro da obra através de medições periódicas.
+ * Fornece a funcionalidade crítica de assinatura digital com integridade garantida por hash.
+ *
+ * Características principais:
+ *   - Lista de medições com badges coloridos por status (Rascunho, Assinada, Em Fiscalização, Aprovada, Reprovada).
+ *   - Modal de Assinatura Digital (AssinaturaModal):
+ *     - Exibe avisos sobre pré-requisitos obrigatórios (ex: ART/RRT ativa e válida — RN01).
+ *     - Gera hash SHA-256 do conteúdo da medição no backend e registra o timestamp da assinatura.
+ *     - Bloqueia nova edição do rascunho após a assinatura.
+ *
+ * Regras de Negócio e Conexões:
+ *   - POST `/api/portal/empresa/medicoes/{medicao_id}/assinar` envia a confirmação de assinatura.
+ *   - TODO Bloco 3: Substituir mockMedicoes por GET `/api/portal/obras/{obra_id}/medicoes`.
+ */
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {

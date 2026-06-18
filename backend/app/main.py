@@ -19,6 +19,7 @@ from app.api.art_rrt import router as art_rrt_router
 from app.api.portal import router as portal_router
 from app.api.notificacoes import router as notificacoes_router
 from app.api.vistorias import router as vistorias_router
+from app.api.orgaos import router as orgaos_router
 
 
 @asynccontextmanager
@@ -75,6 +76,7 @@ app.include_router(art_rrt_router, prefix="/api")
 app.include_router(portal_router, prefix="/api")
 app.include_router(notificacoes_router, prefix="/api")
 app.include_router(vistorias_router, prefix="/api")
+app.include_router(orgaos_router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,40 @@
+/**
+ * NovaObra.jsx — Formulário Multi-Step de Cadastro de Obra
+ *
+ * Divide o cadastro em 3 etapas para reduzir a carga cognitiva do usuário:
+ *   Etapa 0 — Dados Gerais: título, descrição, município
+ *   Etapa 1 — Localização:  endereço, lat/lng, raio de geofencing
+ *   Etapa 2 — Contrato:     valor, datas de início e conclusão
+ *
+ * Ao submeter a última etapa, envia POST /obras para a API.
+ * Em caso de sucesso, redireciona para /obras.
+ *
+ * Componentes internos:
+ *   - ObraFormField: input genérico com label e estilo padrão
+ *
+ * TODO Bloco 2: buscar lista de contratos existentes da API para o campo
+ *   contrato_id (atualmente oculto no form, precisa de um <select> dinâmico).
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, MapPin, Calendar, DollarSign, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 
+// Nomes de cada etapa — usados no indicador visual de progresso
 const steps = ['Dados Gerais', 'Localização', 'Contrato'];
 
+/**
+ * ObraFormField — Campo de formulário padronizado
+ * Evita repetir a mesma estrutura label + input em cada etapa do wizard.
+ *
+ * @param {string} label      - Texto do label
+ * @param {string} id         - id do input (para htmlFor do label)
+ * @param {string} type       - Tipo do input (default: 'text')
+ * @param {string} value      - Valor controlado (estado React)
+ * @param {Function} onChange - Handler de mudança
+ * @param {string} placeholder
+ * @param {boolean} required  - Se verdadeiro, exibe asterisco vermelho
+ */
 const ObraFormField = ({ label, id, type = 'text', value, onChange, placeholder, required }) => (
   <div className="space-y-1.5">
     <label htmlFor={id} className="block text-sm font-medium text-slate-700">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
@@ -27,21 +57,25 @@ const NovaObra = () => {
     contrato_id: '',
   });
 
+  // `update` é um curried handler: update('titulo') retorna (e) => setForm({...})
+  // Evita criar uma função separada para cada campo do formulário.
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Se não estiver na última etapa, apenas avança para a próxima
     if (step < steps.length - 1) { setStep(step + 1); return; }
     setLoading(true); setError('');
     try {
+      // Converte campos numéricos (vindos como string do input) para Number
       await api.post('/obras', {
         ...form,
-        latitude: form.latitude ? Number(form.latitude) : null,
-        longitude: form.longitude ? Number(form.longitude) : null,
-        raio_geofencing_metros: Number(form.raio_geofencing_metros),
-        valor_contrato: Number(form.valor_contrato),
+        latitude:                form.latitude  ? Number(form.latitude)  : null,
+        longitude:               form.longitude ? Number(form.longitude) : null,
+        raio_geofencing_metros:  Number(form.raio_geofencing_metros),
+        valor_contrato:          Number(form.valor_contrato),
       });
-      navigate('/obras');
+      navigate('/obras');   // Redireciona para a listagem após sucesso
     } catch (err) {
       setError(err.response?.data?.detail || 'Erro ao cadastrar a obra.');
       setLoading(false);

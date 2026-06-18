@@ -1,5 +1,9 @@
 """
 SIN-Obras — Serviço de Notificações
+
+Gerencia o disparo de alertas internos do sistema e notificações por canais externos
+(como e-mail). É acionado para informar engenheiros sobre vistorias agendadas,
+alertar fiscais sobre medições pendentes e enviar avisos de atraso em obras.
 """
 
 from uuid import UUID

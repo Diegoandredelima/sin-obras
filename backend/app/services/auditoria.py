@@ -1,6 +1,9 @@
 """
 SIN-Obras — Serviço de Auditoria
-Registra todas as ações no AuditLog imutável (RF12).
+
+Implementa a Trilha de Auditoria Imutável (Requisito RF12). Registra todas as ações
+de criação, alteração e exclusão realizadas pelos usuários, fornecendo um histórico
+completo com os estados 'antes' e 'depois' em formato JSON para fins de fiscalização e compliance.
 """
 
 from uuid import UUID

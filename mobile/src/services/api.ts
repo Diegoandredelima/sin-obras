@@ -1,3 +1,14 @@
+/**
+ * api.ts — Cliente HTTP Centralizado Mobile (Axios + Interceptors)
+ *
+ * Configura o cliente Axios com a URL base da API SIN-Obras.
+ * Inclui:
+ *   - Interceptor de Requisição: recupera assincronamente o token JWT encriptado do
+ *     SecureStore e injeta no header `Authorization` de todas as requisições de saída.
+ *   - Interceptor de Resposta: remove o token local em caso de erro 401 (Não Autorizado)
+ *     para forçar o fluxo de login.
+ *   - Módulos de API tipados para Obras, Vistorias, Empresa e Autenticação.
+ */
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 

@@ -1,3 +1,18 @@
+/**
+ * CheckinScreen.tsx — Tela de Check-in Georreferenciado
+ *
+ * Responsável por obter a localização GPS em tempo real do fiscal e comparar com as
+ * coordenadas cadastradas da obra (Geofencing — RF05), determinando se ele está
+ * no raio de abrangência configurado.
+ *
+ * Funcionalidades:
+ *   - Exibe o mapa (React Native Maps) com a localização da obra e círculo de geofencing.
+ *   - Obtém a geolocalização do dispositivo de forma assíncrona.
+ *   - Verifica a conectividade do dispositivo (NetInfo):
+ *     - Se online, submete para o endpoint POST `/api/vistorias/checkin`.
+ *     - Se offline, salva no banco local (WatermelonDB/SQLite) para sincronização posterior.
+ *   - Redireciona o usuário para o checklist de vistoria após confirmação.
+ */
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,

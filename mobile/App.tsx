@@ -1,3 +1,13 @@
+/**
+ * App.tsx — Ponto de entrada e Configuração do Roteador Mobile (Expo / React Native)
+ *
+ * Configura o contêiner de navegação principal da aplicação mobile do Fiscal de Obras.
+ * Utiliza o React Navigation para gerenciar:
+ *   - Stack de telas principal (Main, Checkin, Checklist, ResultadoVistoria)
+ *   - Abas inferiores (Bottom Tabs) para navegação no painel principal (Home e Sincronização offline)
+ *
+ * Inicializa a verificação de sessão e leitura do token local no startup.
+ */
 import { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';

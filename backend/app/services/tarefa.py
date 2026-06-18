@@ -1,5 +1,9 @@
 """
 SIN-Obras — Serviço de Tarefas (Kanban)
+
+Gerencia a distribuição de tarefas pontuais para equipes administrativas e de fiscalização
+(ex: checagem de documentação, aprovação de laudos, etc.), servindo de apoio para
+alimentar o painel visual Kanban no frontend.
 """
 
 from uuid import UUID

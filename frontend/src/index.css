@@ -1,9 +1,27 @@
+/*
+ * index.css — Estilos Globais do SIN-Obras
+ * ============================================================
+ * Importa o Tailwind CSS v4 e define:
+ *   1. Design tokens (cores, tipografia) via @theme
+ *   2. Reset e estilos base via @layer base
+ *   3. Utilities customizadas reutilizáveis via @layer utilities
+ *
+ * No Tailwind v4, o @theme substitui o tailwind.config.js para
+ * definir variáveis CSS customizadas que ficam disponíveis como
+ * classes utilitárias (ex: bg-brand-700, text-accent-500).
+ * ============================================================
+ */
 @import "tailwindcss";
 
 @theme {
+  /* Fonte principal — Inter para textos gerais, Outfit como alternativa */
   --font-sans: "Inter", "Outfit", system-ui, sans-serif;
-  
-  /* Government RN / SIN-Obras Custom Colors */
+
+  /* ------------------------------------------------------------------ */
+  /* Paleta de Marca — Verde Institucional (Governo do RN / SIN-Obras)  */
+  /* ------------------------------------------------------------------ */
+  /* Gerada a partir do verde-esmeralda (#15803d como cor primária).     */
+  /* Use brand-700 como cor principal em botões e destaques.             */
   --color-brand-50: #f0fdf4;
   --color-brand-100: #dcfce7;
   --color-brand-200: #bbf7d0;
@@ -11,16 +29,24 @@
   --color-brand-400: #4ade80;
   --color-brand-500: #22c55e;
   --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;  /* Primary Brand */
+  --color-brand-700: #15803d;  /* ← Cor primária da marca */
   --color-brand-800: #166534;
   --color-brand-900: #14532d;
   --color-brand-950: #052e16;
 
-  /* Accent Colors (Yellow/Orange for Kanban and Alerts) */
+  /* ------------------------------------------------------------------ */
+  /* Cores de Destaque — Âmbar/Laranja                                  */
+  /* ------------------------------------------------------------------ */
+  /* Usadas em alertas de atenção, badges "Em Andamento" no Kanban e    */
+  /* indicadores de saúde AMARELO das obras.                             */
   --color-accent-500: #f59e0b;
   --color-accent-600: #d97706;
 
-  /* Surface Colors */
+  /* ------------------------------------------------------------------ */
+  /* Cores de Superfície — Base neutra slate para o layout              */
+  /* ------------------------------------------------------------------ */
+  /* surface-50/100 = fundos de cards e página                          */
+  /* surface-800/900 = sidebar dark e textos de alto contraste          */
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
   --color-surface-200: #e2e8f0;
@@ -28,7 +54,12 @@
   --color-surface-900: #0f172a;
 }
 
-/* Custom Base Styles */
+/* ============================================================
+ * @layer base — Reset e estilos fundamentais
+ * ============================================================
+ * Aplicados antes dos utilitários do Tailwind para garantir
+ * consistência visual entre navegadores.
+ * ============================================================ */
 @layer base {
   :root {
     font-family: var(--font-sans);
@@ -39,17 +70,35 @@
   body {
     margin: 0;
     min-height: 100vh;
+    /* Melhora a renderização de fontes no WebKit (Safari/Chrome) */
     -webkit-font-smoothing: antialiased;
+    /* Melhora a renderização de fontes no Firefox */
     -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Utilities */
+/* ============================================================
+ * @layer utilities — Classes utilitárias customizadas
+ * ============================================================
+ * Defina aqui classes compostas que são usadas em múltiplos
+ * componentes. Prefira @apply para reutilizar utilitários
+ * existentes do Tailwind em vez de escrever CSS puro.
+ * ============================================================ */
 @layer utilities {
+  /*
+   * .glass-panel — Painel com efeito glassmorphism (claro)
+   * Use em cards sobre fundos claros (modo dia).
+   * bg-white/80: fundo branco 80% opaco
+   * backdrop-blur-md: desfoque do fundo (efeito vidro)
+   */
   .glass-panel {
     @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
   }
-  
+
+  /*
+   * .glass-dark — Painel com efeito glassmorphism (escuro)
+   * Use em overlays ou componentes sobre fundos escuros (sidebar, modais).
+   */
   .glass-dark {
     @apply bg-slate-900/80 backdrop-blur-md border border-slate-700/50 shadow-xl;
   }

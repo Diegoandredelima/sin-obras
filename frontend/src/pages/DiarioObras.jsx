@@ -1,3 +1,19 @@
+/**
+ * DiarioObras.jsx — Livro de Ordem / Diário de Obras (Portal da Empresa)
+ *
+ * Registra o histórico diário de eventos no canteiro de obras. Indispensável para
+ * controle de contingências, contagem de mão de obra e registro de condições climáticas.
+ *
+ * Componentes internos:
+ *   - DiarioForm: Formulário para criação de um novo registro diário. Coleta clima,
+ *     efetivo de funcionários, equipamentos em uso, descrição de atividades e ocorrências.
+ *   - DiarioObras (Principal): Renderiza a linha do tempo (Timeline) vertical com todos os
+ *     diários registrados para a obra atual.
+ *
+ * Regras de Negócio e Conexões:
+ *   - POST `/api/portal/empresa/obras/{obra_id}/diario` no envio do formulário.
+ *   - TODO Bloco 3: Substituir mockDiario por requisição real GET `/api/portal/obras/{obra_id}/diarios`.
+ */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 

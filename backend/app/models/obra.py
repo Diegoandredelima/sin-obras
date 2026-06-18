@@ -42,6 +42,23 @@ class SaudeObra(str, enum.Enum):
     VERMELHO = "VERMELHO"
 
 
+class SituacaoObra(str, enum.Enum):
+    """Situação oficial da obra conforme a planilha de acompanhamento da SIN.
+
+    Mais granular que `StatusObra` (que é o status operacional usado pelo app).
+    Consolida as ~43 variações de texto livre da coluna "SITUAÇÃO DA OBRA".
+    """
+    A_INICIAR = "A_INICIAR"
+    EM_ANDAMENTO = "EM_ANDAMENTO"
+    PARALISADA = "PARALISADA"
+    INACABADA = "INACABADA"
+    CONCLUIDA = "CONCLUIDA"
+    RESCINDIDA = "RESCINDIDA"
+    ARQUIVADA = "ARQUIVADA"
+    EXTINTA = "EXTINTA"
+    CEDIDA = "CEDIDA"
+
+
 # ---------------------------------------------------------------------------
 # Contrato
 # ---------------------------------------------------------------------------
@@ -56,12 +73,47 @@ class Contrato(Base):
         String(50), unique=True, nullable=False, index=True
     )
     valor_global: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-    data_assinatura: Mapped[date] = mapped_column(Date, nullable=False)
-    data_vigencia: Mapped[date] = mapped_column(Date, nullable=False)
-    empresa_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
+    # Datas relaxadas para nullable: contratos históricos importados nem sempre
+    # têm a data de assinatura/vigência preenchida nas planilhas.
+    data_assinatura: Mapped[date | None] = mapped_column(Date, nullable=True)
+    data_publicacao: Mapped[date | None] = mapped_column(Date, nullable=True)
+    data_vigencia: Mapped[date | None] = mapped_column(Date, nullable=True)
+    prazo_vigencia_dias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    prazo_execucao_dias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Conta de login da empresa (opcional). A referência cadastral canônica é
+    # `empresa_ref_id` → tabela `empresas`.
+    empresa_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
+    empresa_ref_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("empresas.id"), nullable=True
+    )
+    orgao_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orgaos.id"), nullable=True
+    )
+    fiscal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
+    gestor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
+    # Nomes brutos do fiscal/gestor (planilha) — preservados quando ainda não
+    # há conta de usuário vinculada (fiscal_id / gestor_id).
+    fiscal_nome: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    gestor_nome: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Texto livre legado do órgão (mantido por compatibilidade; preferir orgao_id)
+    orgao: Mapped[str | None] = mapped_column(String(100), nullable=True)
     objeto: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # --- Financeiro (planilha de acompanhamento) ---
+    valor_aditivo: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    valor_reajustado: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    valor_final: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    recurso_federal: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    recurso_estadual: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    # --- Licitação ---
+    tipo_licitacao: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    numero_licitacao: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    matricula_cei: Mapped[str | None] = mapped_column(String(50), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -70,6 +122,10 @@ class Contrato(Base):
 
     # Relationships
     empresa = relationship("Usuario", foreign_keys=[empresa_id], lazy="selectin")
+    empresa_ref = relationship("Empresa", foreign_keys=[empresa_ref_id], lazy="selectin")
+    orgao_ref = relationship("Orgao", foreign_keys=[orgao_id], lazy="selectin")
+    fiscal = relationship("Usuario", foreign_keys=[fiscal_id], lazy="selectin")
+    gestor = relationship("Usuario", foreign_keys=[gestor_id], lazy="selectin")
     obras = relationship("Obra", back_populates="contrato", lazy="selectin")
 
     def __repr__(self) -> str:
@@ -96,11 +152,20 @@ class Obra(Base):
     valor_contrato: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     data_inicio: Mapped[date | None] = mapped_column(Date, nullable=True)
     data_fim_prevista: Mapped[date | None] = mapped_column(Date, nullable=True)
+    data_ordem_servico: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(
         Enum(StatusObra, name="status_obra_enum"),
         default=StatusObra.PLANEJADA,
         nullable=False,
     )
+    # Situação oficial (planilha) — mais granular que `status`
+    situacao: Mapped[str | None] = mapped_column(
+        Enum(SituacaoObra, name="situacao_obra_enum"),
+        nullable=True,
+    )
+    # Texto bruto original da coluna "SITUAÇÃO DA OBRA" (ex.: "CONCLUÍDA/2022")
+    situacao_origem: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    ano_referencia: Mapped[int | None] = mapped_column(Integer, nullable=True)
     saude: Mapped[str] = mapped_column(
         Enum(SaudeObra, name="saude_obra_enum"),
         default=SaudeObra.VERDE,
@@ -109,6 +174,22 @@ class Obra(Base):
     percentual_executado: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), default=Decimal("0.00"), nullable=False
     )
+    # --- Prazos rastreáveis (planilha de acompanhamento) ---
+    prazo_inicial_dias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    vigencia_inicio: Mapped[date | None] = mapped_column(Date, nullable=True)
+    vigencia_dias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    vigencia_fim: Mapped[date | None] = mapped_column(Date, nullable=True)
+    execucao_inicio: Mapped[date | None] = mapped_column(Date, nullable=True)
+    execucao_dias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    execucao_fim: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # --- Financeiro de execução ---
+    valor_medido: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    saldo_a_medir: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    matricula_cei: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # --- Textos brutos preservados da planilha (não estruturados) ---
+    historico: Mapped[str | None] = mapped_column(Text, nullable=True)
+    importante: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
     raio_geofencing_metros: Mapped[int] = mapped_column(
         Integer, default=200, nullable=False
     )
@@ -118,6 +199,10 @@ class Obra(Base):
     responsavel_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
+    gestor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
+    orgao: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -134,6 +219,7 @@ class Obra(Base):
     # Relationships
     contrato = relationship("Contrato", back_populates="obras", lazy="selectin")
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id], lazy="selectin")
+    gestor = relationship("Usuario", foreign_keys=[gestor_id], lazy="selectin")
     metas = relationship("Meta", back_populates="obra", lazy="selectin", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

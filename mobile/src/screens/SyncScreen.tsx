@@ -1,3 +1,15 @@
+/**
+ * SyncScreen.tsx — Tela de Sincronização de Dados Offline
+ *
+ * Exibe a fila de vistorias, checklists e fotografias capturadas em locais sem conectividade
+ * móvel, permitindo a sincronização em massa quando o sinal for reestabelecido.
+ *
+ * Funcionalidades:
+ *   - Monitoramento dinâmico de rede (via NetInfo) mostrando badges coloridos de conexão.
+ *   - Consolida dados salvos no SQLite em uma lista ordenada por tipo de ação.
+ *   - Algoritmo de envio sequencial que processa e valida cada item (check-ins, checklists, fotos, finalizações)
+ *     atualizando os registros no servidor em ordem lógica de dependência.
+ */
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,

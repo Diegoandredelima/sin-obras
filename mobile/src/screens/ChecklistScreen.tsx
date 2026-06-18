@@ -1,3 +1,16 @@
+/**
+ * ChecklistScreen.tsx — Tela de Lista de Verificação (Checklist)
+ *
+ * Apresenta a relação de serviços declarados na medição atual para que o fiscal
+ * ateste a conformidade de cada item individualmente em campo.
+ *
+ * Funcionalidades:
+ *   - Carrega itens de checklist baseados nos eventos declarados na medição correspondente.
+ *   - Atesta conformidade ativando/desativando interruptores de estado.
+ *   - Permite capturar e vincular fotos (RN03) a cada item de serviço:
+ *     - Fotos usam câmera nativa (não galeria) e gravam hashes e timestamps invioláveis.
+ *   - Exibe uma barra de progresso visual de conformidade dos serviços da vistoria.
+ */
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,

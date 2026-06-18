@@ -1,3 +1,21 @@
+/**
+ * Quadro.jsx — Quadro Kanban de Tarefas da Obra
+ *
+ * Exibe tarefas organizadas por status em colunas Kanban (A Fazer, Em Andamento, Concluído)
+ * permitindo o gerenciamento visual do fluxo de trabalho.
+ *
+ * Funcionalidades principais:
+ *   - Cards de tarefas individuais mostrando título, descrição (opcional), data limite (opcional) e prioridade.
+ *   - Botões de navegação lateral nos cards para mover tarefas entre colunas vizinhas.
+ *   - Modal de formulário simplificado para criação rápida de novas tarefas.
+ *   - Badges de prioridade coloridas dinamicamente baseadas no nível de urgência.
+ *
+ * TODO Bloco 2:
+ *   - Substituir mockTarefas por chamadas reais de API:
+ *     - GET `/api/tarefas/` para buscar tarefas associadas à obra ativa.
+ *     - PATCH `/api/tarefas/{id}/status` para atualizar o status ao mover.
+ *     - POST `/api/tarefas/` para criar novas tarefas vinculadas à obra.
+ */
 import { useState } from 'react';
 import { Plus, Trash2, KanbanSquare, Loader2 } from 'lucide-react';
 import api from '../services/api';

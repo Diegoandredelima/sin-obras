@@ -1,5 +1,12 @@
 """
 SIN-Obras — Serviço de Cronograma (Metas, Submetas, Eventos)
+
+Gerencia a estrutura hierárquica em 3 níveis do cronograma físico-financeiro:
+  1. Meta (ex: Infraestrutura, Superestrutura)
+  2. Submeta (ex: Fundações, Pilares, Lajes)
+  3. Evento (ex: item de serviço unitário — m³ de concreto, m² de fôrma, etc.)
+
+Esses itens formam a base para a declaração de medições e avanço de obras.
 """
 
 from uuid import UUID

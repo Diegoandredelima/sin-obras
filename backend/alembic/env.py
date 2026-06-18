@@ -29,10 +29,40 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 def include_object(object, name, type_, reflected, compare_to):
-    # Ignorar tabelas geográficas do PostGIS
-    if type_ == "table" and name == "spatial_ref_sys":
-        return False
+    """
+    Filtra objetos do PostGIS, Tiger geocoder e Topology para evitar
+    que o autogenerate detecte tabelas internas como 'removed'.
+    """
+    # Ignorar schemas internas do PostGIS/Tiger
+    IGNORED_SCHEMAS = {"tiger", "tiger_data", "topology"}
+
+    # Ignorar tabelas internas do PostGIS (schema public mas de extensões)
+    IGNORED_TABLES = {
+        "spatial_ref_sys",
+        # Tiger geocoder
+        "loader_lookuptables", "loader_variables", "loader_platform",
+        "countysub_lookup", "secondary_unit_lookup", "street_type_lookup",
+        "state_lookup", "direction_lookup", "place_lookup", "county_lookup",
+        "zip_lookup", "zip_lookup_all", "zip_lookup_base", "zip_state",
+        "zip_state_loc", "geocode_settings", "geocode_settings_default",
+        "layer", "topology",
+        # PostGIS Tiger tabelas geográficas
+        "bg", "tabblock", "tabblock20", "tract", "county", "state",
+        "place", "zcta5", "cousub", "faces", "edges", "addr",
+        "addrfeat", "featnames", "pagc_rules", "pagc_lex", "pagc_gaz",
+    }
+
+    if type_ == "table":
+        # Ignorar tabelas de schemas internas
+        schema = getattr(object, "schema", None)
+        if schema and schema in IGNORED_SCHEMAS:
+            return False
+        # Ignorar tabelas internas no schema public
+        if name in IGNORED_TABLES:
+            return False
+
     return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
