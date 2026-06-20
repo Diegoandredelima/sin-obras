@@ -1,47 +1,41 @@
-/**
- * Quadro.jsx — Quadro Kanban de Tarefas da Obra
- *
- * Exibe tarefas organizadas por status em colunas Kanban (A Fazer, Em Andamento, Concluído)
- * permitindo o gerenciamento visual do fluxo de trabalho.
- *
- * Funcionalidades principais:
- *   - Cards de tarefas individuais mostrando título, descrição (opcional), data limite (opcional) e prioridade.
- *   - Botões de navegação lateral nos cards para mover tarefas entre colunas vizinhas.
- *   - Modal de formulário simplificado para criação rápida de novas tarefas.
- *   - Badges de prioridade coloridas dinamicamente baseadas no nível de urgência.
- *
- * TODO Bloco 2:
- *   - Substituir mockTarefas por chamadas reais de API:
- *     - GET `/api/tarefas/` para buscar tarefas associadas à obra ativa.
- *     - PATCH `/api/tarefas/{id}/status` para atualizar o status ao mover.
- *     - POST `/api/tarefas/` para criar novas tarefas vinculadas à obra.
- */
-import { useState } from 'react';
-import { Plus, Trash2, KanbanSquare, Loader2 } from 'lucide-react';
-import api from '../services/api';
+import { useState } from "react";
+import { Plus, KanbanSquare } from "lucide-react";
+import { fmtDate } from "@/utils/format";
 
-const COLUMNS = [
-  { id: 'A_FAZER', label: 'A Fazer', color: 'bg-slate-100', headerCls: 'bg-slate-100 text-slate-600', dotCls: 'bg-slate-400' },
-  { id: 'EM_ANDAMENTO', label: 'Em Andamento', color: 'bg-amber-50', headerCls: 'bg-amber-50 text-amber-700', dotCls: 'bg-amber-400' },
-  { id: 'CONCLUIDO', label: 'Concluído', color: 'bg-emerald-50', headerCls: 'bg-emerald-50 text-emerald-700', dotCls: 'bg-emerald-400' },
+type TarefaStatus = "A_FAZER" | "EM_ANDAMENTO" | "CONCLUIDO";
+type TarefaPrioridade = "BAIXA" | "MEDIA" | "ALTA" | "URGENTE";
+
+interface Tarefa {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  status: TarefaStatus;
+  prioridade: TarefaPrioridade;
+  prazo: string | null;
+}
+
+const COLUMNS: { id: TarefaStatus; label: string; color: string; headerCls: string; dotCls: string }[] = [
+  { id: "A_FAZER", label: "A Fazer", color: "bg-slate-100", headerCls: "bg-slate-100 text-slate-600", dotCls: "bg-slate-400" },
+  { id: "EM_ANDAMENTO", label: "Em Andamento", color: "bg-amber-50", headerCls: "bg-amber-50 text-amber-700", dotCls: "bg-amber-400" },
+  { id: "CONCLUIDO", label: "Concluído", color: "bg-emerald-50", headerCls: "bg-emerald-50 text-emerald-700", dotCls: "bg-emerald-400" },
 ];
 
-const PRIORITY_CONFIG = {
-  BAIXA: { label: 'Baixa', cls: 'bg-slate-100 text-slate-500' },
-  MEDIA: { label: 'Média', cls: 'bg-sky-100 text-sky-600' },
-  ALTA: { label: 'Alta', cls: 'bg-orange-100 text-orange-600' },
-  URGENTE: { label: 'Urgente', cls: 'bg-rose-100 text-rose-600' },
+const PRIORITY_CONFIG: Record<TarefaPrioridade, { label: string; cls: string }> = {
+  BAIXA: { label: "Baixa", cls: "bg-slate-100 text-slate-500" },
+  MEDIA: { label: "Média", cls: "bg-sky-100 text-sky-600" },
+  ALTA: { label: "Alta", cls: "bg-orange-100 text-orange-600" },
+  URGENTE: { label: "Urgente", cls: "bg-rose-100 text-rose-600" },
 };
 
-const mockTarefas = [
-  { id: '1', titulo: 'Verificar ART do responsável técnico', descricao: 'Conferir validade e upload no sistema', status: 'A_FAZER', prioridade: 'ALTA', prazo: '2026-07-01' },
-  { id: '2', titulo: 'Aprovar medição #2 da RN-160', descricao: 'Analisar documentação enviada pela empresa', status: 'A_FAZER', prioridade: 'URGENTE', prazo: '2026-06-20' },
-  { id: '3', titulo: 'Agendar vistoria no CRAS', descricao: null, status: 'EM_ANDAMENTO', prioridade: 'MEDIA', prazo: '2026-06-25' },
-  { id: '4', titulo: 'Importar cronograma XLSX', descricao: 'Receber da empresa e importar no sistema', status: 'EM_ANDAMENTO', prioridade: 'BAIXA', prazo: null },
-  { id: '5', titulo: 'Revisar projeto executivo da ponte', descricao: null, status: 'CONCLUIDO', prioridade: 'ALTA', prazo: '2026-06-10' },
+const mockTarefas: Tarefa[] = [
+  { id: "1", titulo: "Verificar ART do responsável técnico", descricao: "Conferir validade e upload no sistema", status: "A_FAZER", prioridade: "ALTA", prazo: "2026-07-01" },
+  { id: "2", titulo: "Aprovar medição #2 da RN-160", descricao: "Analisar documentação enviada pela empresa", status: "A_FAZER", prioridade: "URGENTE", prazo: "2026-06-20" },
+  { id: "3", titulo: "Agendar vistoria no CRAS", descricao: null, status: "EM_ANDAMENTO", prioridade: "MEDIA", prazo: "2026-06-25" },
+  { id: "4", titulo: "Importar cronograma XLSX", descricao: "Receber da empresa e importar no sistema", status: "EM_ANDAMENTO", prioridade: "BAIXA", prazo: null },
+  { id: "5", titulo: "Revisar projeto executivo da ponte", descricao: null, status: "CONCLUIDO", prioridade: "ALTA", prazo: "2026-06-10" },
 ];
 
-const TarefaCard = ({ tarefa, onMove }) => {
+const TarefaCard = ({ tarefa, onMove }: { tarefa: Tarefa; onMove: (id: string, novoStatus: TarefaStatus) => void }) => {
   const priority = PRIORITY_CONFIG[tarefa.prioridade];
   const cols = COLUMNS.map(c => c.id);
   const currentIdx = cols.indexOf(tarefa.status);
@@ -55,7 +49,7 @@ const TarefaCard = ({ tarefa, onMove }) => {
       {tarefa.descricao && <p className="text-xs text-slate-400 leading-relaxed">{tarefa.descricao}</p>}
       {tarefa.prazo && (
         <p className="text-xs text-slate-400">
-          Prazo: <span className="font-medium text-slate-600">{new Date(tarefa.prazo).toLocaleDateString('pt-BR')}</span>
+          Prazo: <span className="font-medium text-slate-600">{fmtDate(tarefa.prazo)}</span>
         </p>
       )}
       <div className="flex gap-1 pt-1">
@@ -77,25 +71,24 @@ const TarefaCard = ({ tarefa, onMove }) => {
 };
 
 const Quadro = () => {
-  const [tarefas, setTarefas] = useState(mockTarefas);
+  const [tarefas, setTarefas] = useState<Tarefa[]>(mockTarefas);
   const [showModal, setShowModal] = useState(false);
-  const [newTarefa, setNewTarefa] = useState({ titulo: '', prioridade: 'MEDIA' });
+  const [newTarefa, setNewTarefa] = useState({ titulo: "", prioridade: "MEDIA" as TarefaPrioridade });
 
-  const handleMove = (id, novoStatus) => {
+  const handleMove = (id: string, novoStatus: TarefaStatus) => {
     setTarefas((prev) => prev.map((t) => t.id === id ? { ...t, status: novoStatus } : t));
   };
 
-  const handleAddTarefa = (e) => {
+  const handleAddTarefa = (e: React.FormEvent) => {
     e.preventDefault();
-    const t = { id: String(Date.now()), ...newTarefa, status: 'A_FAZER', descricao: null, prazo: null };
+    const t: Tarefa = { id: String(Date.now()), ...newTarefa, status: "A_FAZER", descricao: null, prazo: null };
     setTarefas((prev) => [...prev, t]);
-    setNewTarefa({ titulo: '', prioridade: 'MEDIA' });
+    setNewTarefa({ titulo: "", prioridade: "MEDIA" });
     setShowModal(false);
   };
 
   return (
     <div className="space-y-6 h-full">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Quadro de Tarefas</h2>
@@ -110,13 +103,11 @@ const Quadro = () => {
         </button>
       </div>
 
-      {/* Kanban Board */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
         {COLUMNS.map((col) => {
           const items = tarefas.filter((t) => t.status === col.id);
           return (
             <div key={col.id} className="flex flex-col gap-3">
-              {/* Column Header */}
               <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${col.headerCls}`}>
                 <span className={`h-2 w-2 rounded-full ${col.dotCls}`} />
                 <span className="text-sm font-semibold">{col.label}</span>
@@ -125,7 +116,6 @@ const Quadro = () => {
                 </span>
               </div>
 
-              {/* Cards */}
               <div className="space-y-3 min-h-[200px]">
                 {items.map((t) => (
                   <TarefaCard key={t.id} tarefa={t} onMove={handleMove} />
@@ -142,7 +132,6 @@ const Quadro = () => {
         })}
       </div>
 
-      {/* New Task Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
@@ -157,7 +146,7 @@ const Quadro = () => {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-slate-700">Prioridade</label>
-                <select value={newTarefa.prioridade} onChange={(e) => setNewTarefa({ ...newTarefa, prioridade: e.target.value })}
+                <select value={newTarefa.prioridade} onChange={(e) => setNewTarefa({ ...newTarefa, prioridade: e.target.value as TarefaPrioridade })}
                   className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
                 >
                   <option value="BAIXA">Baixa</option>

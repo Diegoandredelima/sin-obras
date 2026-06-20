@@ -13,6 +13,8 @@
  */
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Fonte principal — Inter para textos gerais, Outfit como alternativa */
   --font-sans: "Inter", "Outfit", system-ui, sans-serif;

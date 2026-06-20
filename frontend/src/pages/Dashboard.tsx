@@ -1,18 +1,29 @@
-import { useState, useEffect } from 'react';
 import {
   Building2, Clock, CheckCircle2, AlertTriangle,
   TrendingUp, Briefcase, KanbanSquare, ArrowRight, Activity,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useAuthStore } from '../store/auth';
-import api from '../services/api';
+  type LucideIcon,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/store/auth";
+import api from "@/services/api";
+import type { Obra, ObraStats, PaginatedResponse } from "@/types";
 
-const KPICard = ({ icon: Icon, label, value, sub, color = 'emerald', loading }) => {
-  const colors = {
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    amber:   'bg-amber-50 text-amber-600 border-amber-100',
-    rose:    'bg-rose-50 text-rose-600 border-rose-100',
-    sky:     'bg-sky-50 text-sky-600 border-sky-100',
+interface KPICardProps {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  sub: string;
+  color?: string;
+  loading?: boolean;
+}
+
+const KPICard = ({ icon: Icon, label, value, sub, color = "emerald", loading }: KPICardProps) => {
+  const colors: Record<string, string> = {
+    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    amber:   "bg-amber-50 text-amber-600 border-amber-100",
+    rose:    "bg-rose-50 text-rose-600 border-rose-100",
+    sky:     "bg-sky-50 text-sky-600 border-sky-100",
   };
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -32,11 +43,15 @@ const KPICard = ({ icon: Icon, label, value, sub, color = 'emerald', loading }) 
   );
 };
 
-const StatusBadge = ({ status }) => {
-  const map = {
-    VERDE:    { label: 'Em dia',  cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-    AMARELO:  { label: 'Atenção', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-    VERMELHO: { label: 'Crítico', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+interface StatusBadgeProps {
+  status: string;
+}
+
+const StatusBadge = ({ status }: StatusBadgeProps) => {
+  const map: Record<string, { label: string; cls: string }> = {
+    VERDE:    { label: "Em dia",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    AMARELO:  { label: "Atenção", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+    VERMELHO: { label: "Crítico", cls: "bg-rose-50 text-rose-700 border-rose-200" },
   };
   const item = map[status] || map.VERDE;
   return (
@@ -46,36 +61,39 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const SITUACAO_LABEL = {
-  EM_ANDAMENTO: 'Em Andamento',
-  CONCLUIDA:    'Concluída',
-  PARALISADA:   'Paralisada',
-  A_INICIAR:    'A Iniciar',
-  INACABADA:    'Inacabada',
-  RESCINDIDA:   'Rescindida',
-  ARQUIVADA:    'Arquivada',
-  EXTINTA:      'Extinta',
-  CEDIDA:       'Cedida',
+const SITUACAO_LABEL: Record<string, string> = {
+  EM_ANDAMENTO: "Em Andamento",
+  CONCLUIDA:    "Concluída",
+  PARALISADA:   "Paralisada",
+  A_INICIAR:    "A Iniciar",
+  INACABADA:    "Inacabada",
+  RESCINDIDA:   "Rescindida",
+  ARQUIVADA:    "Arquivada",
+  EXTINTA:      "Extinta",
+  CEDIDA:       "Cedida",
 };
 
 const Dashboard = () => {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState(null);
-  const [obras, setObras] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/obras/stats'),
-      api.get('/obras', { params: { limit: 10 } }),
-    ])
-      .then(([statsRes, obrasRes]) => {
-        setStats(statsRes.data);
-        setObras(obrasRes.data);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: stats, isLoading: statsLoading } = useQuery<ObraStats>({
+    queryKey: ["obras", "stats"],
+    queryFn: async () => {
+      const { data } = await api.get("/obras/stats");
+      return data;
+    },
+  });
 
+  const { data: obrasData, isLoading: obrasLoading } = useQuery<PaginatedResponse<Obra>>({
+    queryKey: ["obras", "recentes"],
+    queryFn: async () => {
+      const { data } = await api.get("/obras", { params: { limit: 10 } });
+      return data;
+    },
+  });
+
+  const obras = obrasData?.items ?? [];
+  const loading = statsLoading || obrasLoading;
   const s = stats?.por_situacao || {};
   const emExecucao = (s.EM_ANDAMENTO || 0) + (stats?.por_status?.EM_EXECUCAO || 0);
   const atencao = (s.PARALISADA || 0) + (s.INACABADA || 0);
@@ -83,27 +101,24 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Welcome Banner */}
       <div className="rounded-2xl bg-gradient-to-r from-emerald-700 to-emerald-500 p-8 text-white shadow-xl shadow-emerald-200 relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-64 opacity-10">
           <Building2 className="h-full w-full" />
         </div>
         <div className="relative">
           <p className="text-sm font-medium text-emerald-100 mb-1">Bem-vindo ao painel,</p>
-          <h2 className="text-3xl font-bold mb-2">{user?.nome || 'Usuário'}</h2>
-          <p className="text-emerald-100 text-sm">Confira o resumo das obras sob sua responsabilidade hoje.</p>
+          <h2 className="text-3xl font-bold mb-2">{user?.nome || "Usuário"}</h2>
+          <p className="text-emerald-100 text-sm">Confira o resumo dos contratos e obras sob sua responsabilidade.</p>
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KPICard icon={Building2}     label="Obras Cadastradas"  value={stats?.total ?? '—'}  sub="total"       color="sky"     loading={loading} />
-        <KPICard icon={Activity}      label="Em Execução"        value={emExecucao || '—'}     sub="ativas"      color="emerald" loading={loading} />
-        <KPICard icon={AlertTriangle} label="Paralisadas"        value={atencao || '—'}        sub="alertas"     color="amber"   loading={loading} />
-        <KPICard icon={CheckCircle2}  label="Concluídas"         value={concluidas || '—'}     sub="total"       color="sky"     loading={loading} />
+        <KPICard icon={Briefcase}      label="Contratos Ativos"   value={stats?.total ?? "—"}  sub="total"       color="sky"     loading={loading} />
+        <KPICard icon={Activity}      label="Em Execução"        value={emExecucao || "—"}     sub="ativas"      color="emerald" loading={loading} />
+        <KPICard icon={AlertTriangle} label="Paralisadas"        value={atencao || "—"}        sub="alertas"     color="amber"   loading={loading} />
+        <KPICard icon={CheckCircle2}  label="Concluídas"         value={concluidas || "—"}     sub="total"       color="sky"     loading={loading} />
       </div>
 
-      {/* Distribuição por situação */}
       {stats && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Distribuição por situação oficial</h3>
@@ -118,7 +133,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Obras recentes */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div>
@@ -165,7 +179,7 @@ const Dashboard = () => {
                         />
                       </div>
                     </div>
-                    <StatusBadge status={obra.saude} />
+                    <StatusBadge status={obra.saude || "VERDE"} />
                     <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
                   </div>
                 </Link>
@@ -174,12 +188,11 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quick Access */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { to: '/obras/nova',  icon: Building2,    title: 'Cadastrar Obra',    desc: 'Registre uma nova obra no sistema',    color: 'text-emerald-600 bg-emerald-50' },
-          { to: '/contratos',  icon: Briefcase,    title: 'Ver Contratos',     desc: `${stats?.total ?? '—'} contratos no sistema`,          color: 'text-sky-600 bg-sky-50' },
-          { to: '/quadro',     icon: KanbanSquare, title: 'Quadro de Tarefas', desc: 'Acompanhe as tarefas Kanban',           color: 'text-violet-600 bg-violet-50' },
+          { to: "/obras/nova",  icon: Briefcase,    title: "Novo Contrato",    desc: "Cadastre um novo contrato de obra",    color: "text-emerald-600 bg-emerald-50" },
+          { to: "/contratos",  icon: Briefcase,    title: "Ver Contratos",     desc: `${stats?.total ?? "—"} contratos no sistema`,          color: "text-sky-600 bg-sky-50" },
+          { to: "/quadro",     icon: KanbanSquare, title: "Quadro de Tarefas", desc: "Acompanhe as tarefas Kanban",           color: "text-violet-600 bg-violet-50" },
         ].map((item) => (
           <Link
             key={item.to}

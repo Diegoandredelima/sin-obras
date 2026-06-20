@@ -1,43 +1,41 @@
-/**
- * Medicoes.jsx — Painel de Medições e Assinatura Digital (Portal da Empresa)
- *
- * Controla o faturamento físico-financeiro da obra através de medições periódicas.
- * Fornece a funcionalidade crítica de assinatura digital com integridade garantida por hash.
- *
- * Características principais:
- *   - Lista de medições com badges coloridos por status (Rascunho, Assinada, Em Fiscalização, Aprovada, Reprovada).
- *   - Modal de Assinatura Digital (AssinaturaModal):
- *     - Exibe avisos sobre pré-requisitos obrigatórios (ex: ART/RRT ativa e válida — RN01).
- *     - Gera hash SHA-256 do conteúdo da medição no backend e registra o timestamp da assinatura.
- *     - Bloqueia nova edição do rascunho após a assinatura.
- *
- * Regras de Negócio e Conexões:
- *   - POST `/api/portal/empresa/medicoes/{medicao_id}/assinar` envia a confirmação de assinatura.
- *   - TODO Bloco 3: Substituir mockMedicoes por GET `/api/portal/obras/{obra_id}/medicoes`.
- */
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  FileText, Plus, CheckCircle2, Clock, XCircle, 
-  AlertCircle, ChevronRight, Shield, Lock, Loader2
-} from 'lucide-react';
-import api from '../services/api';
+  FileText, Plus, CheckCircle2, Clock, XCircle,
+  AlertCircle, ChevronRight, Shield, Lock, Loader2,
+  type LucideIcon,
+} from "lucide-react";
+import api from "@/services/api";
+import { fmtDate } from "@/utils/format";
 
-const STATUS_CONFIG = {
-  RASCUNHO: { label: 'Rascunho', cls: 'bg-slate-100 text-slate-600', icon: Clock },
-  ASSINADA: { label: 'Aguardando Fiscalização', cls: 'bg-sky-100 text-sky-700', icon: Shield },
-  EM_FISCALIZACAO: { label: 'Em Fiscalização', cls: 'bg-amber-100 text-amber-700', icon: AlertCircle },
-  APROVADA: { label: 'Aprovada', cls: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
-  REPROVADA: { label: 'Reprovada', cls: 'bg-rose-100 text-rose-700', icon: XCircle },
+type MedicaoStatus = "RASCUNHO" | "ASSINADA" | "EM_FISCALIZACAO" | "APROVADA" | "REPROVADA";
+
+interface Medicao {
+  id: string;
+  numero_medicao: number;
+  status: MedicaoStatus;
+  criado_em: string;
+  hash_assinatura: string | null;
+  assinada_em?: string;
+}
+
+const STATUS_CONFIG: Record<MedicaoStatus, { label: string; cls: string; icon: LucideIcon }> = {
+  RASCUNHO: { label: "Rascunho", cls: "bg-slate-100 text-slate-600", icon: Clock },
+  ASSINADA: { label: "Aguardando Fiscalização", cls: "bg-sky-100 text-sky-700", icon: Shield },
+  EM_FISCALIZACAO: { label: "Em Fiscalização", cls: "bg-amber-100 text-amber-700", icon: AlertCircle },
+  APROVADA: { label: "Aprovada", cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+  REPROVADA: { label: "Reprovada", cls: "bg-rose-100 text-rose-700", icon: XCircle },
 };
 
-const mockMedicoes = [
-  { id: '1', numero_medicao: 3, status: 'RASCUNHO', criado_em: '2026-06-14T10:00:00Z', hash_assinatura: null },
-  { id: '2', numero_medicao: 2, status: 'APROVADA', criado_em: '2026-05-01T10:00:00Z', hash_assinatura: 'a1b2c3d4...', assinada_em: '2026-05-05T14:22:00Z' },
-  { id: '3', numero_medicao: 1, status: 'APROVADA', criado_em: '2026-04-01T10:00:00Z', hash_assinatura: 'f8e9d0c1...', assinada_em: '2026-04-07T09:10:00Z' },
-];
+interface AssinaturaModalProps {
+  medicao: Medicao;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}
 
-const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }) => (
+const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }: AssinaturaModalProps) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
       <div className="flex items-center gap-3">
@@ -71,42 +69,69 @@ const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }) => (
   </div>
 );
 
-const Medicoes = () => {
-  const obraId = '1';
+export const MedicoesContent = ({ obraId }: { obraId: string }) => {
   const navigate = useNavigate();
-  const [medicoes, setMedicoes] = useState(mockMedicoes);
-  const [assinarModal, setAssinarModal] = useState(null);
+  const queryClient = useQueryClient();
+  const [assinarModal, setAssinarModal] = useState<Medicao | null>(null);
   const [assinarLoading, setAssinarLoading] = useState(false);
 
+  const { data: medicoes = [], isLoading, isError } = useQuery<Medicao[]>({
+    queryKey: ["medicoes", obraId],
+    queryFn: async () => {
+      const { data } = await api.get(`/empresa/obras/${obraId}/medicoes`);
+      return data;
+    },
+    enabled: !!obraId,
+  });
+
   const handleAssinar = async () => {
+    if (!assinarModal) return;
     setAssinarLoading(true);
     try {
       await api.post(`/empresa/medicoes/${assinarModal.id}/assinar`, { confirmado: true });
-      setMedicoes(prev => prev.map(m => m.id === assinarModal.id ? { ...m, status: 'ASSINADA' } : m));
+      queryClient.invalidateQueries({ queryKey: ["medicoes", obraId] });
       setAssinarModal(null);
-    } catch (e) {
-      alert(e.response?.data?.detail || 'Erro ao assinar a medição.');
+    } catch (e: unknown) {
+      const detail =
+        e && typeof e === "object" && "response" in e
+          ? (e.response as { data?: { detail?: string } })?.data?.detail
+          : undefined;
+      alert(detail || "Erro ao assinar a medição.");
     } finally {
       setAssinarLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Medições</h2>
-          <p className="text-sm text-slate-500 mt-0.5">{medicoes.length} medições • Obra: CRAS Cidade Nova</p>
-        </div>
-        <button onClick={() => navigate('/empresa/medicoes/nova')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-500 transition-all">
-          <Plus className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500">{medicoes.length} medições</span>
+        <button onClick={() => navigate("/empresa/medicoes/nova")}
+          className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 transition-all">
+          <Plus className="h-3.5 w-3.5" />
           Nova Medição
         </button>
       </div>
 
       <div className="space-y-3">
-        {medicoes.map((m) => {
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 text-slate-300 animate-spin" />
+          </div>
+        )}
+        {isError && !isLoading && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="h-8 w-8 text-rose-300 mb-2" />
+            <p className="text-sm text-slate-500">Erro ao carregar medições</p>
+          </div>
+        )}
+        {!isLoading && !isError && medicoes.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <FileText className="h-8 w-8 text-slate-200 mb-2" />
+            <p className="text-sm text-slate-500">Nenhuma medição registrada</p>
+          </div>
+        )}
+        {!isLoading && !isError && medicoes.map((m) => {
           const cfg = STATUS_CONFIG[m.status] || STATUS_CONFIG.RASCUNHO;
           const StatusIcon = cfg.icon;
           return (
@@ -119,8 +144,8 @@ const Medicoes = () => {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-900">Medição #{m.numero_medicao}</p>
                   <p className="text-xs text-slate-400">
-                    Criada em {new Date(m.criado_em).toLocaleDateString('pt-BR')}
-                    {m.assinada_em && ` • Assinada em ${new Date(m.assinada_em).toLocaleDateString('pt-BR')}`}
+                    Criada em {fmtDate(m.criado_em)}
+                    {m.assinada_em && ` • Assinada em ${fmtDate(m.assinada_em)}`}
                   </p>
                   {m.hash_assinatura && (
                     <p className="text-xs font-mono text-slate-300 truncate max-w-xs mt-0.5">
@@ -134,7 +159,7 @@ const Medicoes = () => {
                   <StatusIcon className="h-3.5 w-3.5" />
                   {cfg.label}
                 </span>
-                {m.status === 'RASCUNHO' && (
+                {m.status === "RASCUNHO" && (
                   <button onClick={() => setAssinarModal(m)}
                     className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition-all">
                     <Shield className="h-3.5 w-3.5" /> Assinar
@@ -157,6 +182,21 @@ const Medicoes = () => {
           loading={assinarLoading}
         />
       )}
+    </div>
+  );
+};
+
+const Medicoes = () => {
+  const { obraId } = useParams<{ obraId: string }>();
+  const id = obraId || "1";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">Medições</h2>
+        <p className="text-sm text-slate-500 mt-0.5">Obra: CRAS Cidade Nova</p>
+      </div>
+      <MedicoesContent obraId={id} />
     </div>
   );
 };

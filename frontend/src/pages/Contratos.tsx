@@ -1,15 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Briefcase, ArrowRight, Calendar, DollarSign, User, Building } from 'lucide-react';
-import api from '../services/api';
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, Search, Briefcase, ArrowRight, Calendar, DollarSign, User, Building, AlertTriangle, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/services/api";
+import type { PaginatedResponse } from "@/types";
+import { fmtCurrency, fmtDate } from "@/utils/format";
 
-const fmt = (v) =>
-  v ? Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : null;
+interface ContratoItem {
+  id: string;
+  numero_contrato: string;
+  objeto?: string;
+  orgao?: string;
+  fiscal_nome?: string;
+  valor_global?: number;
+  valor_final?: number;
+  data_vigencia?: string;
+  empresa_ref?: { id: string; razao_social: string };
+}
 
-const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('pt-BR') : null;
-
-const ContratoRow = ({ c }) => (
+const ContratoRow = ({ c }: { c: ContratoItem }) => {
+  const navigate = useNavigate();
+  return (
   <Link to={`/contratos/${c.id}`} className="flex flex-col sm:flex-row sm:items-start gap-3 px-6 py-4 hover:bg-slate-50/70 transition-colors group">
     <div className="flex items-center gap-3 flex-1 min-w-0">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 border border-sky-100">
@@ -24,7 +35,7 @@ const ContratoRow = ({ c }) => (
             </span>
           )}
         </p>
-        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{c.objeto || '—'}</p>
+        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{c.objeto || "—"}</p>
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
           {c.fiscal_nome && (
             <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -32,10 +43,14 @@ const ContratoRow = ({ c }) => (
             </span>
           )}
           {c.empresa_ref?.razao_social && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/empresas/${c.empresa_ref!.id}`); }}
+              className="text-xs text-slate-400 hover:text-sky-600 transition-colors flex items-center gap-1 group/link"
+            >
               <Building className="h-3 w-3" />
               <span className="truncate max-w-[200px]">{c.empresa_ref.razao_social}</span>
-            </span>
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+            </button>
           )}
         </div>
       </div>
@@ -44,10 +59,10 @@ const ContratoRow = ({ c }) => (
     <div className="flex flex-col sm:items-end gap-1 shrink-0 text-xs text-slate-500 pl-13 sm:pl-0">
       <div className="flex items-center gap-1 font-semibold text-slate-700">
         <DollarSign className="h-3.5 w-3.5" />
-        R$ {fmt(c.valor_final || c.valor_global) || '—'}
+        {fmtCurrency(c.valor_final || c.valor_global)}
       </div>
       {c.valor_final && c.valor_global && c.valor_final !== c.valor_global && (
-        <span className="text-slate-400">Inicial: R$ {fmt(c.valor_global)}</span>
+        <span className="text-slate-400">Inicial: {fmtCurrency(c.valor_global)}</span>
       )}
       {c.data_vigencia && (
         <div className="flex items-center gap-1">
@@ -60,7 +75,8 @@ const ContratoRow = ({ c }) => (
       </span>
     </div>
   </Link>
-);
+  );
+};
 
 const RowSkeleton = () => (
   <div className="flex items-center gap-3 px-6 py-4 animate-pulse">
@@ -74,40 +90,39 @@ const RowSkeleton = () => (
 );
 
 const Contratos = () => {
-  const [contratos, setContratos] = useState([]);
-  const [total, setTotal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
   }, [search]);
 
-  const fetchContratos = useCallback(() => {
-    setLoading(true);
-    const params = { limit: 200 };
-    if (debouncedSearch) params.search = debouncedSearch;
+  const { data, isLoading, isError } = useQuery<PaginatedResponse<ContratoItem>>({
+    queryKey: ["contratos", debouncedSearch, page],
+    queryFn: async () => {
+      const params: Record<string, string | number> = { skip: page * pageSize, limit: pageSize };
+      if (debouncedSearch) params.search = debouncedSearch;
+      const { data } = await api.get("/contratos", { params });
+      return data;
+    },
+  });
 
-    api.get('/contratos', { params })
-      .then((r) => {
-        setContratos(r.data);
-        setTotal(r.data.length);
-      })
-      .finally(() => setLoading(false));
-  }, [debouncedSearch]);
+  useEffect(() => { setPage(0); }, [debouncedSearch]);
 
-  useEffect(() => { fetchContratos(); }, [fetchContratos]);
+  const contratos = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Contratos</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {total !== null ? `${total} contratos` : '...'}
+            {!isLoading ? `${total} contratos` : "..."}
           </p>
         </div>
         <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-500 transition-all">
@@ -116,7 +131,6 @@ const Contratos = () => {
         </button>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="pointer-events-none absolute inset-y-0 left-3 flex items-center h-full w-4 text-slate-400" />
         <input
@@ -128,15 +142,19 @@ const Contratos = () => {
         />
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100">
           <h3 className="text-sm font-semibold text-slate-700">Lista de Contratos</h3>
         </div>
         <div className="divide-y divide-slate-50">
-          {loading
+          {isLoading
             ? Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)
-            : contratos.length > 0
+            : isError ? (
+              <div className="flex flex-col items-center justify-center p-16 text-center">
+                <AlertTriangle className="h-10 w-10 text-rose-300 mb-3" />
+                <p className="text-sm font-medium text-slate-500">Erro ao carregar contratos</p>
+              </div>
+            ) : contratos.length > 0
               ? contratos.map((c) => <ContratoRow key={c.id} c={c} />)
               : (
                 <div className="flex flex-col items-center justify-center p-16 text-center">
@@ -147,6 +165,26 @@ const Contratos = () => {
           }
         </div>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-slate-400 px-2">{page + 1} de {totalPages}</span>
+          <button
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
     </div>
   );
 };

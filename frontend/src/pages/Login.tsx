@@ -1,61 +1,43 @@
-/**
- * Login.jsx — Tela de Autenticação Unificada
- *
- * Fornece a interface de login para todos os perfis de usuário (Secretários,
- * Engenheiros, Fiscais, Empresas, etc.), utilizando Matrícula ou CNPJ como identificador.
- *
- * Fluxo de Autenticação:
- *   1. Submissão do formulário envia `matricula_cnpj` e `senha` para POST `/api/auth/login`.
- *   2. Recebe `access_token` (JWT) e `refresh_token`.
- *   3. Insere temporariamente o token na instância do Axios (`api.defaults.headers.common`).
- *   4. Faz chamada GET `/api/auth/me` para capturar os detalhes do perfil do usuário logado.
- *   5. Salva dados do usuário e tokens no store global do Zustand (com persistência local).
- *   6. Redireciona para o `/dashboard`.
- *
- * Responsividade:
- *   - Layout de 2 colunas: formulário à esquerda e banner estático institucional à direita (oculto em telas menores).
- */
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/auth';
-import { Building2, Lock, User, Loader2 } from 'lucide-react';
-import api from '../services/api';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/store/auth";
+import { Lock, User, Loader2 } from "lucide-react";
+import api from "@/services/api";
+import brasaoRN from "../assets/brasao_RN.png";
 
 const Login = () => {
-  const [identificador, setIdentificador] = useState('');
-  const [senha, setSenha] = useState('');
+  const [identificador, setIdentificador] = useState("");
+  const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      // 1. Autenticar e obter tokens
-      const tokenRes = await api.post('/auth/login', {
+      const tokenRes = await api.post("/auth/login", {
         matricula_cnpj: identificador,
         senha,
       });
       const { access_token, refresh_token } = tokenRes.data;
 
-      // Injetar token temporariamente para buscar perfil
-      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
 
-      // 2. Buscar dados do usuário logado
-      const meRes = await api.get('/auth/me');
+      const meRes = await api.get("/auth/me");
       const usuario = meRes.data.usuario;
 
-      // 3. Salvar no store (token + dados do usuário)
-      login({ ...usuario, access_token, refresh_token }, access_token);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(
-        err.response?.data?.detail || 'Credenciais inválidas. Tente novamente.'
-      );
+      login(usuario, access_token, refresh_token);
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      const detail =
+        err && typeof err === "object" && "response" in err
+          ? (err.response as { data?: { detail?: string } })?.data?.detail
+          : undefined;
+      setError(detail || "Credenciais inválidas. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -63,13 +45,11 @@ const Login = () => {
 
   return (
     <div className="flex h-screen w-full bg-slate-50">
-      {/* Left Column - Form */}
       <div className="flex w-full flex-col justify-center px-8 sm:px-16 md:px-24 lg:w-[480px] xl:w-[560px] 2xl:px-32 z-10 bg-white shadow-2xl relative">
         <div className="mx-auto w-full max-w-sm lg:max-w-md">
-          {/* Logo Area */}
           <div className="mb-10 flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 shadow-xl shadow-green-500/30">
-              <Building2 className="h-6 w-6 text-white" />
+            <div className="flex h-14 w-14 items-center justify-center">
+              <img src={brasaoRN} alt="Brasão do Governo do RN" className="h-full w-full object-contain drop-shadow-sm" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">SIN-Obras</h1>
@@ -88,7 +68,7 @@ const Login = () => {
                 <span className="flex-1">{error}</span>
               </div>
             )}
-            
+
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700" htmlFor="identificador">
                 Matrícula ou CNPJ
@@ -145,20 +125,19 @@ const Login = () => {
                   Entrando...
                 </>
               ) : (
-                'Entrar no Sistema'
+                "Entrar no Sistema"
               )}
             </button>
           </form>
         </div>
       </div>
 
-      {/* Right Column - Image Background */}
       <div className="relative hidden w-full flex-1 lg:block overflow-hidden bg-slate-900">
         <div className="absolute inset-0 bg-emerald-900/40 mix-blend-multiply z-10" />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent z-10" />
         <img
-          className="absolute inset-0 h-full w-full object-cover"
-          src="/login_bg.webp" 
+          className="absolute inset-0 h-full w-full object-contain object-center"
+          src="/login_bg.jpeg"
           alt="Construção Moderna"
         />
         <div className="absolute bottom-12 left-12 right-12 z-20 text-white">

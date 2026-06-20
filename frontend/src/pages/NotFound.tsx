@@ -1,11 +1,4 @@
-/**
- * NotFound.jsx — Tela de Erro 404 (Rota Não Encontrada)
- *
- * Exibe uma mensagem amigável e um botão de ação rápida para redirecionar o
- * usuário de volta ao painel principal (/dashboard) quando ele tenta acessar
- * uma rota inválida ou inexistente.
- */
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -19,7 +12,7 @@ const NotFound = () => {
       <h1 className="text-2xl font-bold text-slate-900 mb-2">Página não encontrada</h1>
       <p className="text-slate-400 mb-8 max-w-sm">A rota que você tentou acessar não existe ou foi removida.</p>
       <button
-        onClick={() => navigate('/dashboard')}
+        onClick={() => navigate("/dashboard")}
         className="px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-500 transition-all"
       >
         Voltar ao Dashboard

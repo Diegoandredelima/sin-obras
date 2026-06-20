@@ -1,39 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Plus, Search, Building2, ArrowRight,
-  MapPin, Calendar, TrendingUp,
-} from 'lucide-react';
-import api from '../services/api';
+  MapPin, Calendar, TrendingUp, AlertTriangle,
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/services/api";
+import type { Obra, PaginatedResponse, SaudeObra } from "@/types";
+import { fmtCurrency, fmtDate } from "@/utils/format";
 
-const STATUS_LABELS = {
-  PLANEJADA:   { label: 'Planejada',   cls: 'bg-slate-100 text-slate-600' },
-  EM_EXECUCAO: { label: 'Em Execução', cls: 'bg-sky-100 text-sky-700' },
-  PARALISADA:  { label: 'Paralisada',  cls: 'bg-amber-100 text-amber-700' },
-  CONCLUIDA:   { label: 'Concluída',   cls: 'bg-emerald-100 text-emerald-700' },
+const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+  PLANEJADA:   { label: "Planejada",   cls: "bg-slate-100 text-slate-600" },
+  EM_EXECUCAO: { label: "Em Execução", cls: "bg-sky-100 text-sky-700" },
+  PARALISADA:  { label: "Paralisada",  cls: "bg-amber-100 text-amber-700" },
+  CONCLUIDA:   { label: "Concluída",   cls: "bg-emerald-100 text-emerald-700" },
 };
 
-const SITUACAO_LABELS = {
-  A_INICIAR:   'A Iniciar',
-  EM_ANDAMENTO:'Em Andamento',
-  PARALISADA:  'Paralisada',
-  INACABADA:   'Inacabada',
-  CONCLUIDA:   'Concluída',
-  RESCINDIDA:  'Rescindida',
-  ARQUIVADA:   'Arquivada',
-  EXTINTA:     'Extinta',
-  CEDIDA:      'Cedida',
+const SITUACAO_LABELS: Record<string, string> = {
+  A_INICIAR:   "A Iniciar",
+  EM_ANDAMENTO: "Em Andamento",
+  PARALISADA:  "Paralisada",
+  INACABADA:   "Inacabada",
+  CONCLUIDA:   "Concluída",
+  RESCINDIDA:  "Rescindida",
+  ARQUIVADA:   "Arquivada",
+  EXTINTA:     "Extinta",
+  CEDIDA:      "Cedida",
 };
 
-const SAUDE_CONFIG = {
-  VERDE:    { dot: 'bg-emerald-400', bar: 'bg-emerald-400', label: 'Em dia' },
-  AMARELO:  { dot: 'bg-amber-400',   bar: 'bg-amber-400',   label: 'Atenção' },
-  VERMELHO: { dot: 'bg-rose-400',    bar: 'bg-rose-400',    label: 'Crítico' },
+const SAUDE_CONFIG: Record<SaudeObra, { dot: string; bar: string; label: string }> = {
+  VERDE:    { dot: "bg-emerald-400", bar: "bg-emerald-400", label: "Em dia" },
+  AMARELO:  { dot: "bg-amber-400",   bar: "bg-amber-400",   label: "Atenção" },
+  VERMELHO: { dot: "bg-rose-400",    bar: "bg-rose-400",    label: "Crítico" },
 };
 
-const ObraCard = ({ obra }) => {
-  const saude = SAUDE_CONFIG[obra.saude] || SAUDE_CONFIG.VERDE;
-  const statusLabel = STATUS_LABELS[obra.status] || STATUS_LABELS.PLANEJADA;
+const ObraCard = ({ obra }: { obra: Obra }) => {
+  const saude = SAUDE_CONFIG[(obra.saude as SaudeObra) || "VERDE"];
+  const statusLabel = STATUS_LABELS[obra.status || ""] || STATUS_LABELS.PLANEJADA;
   const prazo = obra.vigencia_fim || obra.execucao_fim || obra.data_fim_prevista;
 
   return (
@@ -66,20 +69,20 @@ const ObraCard = ({ obra }) => {
         {prazo && (
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
-            <span>Prazo: {new Date(prazo).toLocaleDateString('pt-BR')}</span>
+            <span>Prazo: {fmtDate(prazo)}</span>
           </div>
         )}
         {obra.valor_contrato && (
           <div className="flex items-center gap-1.5">
             <TrendingUp className="h-3.5 w-3.5 shrink-0" />
-            <span>R$ {Number(obra.valor_contrato).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span>{fmtCurrency(obra.valor_contrato)}</span>
           </div>
         )}
         {obra.situacao && (
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className="inline-block bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-xs">
               {SITUACAO_LABELS[obra.situacao] || obra.situacao}
-              {obra.ano_referencia ? ` / ${obra.ano_referencia}` : ''}
+              {obra.ano_referencia ? ` / ${obra.ano_referencia}` : ""}
             </span>
           </div>
         )}
@@ -120,53 +123,52 @@ const CardSkeleton = () => (
 );
 
 const SITUACOES = [
-  { value: '', label: 'Todas as situações' },
-  { value: 'EM_ANDAMENTO', label: 'Em Andamento' },
-  { value: 'CONCLUIDA',    label: 'Concluída' },
-  { value: 'PARALISADA',   label: 'Paralisada' },
-  { value: 'A_INICIAR',    label: 'A Iniciar' },
-  { value: 'INACABADA',    label: 'Inacabada' },
-  { value: 'RESCINDIDA',   label: 'Rescindida' },
-  { value: 'ARQUIVADA',    label: 'Arquivada' },
+  { value: "", label: "Todas as situações" },
+  { value: "EM_ANDAMENTO", label: "Em Andamento" },
+  { value: "CONCLUIDA",    label: "Concluída" },
+  { value: "PARALISADA",   label: "Paralisada" },
+  { value: "A_INICIAR",    label: "A Iniciar" },
+  { value: "INACABADA",    label: "Inacabada" },
+  { value: "RESCINDIDA",   label: "Rescindida" },
+  { value: "ARQUIVADA",    label: "Arquivada" },
 ];
 
 const Obras = () => {
-  const [obras, setObras] = useState([]);
-  const [total, setTotal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [situacao, setSituacao] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState("");
+  const [situacao, setSituacao] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 350);
     return () => clearTimeout(t);
   }, [search]);
 
-  const fetchObras = useCallback(() => {
-    setLoading(true);
-    const params = { limit: 200 };
-    if (debouncedSearch) params.search = debouncedSearch;
-    if (situacao) params.situacao = situacao;
+  const { data, isLoading, isError } = useQuery<PaginatedResponse<Obra>>({
+    queryKey: ["obras", debouncedSearch, situacao, page],
+    queryFn: async () => {
+      const params: Record<string, string | number> = { skip: page * pageSize, limit: pageSize };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (situacao) params.situacao = situacao;
+      const { data } = await api.get("/obras", { params });
+      return data;
+    },
+  });
 
-    api.get('/obras', { params })
-      .then((r) => {
-        setObras(r.data);
-        setTotal(r.data.length);
-      })
-      .finally(() => setLoading(false));
-  }, [debouncedSearch, situacao]);
+  useEffect(() => { setPage(0); }, [debouncedSearch, situacao]);
 
-  useEffect(() => { fetchObras(); }, [fetchObras]);
+  const obras = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Obras</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            {total !== null ? `${total} obras` : '...'}
+            {!isLoading ? `${total} obras` : "..."}
           </p>
         </div>
         <Link
@@ -178,7 +180,6 @@ const Obras = () => {
         </Link>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute inset-y-0 left-3 flex items-center h-full w-4 text-slate-400" />
@@ -201,15 +202,43 @@ const Obras = () => {
         </select>
       </div>
 
-      {/* Grid */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array.from({ length: 9 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
-      ) : obras.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {obras.map((obra) => <ObraCard key={obra.id} obra={obra} />)}
+      ) : isError ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-rose-200 p-16 text-center">
+          <AlertTriangle className="h-12 w-12 text-rose-300 mb-4" />
+          <p className="text-lg font-semibold text-slate-600 mb-2">Erro ao carregar obras</p>
+          <p className="text-sm text-slate-400">Verifique sua conexão e tente novamente.</p>
         </div>
+      ) : obras.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {obras.map((obra) => <ObraCard key={obra.id} obra={obra} />)}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+              >
+                Anterior
+              </button>
+              <span className="text-sm text-slate-400 px-2">
+                {page + 1} de {totalPages}
+              </span>
+              <button
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className="px-4 py-2 text-sm font-medium rounded-xl border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 p-16 text-center">
           <Building2 className="h-12 w-12 text-slate-300 mb-4" />
