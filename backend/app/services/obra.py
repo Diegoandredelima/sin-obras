@@ -3,41 +3,46 @@ SIN-Obras — Serviço de Obras
 """
 
 from uuid import UUID
-from sqlalchemy import select, func, or_
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
 
-from app.models.obra import Obra, StatusObra, SituacaoObra
+from fastapi import HTTPException, status
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.obra import Obra, SituacaoObra, StatusObra
 from app.schemas.obra import ObraCreate, ObraUpdate
 
 
 async def get_obras(
     db: AsyncSession,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20,
     search: str | None = None,
     status: StatusObra | None = None,
     situacao: SituacaoObra | None = None,
     municipio: str | None = None,
     contrato_id: str | None = None,
 ):
-    q = select(Obra).where(Obra.ativo == True)
+    base = select(Obra).where(Obra.ativo == True)
 
     if search:
         term = f"%{search}%"
-        q = q.where(or_(Obra.titulo.ilike(term), Obra.municipio.ilike(term)))
+        base = base.where(or_(Obra.titulo.ilike(term), Obra.municipio.ilike(term)))
     if status:
-        q = q.where(Obra.status == status)
+        base = base.where(Obra.status == status)
     if situacao:
-        q = q.where(Obra.situacao == situacao)
+        base = base.where(Obra.situacao == situacao)
     if municipio:
-        q = q.where(Obra.municipio.ilike(f"%{municipio}%"))
+        base = base.where(Obra.municipio.ilike(f"%{municipio}%"))
     if contrato_id:
-        q = q.where(Obra.contrato_id == contrato_id)
+        base = base.where(Obra.contrato_id == contrato_id)
 
-    q = q.order_by(Obra.criado_em.desc()).offset(skip).limit(limit)
+    total = await db.scalar(select(func.count()).select_from(base.subquery()))
+
+    q = base.order_by(Obra.criado_em.desc()).offset(skip).limit(limit)
     result = await db.execute(q)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {"items": list(items), "total": total or 0, "skip": skip, "limit": limit}
 
 
 async def get_obras_stats(db: AsyncSession) -> dict:

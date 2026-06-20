@@ -10,12 +10,14 @@ Esses itens formam a base para a declaração de medições e avanço de obras.
 """
 
 from uuid import UUID
+
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
 
-from app.models.obra import Meta, Submeta, Evento
-from app.schemas.obra import MetaCreate, SubmetaCreate, EventoCreate, EventoBase
+from app.models.obra import Evento, Meta, Submeta
+from app.schemas.obra import EventoBase, EventoCreate, MetaCreate, SubmetaCreate
+
 
 # ---------------------------------------------------------------------------
 # Metas
@@ -65,10 +67,10 @@ async def get_evento_by_id(db: AsyncSession, evento_id: UUID) -> Evento:
 async def update_evento(db: AsyncSession, evento_id: UUID, obj_in: EventoBase) -> Evento:
     db_obj = await get_evento_by_id(db, evento_id)
     update_data = obj_in.model_dump(exclude_unset=True)
-    
+
     for field, value in update_data.items():
         setattr(db_obj, field, value)
-        
+
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)

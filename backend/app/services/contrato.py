@@ -3,9 +3,10 @@ SIN-Obras — Serviço de Contratos
 """
 
 from uuid import UUID
-from sqlalchemy import select, or_
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from fastapi import HTTPException, status
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.obra import Contrato
 from app.schemas.contrato import ContratoCreate, ContratoUpdate
@@ -14,15 +15,15 @@ from app.schemas.contrato import ContratoCreate, ContratoUpdate
 async def get_contratos(
     db: AsyncSession,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20,
     search: str | None = None,
     orgao: str | None = None,
 ):
-    q = select(Contrato)
+    base = select(Contrato)
 
     if search:
         term = f"%{search}%"
-        q = q.where(
+        base = base.where(
             or_(
                 Contrato.numero_contrato.ilike(term),
                 Contrato.objeto.ilike(term),
@@ -30,11 +31,15 @@ async def get_contratos(
             )
         )
     if orgao:
-        q = q.where(Contrato.orgao.ilike(f"%{orgao}%"))
+        base = base.where(Contrato.orgao.ilike(f"%{orgao}%"))
 
-    q = q.order_by(Contrato.criado_em.desc()).offset(skip).limit(limit)
+    total = await db.scalar(select(func.count()).select_from(base.subquery()))
+
+    q = base.order_by(Contrato.criado_em.desc()).offset(skip).limit(limit)
     result = await db.execute(q)
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {"items": list(items), "total": total or 0, "skip": skip, "limit": limit}
 
 
 async def get_contrato_by_id(db: AsyncSession, contrato_id: UUID) -> Contrato:

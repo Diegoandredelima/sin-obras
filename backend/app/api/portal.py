@@ -3,7 +3,6 @@ SIN-Obras — Router do Portal da Empresa Executora
 Endpoints: Diário de Obras, Medições (com assinatura e fluxo de fiscalização)
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -13,13 +12,18 @@ from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
 from app.models.usuario import Usuario
 from app.schemas.portal import (
-    DiarioCreate, DiarioResponse, DiarioUpdate,
-    MedicaoCreate, MedicaoResponse, MedicaoUpdate,
-    MedicaoAssinarRequest, MedicaoFiscalRequest,
+    DiarioCreate,
+    DiarioResponse,
+    DiarioUpdate,
+    MedicaoAssinarRequest,
+    MedicaoCreate,
+    MedicaoFiscalRequest,
+    MedicaoResponse,
+    MedicaoUpdate,
 )
 from app.services import portal as portal_service
-from app.services.notificacao import criar_notificacao
 from app.services.auditoria import registrar_auditoria
+from app.services.notificacao import criar_notificacao
 
 router = APIRouter(prefix="/empresa", tags=["Portal da Empresa"])
 
@@ -27,7 +31,7 @@ router = APIRouter(prefix="/empresa", tags=["Portal da Empresa"])
 # ---------------------------------------------------------------------------
 # Diário de Obras
 # ---------------------------------------------------------------------------
-@router.get("/obras/{obra_id}/diario", response_model=List[DiarioResponse])
+@router.get("/obras/{obra_id}/diario", response_model=list[DiarioResponse])
 async def list_diario(
     obra_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -65,7 +69,7 @@ async def update_diario(
 # ---------------------------------------------------------------------------
 # Medições
 # ---------------------------------------------------------------------------
-@router.get("/obras/{obra_id}/medicoes", response_model=List[MedicaoResponse])
+@router.get("/obras/{obra_id}/medicoes", response_model=list[MedicaoResponse])
 async def list_medicoes(
     obra_id: UUID,
     db: AsyncSession = Depends(get_db),

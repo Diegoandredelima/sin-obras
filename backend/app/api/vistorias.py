@@ -3,18 +3,22 @@ SIN-Obras — Router de Vistorias (Bloco 4 — Mobile)
 Check-in georreferenciado, checklist, upload de fotos e finalização.
 """
 
-from typing import List
+from datetime import UTC
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Form, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
 from app.models.usuario import Usuario
 from app.schemas.vistoria import (
-    CheckinRequest, ChecklistItemResponse, ChecklistItemUpdate,
-    FotoUploadResponse, VistoriaFinalizarRequest, VistoriaResponse,
+    CheckinRequest,
+    ChecklistItemResponse,
+    ChecklistItemUpdate,
+    FotoUploadResponse,
+    VistoriaFinalizarRequest,
+    VistoriaResponse,
 )
 from app.services import vistoria as vistoria_service
 from app.services.auditoria import registrar_auditoria
@@ -46,7 +50,7 @@ async def checkin(
 # ---------------------------------------------------------------------------
 # Checklist
 # ---------------------------------------------------------------------------
-@router.get("/{vistoria_id}/checklist", response_model=List[ChecklistItemResponse])
+@router.get("/{vistoria_id}/checklist", response_model=list[ChecklistItemResponse])
 async def get_checklist(
     vistoria_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -125,5 +129,5 @@ async def server_timestamp(
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
     """Retorna o timestamp oficial do servidor para carimbo de fotos (RN03)."""
-    from datetime import datetime, timezone
-    return {"timestamp": datetime.now(timezone.utc).isoformat(), "timezone": "UTC"}
+    from datetime import datetime
+    return {"timestamp": datetime.now(UTC).isoformat(), "timezone": "UTC"}

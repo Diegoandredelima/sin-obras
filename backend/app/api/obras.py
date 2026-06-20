@@ -2,7 +2,6 @@
 SIN-Obras — Router de Obras
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -10,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
-from app.models.obra import StatusObra, SituacaoObra
+from app.models.obra import SituacaoObra, StatusObra
 from app.models.usuario import Usuario
-from app.schemas.obra import ObraCreate, ObraResponse, ObraUpdate, ObraDetalheResponse
+from app.schemas.common import PaginatedResponse
+from app.schemas.obra import ObraCreate, ObraDetalheResponse, ObraResponse, ObraUpdate
 from app.services import obra as obra_service
 from app.services.auditoria import registrar_auditoria
 
@@ -28,10 +28,10 @@ async def get_obras_stats(
     return await obra_service.get_obras_stats(db)
 
 
-@router.get("", response_model=List[ObraResponse])
+@router.get("", response_model=PaginatedResponse[ObraResponse])
 async def list_obras(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20,
     search: str | None = Query(None, description="Busca por título ou município"),
     status: StatusObra | None = Query(None),
     situacao: SituacaoObra | None = Query(None),

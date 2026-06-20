@@ -2,7 +2,6 @@
 SIN-Obras — Router de ART/RRT
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -17,7 +16,7 @@ from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/art-rrt", tags=["ART/RRT"])
 
-@router.get("/obra/{obra_id}", response_model=List[ArtRrtResponse])
+@router.get("/obra/{obra_id}", response_model=list[ArtRrtResponse])
 async def list_art_rrt_by_obra(
     obra_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -34,7 +33,7 @@ async def create_art_rrt(
 ):
     """Upload/cadastro de ART/RRT."""
     art = await art_rrt_service.create_art_rrt(db, current_user.id, payload)
-    
+
     await registrar_auditoria(db, current_user.id, "ArtRrt", str(art.id), "CREATE", dados_depois=payload.model_dump(mode="json"))
     return art
 

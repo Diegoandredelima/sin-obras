@@ -5,16 +5,16 @@ Implementa: Check-in com PostGIS, geofencing, checklist, fotos invioláveis (RN0
 
 import hashlib
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import HTTPException, status, UploadFile
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Obra, Evento
-from app.models.portal import Medicao, StatusMedicao
-from app.models.vistoria import Vistoria, ChecklistItem, FotoVistoria, ResultadoVistoria
+from app.models.obra import Obra
+from app.models.portal import Medicao
+from app.models.vistoria import ChecklistItem, FotoVistoria, ResultadoVistoria, Vistoria
 from app.schemas.vistoria import CheckinRequest, ChecklistItemUpdate, VistoriaFinalizarRequest
 
 
@@ -76,7 +76,7 @@ async def fazer_checkin(
         fiscal_id=fiscal_id,
         medicao_id=payload.medicao_id,
         local_checkin=f"SRID=4326;POINT({payload.longitude} {payload.latitude})",
-        checkin_em=datetime.now(timezone.utc),
+        checkin_em=datetime.now(UTC),
         dentro_raio=dentro_raio,
         distancia_metros=distancia,
         resultado=ResultadoVistoria.PENDENTE,
@@ -156,7 +156,7 @@ async def upload_foto(
     hash_sha256 = hashlib.sha256(conteudo).hexdigest()
 
     # Carimbo do servidor (inviolável)
-    agora = datetime.now(timezone.utc)
+    agora = datetime.now(UTC)
 
     # Em produção: fazer upload para S3/MinIO aqui
     # Por enquanto, apenas registramos os metadados
@@ -206,7 +206,7 @@ async def finalizar_vistoria(
 
     vistoria.resultado = payload.resultado
     vistoria.observacoes = payload.observacoes
-    vistoria.finalizada_em = datetime.now(timezone.utc)
+    vistoria.finalizada_em = datetime.now(UTC)
     db.add(vistoria)
     await db.flush()
     await db.refresh(vistoria)

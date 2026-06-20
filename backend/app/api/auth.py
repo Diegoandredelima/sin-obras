@@ -4,6 +4,8 @@ Endpoints: login, refresh, me, logout
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,13 +27,16 @@ from app.schemas.auth import (
     TokenResponse,
     UsuarioCreateRequest,
     UsuarioResponse,
+    UsuarioUpdateRequest,
 )
 from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def login(
     payload: LoginRequest,
     request: Request,
@@ -114,6 +119,31 @@ async def refresh_token(
 async def me(current_user: Usuario = Depends(get_current_user)):
     """Retorna os dados do usuário autenticado."""
     return MeResponse(usuario=UsuarioResponse.model_validate(current_user))
+
+
+@router.patch("/me", response_model=UsuarioResponse)
+async def update_me(
+    payload: UsuarioUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Atualiza dados do perfil do usuário autenticado. Matrícula/CNPJ não pode ser alterado."""
+    update_data = payload.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nenhum campo para atualizar.",
+        )
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    db.add(current_user)
+    await db.flush()
+    await db.refresh(current_user)
+
+    return UsuarioResponse.model_validate(current_user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

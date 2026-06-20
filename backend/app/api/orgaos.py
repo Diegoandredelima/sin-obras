@@ -2,7 +2,6 @@
 SIN-Obras — Router de Órgãos
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -25,7 +24,7 @@ class OrgaoResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-@router.get("", response_model=List[OrgaoResponse])
+@router.get("", response_model=list[OrgaoResponse])
 async def list_orgaos(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),

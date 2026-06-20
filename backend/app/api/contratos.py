@@ -2,7 +2,6 @@
 SIN-Obras — Router de Contratos
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
@@ -11,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
 from app.models.usuario import Usuario
+from app.schemas.common import PaginatedResponse
 from app.schemas.contrato import ContratoCreate, ContratoResponse, ContratoUpdate
 from app.services import contrato as contrato_service
 from app.services.auditoria import registrar_auditoria
@@ -18,10 +18,10 @@ from app.services.auditoria import registrar_auditoria
 router = APIRouter(prefix="/contratos", tags=["Contratos"])
 
 
-@router.get("", response_model=List[ContratoResponse])
+@router.get("", response_model=PaginatedResponse[ContratoResponse])
 async def list_contratos(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20,
     search: str | None = Query(None, description="Busca por número, objeto ou fiscal"),
     orgao: str | None = Query(None, description="Filtra por sigla do órgão"),
     db: AsyncSession = Depends(get_db),

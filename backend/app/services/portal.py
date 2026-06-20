@@ -5,11 +5,11 @@ Implementa RN01 (Bloqueio por ART) e assinatura eletrônica com SHA-256
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.art_rrt import ArtRrt
@@ -151,11 +151,11 @@ async def assinar_medicao(db: AsyncSession, medicao_id: UUID, usuario_id: UUID) 
         "numero_medicao": db_obj.numero_medicao,
         "empresa_usuario_id": str(db_obj.empresa_usuario_id),
         "eventos_declarados": db_obj.eventos_declarados,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }, sort_keys=True)
     hash_sha256 = hashlib.sha256(conteudo.encode()).hexdigest()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     db_obj.status = StatusMedicao.ASSINADA
     db_obj.assinada_em = now
     db_obj.enviada_em = now

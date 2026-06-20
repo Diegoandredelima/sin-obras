@@ -7,12 +7,14 @@ e empresas às respectivas obras, validando o período de vigência e ativação
 """
 
 from uuid import UUID
+
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, status
 
 from app.models.art_rrt import ArtRrt
 from app.schemas.art_rrt import ArtRrtCreate
+
 
 async def get_art_rrt_by_obra(db: AsyncSession, obra_id: UUID):
     result = await db.execute(select(ArtRrt).where(ArtRrt.obra_id == obra_id, ArtRrt.ativa == True))
@@ -35,7 +37,7 @@ async def inativar_art_rrt(db: AsyncSession, art_id: UUID):
     db_obj = result.scalar_one_or_none()
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ART/RRT não encontrada.")
-    
+
     db_obj.ativa = False
     db.add(db_obj)
     await db.flush()

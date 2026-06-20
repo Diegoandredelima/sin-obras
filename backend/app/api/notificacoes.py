@@ -2,7 +2,6 @@
 SIN-Obras — Router de Notificações
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -17,7 +16,7 @@ from app.services import notificacao as notif_service
 router = APIRouter(prefix="/notificacoes", tags=["Notificações"])
 
 
-@router.get("", response_model=List[NotificacaoResponse])
+@router.get("", response_model=list[NotificacaoResponse])
 async def list_notificacoes(
     apenas_nao_lidas: bool = False,
     db: AsyncSession = Depends(get_db),

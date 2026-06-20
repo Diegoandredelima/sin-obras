@@ -2,7 +2,6 @@
 SIN-Obras — Router de Tarefas (Kanban)
 """
 
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -17,7 +16,7 @@ from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/tarefas", tags=["Tarefas Kanban"])
 
-@router.get("", response_model=List[TarefaResponse])
+@router.get("", response_model=list[TarefaResponse])
 async def list_tarefas(
     obra_id: UUID | None = None,
     responsavel_id: UUID | None = None,
@@ -35,7 +34,7 @@ async def create_tarefa(
 ):
     """Cria uma tarefa (Acesso: Engenheiro+)."""
     tarefa = await tarefa_service.create_tarefa(db, payload)
-    
+
     await registrar_auditoria(db, current_user.id, "Tarefa", str(tarefa.id), "CREATE", dados_depois=payload.model_dump(mode="json"))
     return tarefa
 
@@ -57,7 +56,7 @@ async def move_tarefa(
 ):
     """Atualiza o status de uma tarefa (drag & drop no Kanban)."""
     tarefa = await tarefa_service.update_tarefa(db, id, payload)
-    
+
     await registrar_auditoria(db, current_user.id, "Tarefa", str(tarefa.id), "UPDATE", dados_depois=payload.model_dump(exclude_unset=True, mode="json"))
     return tarefa
 

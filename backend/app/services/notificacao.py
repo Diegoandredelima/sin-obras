@@ -7,10 +7,11 @@ alertar fiscais sobre medições pendentes e enviar avisos de atraso em obras.
 """
 
 from uuid import UUID
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.portal import Notificacao, CanalNotificacao
+from app.models.portal import CanalNotificacao, Notificacao
 
 
 async def criar_notificacao(
