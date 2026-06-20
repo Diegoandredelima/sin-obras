@@ -22,13 +22,74 @@ api.interceptors.request.use(async (config: any) => {
   return config;
 });
 
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: any) => void }> = [];
+
+function processQueue(error: any, token: string | null = null) {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else if (token) resolve(token);
+  });
+  failedQueue = [];
+}
+
 api.interceptors.response.use(
   (res: any) => res,
   async (error: any) => {
-    if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('access_token');
+    const originalRequest = error.config;
+
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    if (originalRequest.url === '/auth/refresh') {
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          },
+          reject,
+        });
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = await SecureStore.getItemAsync('refresh_token');
+
+    if (!refreshToken) {
+      await SecureStore.deleteItemAsync('access_token');
+      return Promise.reject(error);
+    }
+
+    try {
+      const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken });
+      const newToken = data.access_token;
+      const newRefreshToken = data.refresh_token || refreshToken;
+
+      await SecureStore.setItemAsync('access_token', newToken);
+      await SecureStore.setItemAsync('refresh_token', newRefreshToken);
+      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
+      processQueue(null, newToken);
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 
@@ -62,7 +123,8 @@ export const obrasAPI = {
 
 // Auth
 export const authAPI = {
-  login: (identificador: string, senha: string) => api.post('/auth/login', { identificador, senha }),
+  login: (matricula_cnpj: string, senha: string) => api.post('/auth/login', { matricula_cnpj, senha }),
+  refresh: (refresh_token: string) => api.post('/auth/refresh', { refresh_token }),
   me: () => api.get('/auth/me'),
 };
 
