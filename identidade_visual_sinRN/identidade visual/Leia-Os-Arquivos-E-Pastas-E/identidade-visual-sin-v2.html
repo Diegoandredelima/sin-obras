@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Identidade Visual — SIN/RN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ─────────────────────────────────────────────── */
+    :root {
+      --azul:         #1B3C73;
+      --azul-vivo:    #2457A4;
+      --azul-claro:   #EBF0F8;
+      --laranja:      #C84918;
+      --laranja-text: #B53E14; /* darkened for WCAG AA on light bg */
+      --verde:        #2A7A3E;
+      --amarelo:      #D9A812;
+      --bg:           #F3F5FA;
+      --surface:      #FFFFFF;
+      --fg:           #1A1E2A;
+      --muted:        #6B7080;
+      --border:       #DDE2EC;
+
+      --stripe: linear-gradient(to right,
+        var(--laranja)   25%,
+        var(--verde)     25% 50%,
+        var(--amarelo)   50% 75%,
+        var(--azul-vivo) 75%);
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+    }
+
+    /* ── RESET + BASE ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Barlow', -apple-system, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── ACCESSIBILITY ───────────────────────────────────────── */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 16px;
+      background: var(--azul);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9999;
+      text-decoration: none;
+      transition: top 0.15s;
+    }
+    .skip-link:focus { top: 16px; }
+    :focus-visible {
+      outline: 2.5px solid var(--laranja);
+      outline-offset: 3px;
+      border-radius: 3px;
+    }
+
+    /* ── STRIPE MOTIF ────────────────────────────────────────── */
+    .stripe {
+      height: 6px;
+      background: var(--stripe);
+      flex-shrink: 0;
+    }
+    .stripe.lg { height: 10px; }
+    .stripe.sm { height: 3px; }
+
+    /* ── COVER ───────────────────────────────────────────────── */
+    .cover {
+      background: var(--azul);
+      color: #fff;
+      min-height: 540px;
+      padding: 72px 80px 68px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .cover::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      right: 0;
+      width: 45%;
+      background: var(--azul-vivo);
+      clip-path: polygon(22% 0%, 100% 0%, 100% 100%, 0% 100%);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .cover-watermark {
+      position: absolute;
+      top: 44px;
+      right: 200px;
+      height: 200px;
+      opacity: 0.07;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .cover-logo-img {
+      position: absolute;
+      top: 52px;
+      right: 72px;
+      height: 90px;
+      z-index: 2;
+      filter: brightness(0) invert(1);
+      opacity: 0.9;
+    }
+    .cover-rule {
+      width: 48px;
+      height: 4px;
+      background: var(--laranja);
+      border-radius: 2px;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 2;
+    }
+    .cover-tag {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 2;
+    }
+    .cover h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: clamp(48px, 7vw, 100px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.025em;
+      color: #fff;
+      position: relative;
+      z-index: 2;
+      max-width: 640px;
+      text-wrap: balance;
+    }
+    .cover-sub {
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.65);
+      margin-top: 24px;
+      max-width: 460px;
+      line-height: 1.55;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── DOT NAVIGATION ──────────────────────────────────────── */
+    .dot-nav {
+      position: fixed;
+      right: 28px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 200;
+    }
+    .dot-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      flex-direction: row-reverse;
+    }
+    .dot-nav-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s, transform 0.2s;
+      flex-shrink: 0;
+      border: 1.5px solid var(--muted);
+    }
+    .dot-nav-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0;
+      transform: translateX(6px);
+      transition: opacity 0.18s, transform 0.18s;
+      white-space: nowrap;
+      background: var(--surface);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .dot-nav-item:hover .dot-nav-dot,
+    .dot-nav-item.active .dot-nav-dot {
+      background: var(--laranja);
+      border-color: var(--laranja);
+      transform: scale(1.5);
+    }
+    .dot-nav-item:hover .dot-nav-label {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .dot-nav-item.active .dot-nav-dot { background: var(--azul); border-color: var(--azul); }
+
+    /* ── LAYOUT ──────────────────────────────────────────────── */
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 80px;
+    }
+    .wrap.tight { padding-top: 64px; padding-bottom: 64px; }
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 80px;
+    }
+
+    /* ── SECTION HEADING ─────────────────────────────────────── */
+    .eyebrow {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--laranja-text);  /* darkened for WCAG AA */
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.015em;
+      color: var(--azul);
+      margin-bottom: 44px;
+      text-wrap: balance;
+    }
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 8px;
+    }
+
+    /* ── PALETTE ─────────────────────────────────────────────── */
+    .palette-main {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .swatch {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .swatch:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    }
+    .swatch-color { height: 112px; }
+    .swatch-info  { padding: 14px 16px; }
+    .swatch-name  { font-size: 13px; font-weight: 700; display: block; color: var(--fg); margin-bottom: 2px; }
+    .swatch-hex {
+      font-size: 12px;
+      font-family: ui-monospace, 'Menlo', monospace;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      display: block;
+    }
+    .swatch-desc { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    /* copy feedback tooltip */
+    .swatch-copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.72);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    .swatch.copied .swatch-copy { opacity: 1; }
+
+    .palette-neutral {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+    .swatch-sm .swatch-color { height: 56px; }
+    .swatch-sm .swatch-name  { font-size: 11px; }
+
+    .motif-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 36px 40px;
+      margin-top: 44px;
+    }
+    .motif-box h3 { margin-bottom: 12px; }
+    .motif-box p {
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 58ch;
+      line-height: 1.7;
+      margin-bottom: 24px;
+      text-wrap: pretty;
+    }
+    .stripe-labels {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 8px;
+      text-align: center;
+    }
+    .stripe-labels span {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    /* ── TYPOGRAPHY SPECIMEN ─────────────────────────────────── */
+    .type-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .type-row {
+      display: grid;
+      grid-template-columns: 88px 176px 1fr;
+      align-items: center;
+      gap: 20px;
+      padding: 22px 36px;
+      border-bottom: 1px solid var(--border);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .type-meta {
+      font-size: 10px;
+      font-family: ui-monospace, 'Menlo', monospace;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── LOGO SHOWCASE ───────────────────────────────────────── */
+    .logo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .logo-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      padding: 48px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 220px;
+      background: var(--surface);
+      transition: box-shadow 0.15s;
+    }
+    .logo-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+    .logo-card.on-dark { background: var(--azul); border-color: var(--azul); }
+    .logo-card.on-gray { background: var(--bg); }
+    .logo-card img { max-height: 150px; max-width: 100%; object-fit: contain; }
+    .logo-card.on-dark img { filter: brightness(0) invert(1); }
+    .logo-caption {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 10px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── APPLICATIONS ────────────────────────────────────────── */
+    .app-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .app-panel {
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .app-label {
+      padding: 9px 18px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Ofício */
+    .oficio { padding: 28px 32px 24px; }
+    .oficio-top { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .oficio-brasao { height: 60px; width: 60px; object-fit: contain; flex-shrink: 0; }
+    .oficio-rn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 20px; font-weight: 800;
+      color: var(--azul);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      line-height: 1.05;
+    }
+    .oficio-gov { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-top: 1px; }
+    .oficio-sec { font-size: 11px; font-weight: 600; color: var(--fg); margin-top: 3px; }
+    .oficio-body { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 16px; }
+
+    /* Crachá */
+    .cracha-wrap { padding: 24px 24px 28px; display: flex; justify-content: center; }
+    .cracha {
+      width: 192px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(27,60,115,0.20);
+    }
+    .cracha-head { background: var(--azul); padding: 22px 16px 16px; text-align: center; }
+    .cracha-brasao { height: 44px; object-fit: contain; filter: brightness(0) invert(1); margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
+    .cracha-nome { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.1; }
+    .cracha-cargo { font-size: 9px; color: rgba(255,255,255,0.65); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px; }
+    .cracha-foot { background: #fff; padding: 10px 16px; text-align: center; }
+    .cracha-sin { font-size: 9px; font-weight: 700; color: var(--azul); letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.4; }
+
+    /* Slide preview */
+    .slide-prev {
+      aspect-ratio: 16/9;
+      background: var(--azul);
+      position: relative;
+      overflow: hidden;
+    }
+    .slide-prev::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--azul-vivo);
+      clip-path: polygon(60% 0%, 100% 0%, 100% 100%, 40% 100%);
+      opacity: 0.4;
+    }
+    .slide-content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 28px 32px;
+      z-index: 2;
+    }
+    .slide-tag { font-size: 8px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 7px; }
+    .slide-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: #fff; line-height: 1.1; letter-spacing: -0.01em; }
+    .slide-logo { position: absolute; top: 20px; right: 24px; height: 28px; filter: brightness(0) invert(1); opacity: 0.9; z-index: 3; }
+
+    /* Assinatura e-mail */
+    .email-sig { padding: 24px 28px; font-family: Arial, Helvetica, sans-serif; }
+    .sig-top { display: flex; gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 2px solid var(--azul); }
+    .sig-brasao { height: 44px; object-fit: contain; flex-shrink: 0; }
+    .sig-nome { font-size: 14px; font-weight: 700; color: var(--azul); line-height: 1.2; }
+    .sig-cargo { font-size: 11px; color: #4A5568; margin-top: 1px; }
+    .sig-org { font-size: 9px; font-weight: 700; color: #6B7080; margin-top: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .sig-contact { font-size: 11px; color: #6B7080; line-height: 1.65; margin-top: 10px; }
+
+    /* ── DARK SECTION (PRINCÍPIOS) ───────────────────────────── */
+    .dark-section { background: var(--azul); color: #fff; }
+    .dark-section h2 { color: #fff; }
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+    .principle {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 28px 24px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .principle:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.20);
+    }
+    .principle-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--laranja);
+      line-height: 1;
+      margin-bottom: 14px;
+    }
+    .principle-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    /* CONTRAST FIX: was 0.6, now 0.82 → ~5.5:1 on --azul */
+    .principle-desc  { font-size: 13px; color: rgba(255,255,255,0.82); line-height: 1.65; text-wrap: pretty; }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    .guide-footer {
+      background: var(--fg);
+      padding: 28px 80px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+    }
+    .guide-footer strong { color: rgba(255,255,255,0.88); }
+    .footer-print {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.14);
+      padding: 6px 14px;
+      border-radius: 20px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .footer-print:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.3); }
+
+    /* ── PRINT ───────────────────────────────────────────────── */
+    @media print {
+      .dot-nav, .skip-link, .footer-print { display: none !important; }
+      .cover { min-height: unset; break-after: page; }
+      .wrap, .wrap.tight { padding: 40px 48px; }
+      hr.divider { margin: 0 48px; }
+      .guide-footer { padding: 20px 48px; }
+    }
+
+    /* ── RESPONSIVE 960px ────────────────────────────────────── */
+    @media (max-width: 960px) {
+      .dot-nav { display: none; }
+      .wrap, .wrap.tight { padding: 56px 40px; }
+      hr.divider { margin: 0 40px; }
+      .cover { padding: 52px 40px 48px; }
+      .cover-logo-img { height: 68px; top: 36px; right: 40px; }
+      .cover-watermark { display: none; }
+      h2 { font-size: 36px; }
+      .palette-main { grid-template-columns: 1fr 1fr; }
+      .palette-neutral { grid-template-columns: repeat(3, 1fr); }
+      .logo-grid { grid-template-columns: 1fr 1fr; }
+      .app-grid { grid-template-columns: 1fr; }
+      .principles { grid-template-columns: 1fr; }
+      .type-row { grid-template-columns: 72px 1fr; gap: 12px; }
+      .type-row > *:nth-child(3) { grid-column: 1 / -1; }
+      .guide-footer { flex-direction: column; gap: 10px; text-align: center; padding: 24px 40px; }
+    }
+
+    /* ── RESPONSIVE 600px ────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .wrap, .wrap.tight { padding: 48px 24px; }
+      hr.divider { margin: 0 24px; }
+      .cover { padding: 48px 24px 44px; min-height: 460px; }
+      .cover-logo-img { height: 56px; top: 24px; right: 24px; }
+      h2 { font-size: 30px; margin-bottom: 32px; }
+      .palette-main { grid-template-columns: 1fr; gap: 16px; }
+      .palette-neutral { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .logo-grid { grid-template-columns: 1fr; }
+      .type-row { grid-template-columns: 60px 1fr; padding: 18px 20px; gap: 10px; }
+      .type-row > *:nth-child(3) { grid-column: 1 / -1; }
+      .motif-box { padding: 24px; }
+      .oficio { padding: 20px 20px 16px; }
+      .guide-footer { padding: 20px 24px; }
+    }
+
+    /* ── REDUCED MOTION ──────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- skip to main content -->
+  <a class="skip-link" href="#main-content">Ir para o conteúdo principal</a>
+
+  <!-- ── FLOATING DOT NAVIGATION ────────────────────────────── -->
+  <nav class="dot-nav" aria-label="Navegar por seções">
+    <a class="dot-nav-item" href="#paleta" aria-label="Ir para Paleta Cromática">
+      <span class="dot-nav-dot"></span>
+      <span class="dot-nav-label">01 Paleta</span>
+    </a>
+    <a class="dot-nav-item" href="#tipografia" aria-label="Ir para Tipografia">
+      <span class="dot-nav-dot"></span>
+      <span class="dot-nav-label">02 Tipografia</span>
+    </a>
+    <a class="dot-nav-item" href="#marca" aria-label="Ir para Marca">
+      <span class="dot-nav-dot"></span>
+      <span class="dot-nav-label">03 Marca</span>
+    </a>
+    <a class="dot-nav-item" href="#aplicacoes" aria-label="Ir para Aplicações">
+      <span class="dot-nav-dot"></span>
+      <span class="dot-nav-label">04 Aplicações</span>
+    </a>
+    <a class="dot-nav-item" href="#principios" aria-label="Ir para Princípios">
+      <span class="dot-nav-dot"></span>
+      <span class="dot-nav-label">05 Princípios</span>
+    </a>
+  </nav>
+
+  <!-- ── COVER ──────────────────────────────────────────────── -->
+  <header>
+    <div class="stripe lg"></div>
+    <div class="cover">
+      <img class="cover-watermark"
+           src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/brasao_RN.png"
+           alt="" aria-hidden="true"
+           onerror="this.style.display='none'">
+      <img class="cover-logo-img"
+           src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/SIN.png"
+           alt="Logo SIN"
+           onerror="this.style.display='none'">
+
+      <div class="cover-rule" aria-hidden="true"></div>
+      <span class="cover-tag">Rio Grande do Norte</span>
+      <h1>Sistema de<br>Identidade<br>Visual</h1>
+      <p class="cover-sub">
+        Secretaria de Estado da Infraestrutura — SIN<br>
+        Proposta conceitual · 2025
+      </p>
+    </div>
+    <div class="stripe"></div>
+  </header>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+  <main id="main-content">
+
+    <!-- ── 01 PALETA ───────────────────────────────────────── -->
+    <section class="wrap" id="paleta" data-od-id="paleta-cromatica" aria-labelledby="h2-paleta">
+      <span class="eyebrow">01 — Paleta Cromática</span>
+      <h2 id="h2-paleta">As cores da<br>infraestrutura potiguar</h2>
+
+      <div class="palette-main" role="list">
+        <div class="swatch" role="listitem" tabindex="0" aria-label="Azul Institucional #1B3C73 — clique para copiar o hex">
+          <div class="swatch-color" style="background:#1B3C73;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Azul Institucional</span>
+            <span class="swatch-hex">#1B3C73</span>
+            <p class="swatch-desc">Cor primária. Autoridade, confiança e presença do Estado.</p>
+          </div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch" role="listitem" tabindex="0" aria-label="Laranja Potiguar #C84918 — clique para copiar o hex">
+          <div class="swatch-color" style="background:#C84918;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Laranja Potiguar</span>
+            <span class="swatch-hex">#C84918</span>
+            <p class="swatch-desc">Destaque e ação. Calor, dinamismo e identidade nordestina.</p>
+          </div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch" role="listitem" tabindex="0" aria-label="Verde RN #2A7A3E — clique para copiar o hex">
+          <div class="swatch-color" style="background:#2A7A3E;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Verde RN</span>
+            <span class="swatch-hex">#2A7A3E</span>
+            <p class="swatch-desc">Apoio. Crescimento, sustentabilidade e flora do estado.</p>
+          </div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch" role="listitem" tabindex="0" aria-label="Amarelo Potiguar #D9A812 — clique para copiar o hex">
+          <div class="swatch-color" style="background:#D9A812;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">Amarelo Potiguar</span>
+            <span class="swatch-hex">#D9A812</span>
+            <p class="swatch-desc">Apoio. Sol, energia e riqueza do Rio Grande do Norte.</p>
+          </div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+      </div>
+
+      <h3 style="font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:14px;">Neutros do sistema</h3>
+      <div class="palette-neutral">
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#1A1E2A — clique para copiar">
+          <div class="swatch-color" style="background:#1A1E2A;"></div>
+          <div class="swatch-info"><span class="swatch-name">Quase-Preto</span><span class="swatch-hex">#1A1E2A</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#4A5568 — clique para copiar">
+          <div class="swatch-color" style="background:#4A5568;"></div>
+          <div class="swatch-info"><span class="swatch-name">Grafite</span><span class="swatch-hex">#4A5568</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#6B7080 — clique para copiar">
+          <div class="swatch-color" style="background:#6B7080;"></div>
+          <div class="swatch-info"><span class="swatch-name">Cinza</span><span class="swatch-hex">#6B7080</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#DDE2EC — clique para copiar">
+          <div class="swatch-color" style="background:#DDE2EC;"></div>
+          <div class="swatch-info"><span class="swatch-name">Borda</span><span class="swatch-hex">#DDE2EC</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#F3F5FA — clique para copiar">
+          <div class="swatch-color" style="background:#F3F5FA; border-bottom:1px solid var(--border);"></div>
+          <div class="swatch-info"><span class="swatch-name">Superfície</span><span class="swatch-hex">#F3F5FA</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+        <div class="swatch swatch-sm" tabindex="0" aria-label="#FFFFFF — clique para copiar">
+          <div class="swatch-color" style="background:#FFFFFF; border-bottom:1px solid var(--border);"></div>
+          <div class="swatch-info"><span class="swatch-name">Branco</span><span class="swatch-hex">#FFFFFF</span></div>
+          <span class="swatch-copy" aria-hidden="true">Copiado!</span>
+        </div>
+      </div>
+
+      <div class="motif-box">
+        <h3>Elemento Gráfico — As Quatro Listras</h3>
+        <p>O motivo das quatro listras cromáticas, já presente no logo oficial do RN, é elevado a elemento estrutural do sistema. Aparece como faixa de abertura em documentos, separador de seção em apresentações e rodapé de comunicações digitais.</p>
+        <div class="stripe" style="border-radius:4px;" role="img" aria-label="As quatro listras: laranja, verde, amarelo e azul"></div>
+        <div class="stripe-labels" aria-hidden="true">
+          <span>Laranja</span>
+          <span>Verde</span>
+          <span>Amarelo</span>
+          <span>Azul</span>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── 02 TIPOGRAFIA ────────────────────────────────────── -->
+    <section class="wrap tight" id="tipografia" data-od-id="tipografia" aria-labelledby="h2-tipo">
+      <span class="eyebrow">02 — Tipografia</span>
+      <h2 id="h2-tipo">Barlow — força<br>e clareza técnica</h2>
+      <p style="max-width:55ch; color:var(--muted); margin-bottom:40px; font-size:15px; line-height:1.75; text-wrap:pretty;">
+        A família <strong style="color:var(--fg);">Barlow</strong> combina precisão geométrica com personalidade. A variante <em>Condensed</em> em peso 800 entrega impacto nos títulos, economizando espaço em cabeçalhos de documento. É open-source (Google Fonts) — gratuita para uso institucional.
+      </p>
+
+      <div class="type-card">
+        <div class="type-row">
+          <span class="type-label">Display</span>
+          <span class="type-meta">Condensed 800 · −0.025em</span>
+          <span style="font-family:'Barlow Condensed',sans-serif; font-size:clamp(28px,4vw,56px); font-weight:800; letter-spacing:-0.025em; color:var(--azul); line-height:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">INFRAESTRUTURA</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">H1</span>
+          <span class="type-meta">Condensed 800 · 40px · −0.01em</span>
+          <span style="font-family:'Barlow Condensed',sans-serif; font-size:clamp(22px,3.5vw,38px); font-weight:800; letter-spacing:-0.01em; color:var(--fg); line-height:1.1;">Secretaria de Estado da Infraestrutura</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">H2</span>
+          <span class="type-meta">Barlow 700 · 28px · −0.01em</span>
+          <span style="font-size:clamp(18px,2.5vw,26px); font-weight:700; letter-spacing:-0.01em; color:var(--fg);">Programa de Obras Prioritárias 2025</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">H3</span>
+          <span class="type-meta">Barlow 600 · 20px · 0em</span>
+          <span style="font-size:19px; font-weight:600; color:var(--fg);">Coordenadoria de Rodovias Estaduais</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">Corpo</span>
+          <span class="type-meta">Barlow 400 · 16px · 0em</span>
+          <span style="font-size:15px; font-weight:400; color:var(--muted); max-width:60ch; line-height:1.7; text-wrap:pretty;">Textos corridos em documentos oficiais, ofícios, relatórios e materiais de comunicação interna e externa da Secretaria de Estado da Infraestrutura do Rio Grande do Norte.</span>
+        </div>
+        <div class="type-row">
+          <span class="type-label">Label</span>
+          <span class="type-meta">Barlow 600 · 11px · +0.18em · CAPS</span>
+          <span style="font-size:11px; font-weight:600; letter-spacing:0.18em; text-transform:uppercase; color:var(--laranja-text);">01 — PROCESSO Nº 2025.001.0042 · GAB/SIN</span>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── 03 MARCA ─────────────────────────────────────────── -->
+    <section class="wrap tight" id="marca" data-od-id="marca-logo" aria-labelledby="h2-marca">
+      <span class="eyebrow">03 — Marca</span>
+      <h2 id="h2-marca">Versões e<br>aplicação do logo</h2>
+
+      <div class="logo-grid">
+        <div>
+          <div class="logo-card">
+            <img src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/logos%20para%20defeso/1.png"
+                 alt="Logo SIN com brasão RN — versão horizontal para fundos claros"
+                 onerror="this.style.display='none'">
+          </div>
+          <p class="logo-caption">Uso preferencial — fundos claros</p>
+        </div>
+        <div>
+          <div class="logo-card on-dark">
+            <img src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/SIN.png"
+                 alt="Logo SIN — versão invertida para fundos escuros"
+                 onerror="this.style.display='none'">
+          </div>
+          <p class="logo-caption">Versão invertida — fundos escuros</p>
+        </div>
+        <div>
+          <div class="logo-card on-gray">
+            <img src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/SIN_vertical.png"
+                 alt="Logo SIN — versão vertical para espaços quadrados"
+                 onerror="this.style.display='none'">
+          </div>
+          <p class="logo-caption">Versão vertical — espaços quadrados</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── 04 APLICAÇÕES ────────────────────────────────────── -->
+    <section class="wrap tight" id="aplicacoes" data-od-id="aplicacoes" aria-labelledby="h2-aplic">
+      <span class="eyebrow">04 — Aplicações</span>
+      <h2 id="h2-aplic">A identidade<br>em uso real</h2>
+
+      <div class="app-grid">
+
+        <!-- Cabeçalho de ofício -->
+        <div class="app-panel">
+          <div class="app-label">Cabeçalho de Ofício</div>
+          <div class="oficio">
+            <div class="stripe sm" style="margin-bottom:20px; border-radius:2px;"></div>
+            <div class="oficio-top">
+              <img class="oficio-brasao"
+                   src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/brasao_RN.png"
+                   alt="Brasão do Rio Grande do Norte"
+                   onerror="this.style.display='none'">
+              <div>
+                <div class="oficio-rn">Rio Grande do Norte</div>
+                <div class="oficio-gov">Governo do Estado</div>
+                <div class="oficio-sec">Secretaria de Estado da Infraestrutura — SIN</div>
+              </div>
+            </div>
+            <div class="stripe sm" style="border-radius:2px; margin-bottom:16px;"></div>
+            <div class="oficio-body">
+              <strong>OFÍCIO Nº 042/2025 – GAB/SIN</strong><br>
+              Natal/RN, 18 de junho de 2025.<br><br>
+              Ao Senhor Secretário de Estado da Fazenda,<br>
+              Dr. [Nome do Destinatário]<br><br>
+              Assunto: [Descrição do assunto do ofício em questão]
+            </div>
+          </div>
+        </div>
+
+        <!-- Crachá -->
+        <div class="app-panel">
+          <div class="app-label">Crachá Institucional</div>
+          <div class="cracha-wrap">
+            <div class="cracha">
+              <div class="stripe" style="height:5px;"></div>
+              <div class="cracha-head">
+                <img class="cracha-brasao"
+                     src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/brasao_RN.png"
+                     alt="Brasão do Rio Grande do Norte"
+                     onerror="this.style.display='none'">
+                <div class="cracha-nome">Nome do Servidor</div>
+                <div class="cracha-cargo">Cargo / Função</div>
+              </div>
+              <div class="cracha-foot">
+                <div class="cracha-sin">Secretaria de Estado<br>da Infraestrutura — SIN</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide -->
+        <div class="app-panel">
+          <div class="app-label">Slide de Apresentação</div>
+          <div class="slide-prev" role="img" aria-label="Preview de capa de slide institucional">
+            <img class="slide-logo"
+                 src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/SIN.png"
+                 alt="" aria-hidden="true"
+                 onerror="this.style.display='none'">
+            <div class="slide-content">
+              <div class="slide-tag">Programas de Infraestrutura 2025</div>
+              <div class="slide-title">Título da Apresentação<br>Institucional</div>
+            </div>
+            <div class="stripe" style="position:absolute; bottom:0; left:0; right:0; z-index:3;" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <!-- Assinatura de e-mail -->
+        <div class="app-panel">
+          <div class="app-label">Assinatura de E-mail</div>
+          <div class="email-sig">
+            <div class="sig-top">
+              <img class="sig-brasao"
+                   src="file:///C:/Users/diego/OneDrive/Documentos/identidade_visual_sinRN/brasao_RN.png"
+                   alt="Brasão do Rio Grande do Norte"
+                   onerror="this.style.display='none'">
+              <div>
+                <div class="sig-nome">Nome do Servidor</div>
+                <div class="sig-cargo">Cargo / Função</div>
+                <div class="sig-org">Secretaria de Estado da Infraestrutura — SIN</div>
+              </div>
+            </div>
+            <div style="height:3px; background:var(--stripe); border-radius:0 0 2px 2px; margin-bottom:10px;"></div>
+            <div class="sig-contact">
+              (84) 3232-0000 · sin.rn.gov.br<br>
+              Natal — Rio Grande do Norte
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── 05 PRINCÍPIOS ─────────────────────────────────────── -->
+    <div class="dark-section" id="principios" data-od-id="principios">
+      <div class="stripe"></div>
+      <section class="wrap" aria-labelledby="h2-princ">
+        <span class="eyebrow" style="color:rgba(255,255,255,0.65);">05 — Princípios da Marca</span>
+        <h2 id="h2-princ">O caráter<br>da SIN</h2>
+
+        <div class="principles">
+          <div class="principle">
+            <div class="principle-num" aria-hidden="true">01</div>
+            <h3 class="principle-title">Confiança Pública</h3>
+            <p class="principle-desc">A identidade visual reflete o compromisso do Estado com transparência, responsabilidade e serviço ao cidadão potiguar em cada comunicação.</p>
+          </div>
+          <div class="principle">
+            <div class="principle-num" aria-hidden="true">02</div>
+            <h3 class="principle-title">Clareza Técnica</h3>
+            <p class="principle-desc">Tipografia limpa, hierarquia clara e uso criterioso da cor garantem documentos legíveis e materiais de comunicação profissionais.</p>
+          </div>
+          <div class="principle">
+            <div class="principle-num" aria-hidden="true">03</div>
+            <h3 class="principle-title">Identidade Nordestina</h3>
+            <p class="principle-desc">As quatro listras do brasão do RN — laranja, verde, amarelo e azul — celebram o que é único no Rio Grande do Norte e ancoram toda a identidade.</p>
+          </div>
+        </div>
+      </section>
+      <div class="stripe"></div>
+    </div>
+
+  </main>
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <footer class="guide-footer">
+    <div><strong>Identidade Visual SIN/RN</strong> — Proposta Conceitual · 2025</div>
+    <a class="footer-print" href="javascript:window.print()" aria-label="Imprimir este guia">Imprimir guia</a>
+    <div>Secretaria de Estado da Infraestrutura · Rio Grande do Norte</div>
+  </footer>
+
+  <!-- ── JAVASCRIPT ─────────────────────────────────────────── -->
+  <script>
+    /* ── IntersectionObserver: active dot ─── */
+    (function () {
+      var sections = Array.from(document.querySelectorAll('section[id], div[id="principios"]'));
+      var items    = Array.from(document.querySelectorAll('.dot-nav-item'));
+      var sectionIds = ['paleta', 'tipografia', 'marca', 'aplicacoes', 'principios'];
+
+      if (!sections.length || !items.length) return;
+
+      var active = -1;
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          var idx = sectionIds.indexOf(e.target.id);
+          if (idx < 0) return;
+          if (e.isIntersecting) {
+            active = idx;
+            items.forEach(function (item, i) {
+              item.classList.toggle('active', i === idx);
+            });
+          }
+        });
+      }, { threshold: 0.35 });
+
+      sections.forEach(function (s) {
+        if (sectionIds.indexOf(s.id) >= 0) observer.observe(s);
+      });
+    }());
+
+    /* ── Click-to-copy hex ─── */
+    (function () {
+      var swatches = document.querySelectorAll('.swatch');
+      swatches.forEach(function (swatch) {
+        function copyHex(e) {
+          var hexEl = swatch.querySelector('.swatch-hex');
+          if (!hexEl) return;
+          var hex = hexEl.textContent.trim();
+          if (!navigator.clipboard) return;
+          navigator.clipboard.writeText(hex).then(function () {
+            swatch.classList.add('copied');
+            setTimeout(function () { swatch.classList.remove('copied'); }, 1400);
+          });
+        }
+        swatch.addEventListener('click', copyHex);
+        swatch.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); copyHex(e); }
+        });
+      });
+    }());
+  </script>
+
+</body>
+</html>
