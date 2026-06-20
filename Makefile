@@ -9,7 +9,7 @@
 
 # .PHONY declara que esses nomes são comandos, não arquivos no disco.
 # Sem isso, se existir um arquivo chamado "up", o make confundiria com o alvo.
-.PHONY: help up down build logs migrate migrate-apply seed shell-backend shell-db reset-db
+.PHONY: help up down build logs migrate migrate-apply seed shell-backend shell-db reset-db test lint validate
 
 # Exibe todos os comandos disponíveis (comando padrão ao rodar só "make")
 help:
@@ -26,6 +26,9 @@ help:
 	@echo "  make shell-backend  — Abre bash no container do backend"
 	@echo "  make shell-db       — Abre psql no container do PostgreSQL"
 	@echo "  make reset-db       — APAGA e recria o banco (DESTRUTIVO!)"
+	@echo "  make test           — Roda os testes do backend"
+	@echo "  make lint           — Roda ruff (backend) + eslint (frontend)"
+	@echo "  make validate       — Roda lint + typecheck + testes + build"
 	@echo ""
 
 # Sobe a stack completa em modo detached (-d = background)
@@ -95,3 +98,48 @@ reset-db:
 	@sleep 3                            # Aguarda o banco inicializar
 	docker compose up -d backend frontend
 	@echo "✅ Banco recriado. Rode 'make seed' para popular."
+
+# =============================================================================
+# Validação e Testes
+# =============================================================================
+
+# Roda os testes do backend (12 testes: auth + obras)
+# Usa o banco de dados sinobras_test (isolado do dev)
+test:
+	docker compose exec -e PYTHONPATH=/app \
+		-e DATABASE_URL="postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras_test" \
+		backend pytest tests/ -v
+
+# Roda linters no backend e frontend
+lint:
+	@echo "🔍 Ruff (backend)..."
+	docker compose exec -e PYTHONPATH=/app backend ruff check .
+	@echo "🔍 ESLint (frontend)..."
+	docker compose exec frontend npm run lint
+
+# Validação completa da stack (lint + typecheck + testes + build)
+validate:
+	@echo "============================================"
+	@echo "  SIN-Obras — Validação Completa"
+	@echo "============================================"
+	@echo ""
+	@echo "🔍 Ruff (backend)..."
+	docker compose exec -e PYTHONPATH=/app backend ruff check .
+	@echo ""
+	@echo "🧪 Testes (backend)..."
+	docker compose exec -e PYTHONPATH=/app \
+		-e DATABASE_URL="postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras_test" \
+		backend pytest tests/ -v
+	@echo ""
+	@echo "🔍 ESLint (frontend)..."
+	docker compose exec frontend npm run lint
+	@echo ""
+	@echo "📋 TypeScript (frontend)..."
+	docker compose exec frontend npx tsc --noEmit
+	@echo ""
+	@echo "🏗️  Build (frontend)..."
+	docker compose exec frontend npm run build
+	@echo ""
+	@echo "============================================"
+	@echo "  ✅ Validação completa!"
+	@echo "============================================"

@@ -1,0 +1,26 @@
+# =============================================================================
+# SIN-Obras — Docker Compose (Produção)
+# =============================================================================
+# Use como override: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Ou ajuste as variáveis no .env para apontar para produção.
+# =============================================================================
+
+services:
+  backend:
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - DEBUG=false
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-["https://sinobras.rn.gov.br"]}
+    volumes: []
+
+  frontend:
+    restart: unless-stopped
+    command: npm run preview -- --host 0.0.0.0 --port 5173
+    volumes: []
+
+  postgres:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped
