@@ -79,4 +79,4 @@ jobs:
           TEST_SYNC_URL: postgresql://sinobras:sinobras_dev_2026@localhost:5432/sinobras_test
         run: |
           cd backend
-          PYTHONPATH=. pytest tests/ -v
+          PYTHONPATH=. pytest tests/ -v --cov=app --cov-report=term-missing

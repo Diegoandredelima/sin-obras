@@ -8,7 +8,6 @@ import Contratos from "@/pages/Contratos";
 import Quadro from "@/pages/Quadro";
 import DiarioObras from "@/pages/DiarioObras";
 import Medicoes from "@/pages/Medicoes";
-import DetalheObra from "@/pages/DetalheObra";
 import RedirectObra from "@/pages/RedirectObra";
 import DetalheContrato from "@/pages/DetalheContrato";
 import Relatorio from "@/pages/Relatorio";

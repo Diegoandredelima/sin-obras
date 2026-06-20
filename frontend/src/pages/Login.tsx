@@ -1,45 +1,49 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useAuthStore } from "@/store/auth";
 import { Lock, User, Loader2 } from "lucide-react";
 import api from "@/services/api";
 import brasaoRN from "../assets/brasao_RN.png";
 
+const loginSchema = z.object({
+  identificador: z.string().min(1, "Informe sua matrícula ou CNPJ"),
+  senha: z.string().min(4, "Senha deve ter ao menos 4 caracteres"),
+});
+
+type LoginData = z.infer<typeof loginSchema>;
+
 const Login = () => {
-  const [identificador, setIdentificador] = useState("");
-  const [senha, setSenha] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [apiError, setApiError] = useState("");
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginData>({ resolver: zodResolver(loginSchema) });
 
+  const onSubmit = async (data: LoginData) => {
+    setApiError("");
     try {
       const tokenRes = await api.post("/auth/login", {
-        matricula_cnpj: identificador,
-        senha,
+        matricula_cnpj: data.identificador,
+        senha: data.senha,
       });
       const { access_token, refresh_token } = tokenRes.data;
-
       api.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
-
       const meRes = await api.get("/auth/me");
-      const usuario = meRes.data.usuario;
-
-      login(usuario, access_token, refresh_token);
+      login(meRes.data.usuario, access_token, refresh_token);
       navigate("/dashboard");
     } catch (err: unknown) {
       const detail =
         err && typeof err === "object" && "response" in err
           ? (err.response as { data?: { detail?: string } })?.data?.detail
           : undefined;
-      setError(detail || "Credenciais inválidas. Tente novamente.");
-    } finally {
-      setLoading(false);
+      setApiError(detail || "Credenciais inválidas. Tente novamente.");
     }
   };
 
@@ -62,10 +66,10 @@ const Login = () => {
             <p className="mt-2 text-sm text-slate-500">Acesse o sistema unificado de obras com sua Matrícula ou CNPJ.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            {error && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {apiError && (
               <div className="rounded-lg bg-rose-50 p-4 text-sm font-medium text-rose-600 border border-rose-100 flex items-center gap-2">
-                <span className="flex-1">{error}</span>
+                <span className="flex-1">{apiError}</span>
               </div>
             )}
 
@@ -80,13 +84,14 @@ const Login = () => {
                 <input
                   id="identificador"
                   type="text"
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                  className={`block w-full rounded-xl border ${errors.identificador ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-3 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
                   placeholder="000.000 ou 00.000.000/0000-00"
-                  value={identificador}
-                  onChange={(e) => setIdentificador(e.target.value)}
-                  required
+                  {...register("identificador")}
                 />
               </div>
+              {errors.identificador && (
+                <p className="text-xs text-rose-600 mt-1">{errors.identificador.message}</p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -105,21 +110,22 @@ const Login = () => {
                 <input
                   id="senha"
                   type="password"
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                  className={`block w-full rounded-xl border ${errors.senha ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-3 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
                   placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  required
+                  {...register("senha")}
                 />
               </div>
+              {errors.senha && (
+                <p className="text-xs text-rose-600 mt-1">{errors.senha.message}</p>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Entrando...

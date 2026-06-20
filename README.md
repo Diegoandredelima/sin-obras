@@ -61,7 +61,7 @@ make seed            # Popula banco com dados dev
 make migrate         # Gera e aplica migrations
 make reset-db        # Apaga e recria banco (DESTRUTIVO)
 
-make test            # Testes do backend (12 testes)
+make test            # Testes do backend com cobertura (pytest-cov)
 make lint            # Ruff + ESLint
 make validate        # Lint + typecheck + testes + build
 ```
@@ -72,15 +72,17 @@ make validate        # Lint + typecheck + testes + build
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend | React 19, TypeScript, Tailwind CSS v4, Vite |
+| Frontend | React 19, TypeScript (`strict: true`), Tailwind CSS v4, Vite |
+| Formulários | react-hook-form + zod (validação por schema) |
 | Estado | Zustand + TanStack Query |
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async) |
 | Banco | PostgreSQL 16 + PostGIS 3.4 |
 | Storage | MinIO (S3-compatible) |
 | Auth | JWT + bcrypt (5 níveis RBAC) |
-| Testes | pytest (12 testes) |
+| Testes | pytest + pytest-cov (12 testes, backend) |
 | Lint | Ruff (backend) + ESLint/TypeScript (frontend) |
-| CI/CD | GitHub Actions (lint + typecheck + tests + build) |
+| CI/CD | GitHub Actions (lint + typecheck + testes + coverage + build) |
+| Produção | nginx:alpine via Dockerfile.prod (multi-stage) |
 
 ---
 
@@ -90,7 +92,7 @@ make validate        # Lint + typecheck + testes + build
 Sin-Obras/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # FastAPI routers (12 módulos)
+│   │   ├── api/          # FastAPI routers (13 módulos)
 │   │   ├── core/         # Config, DB, RBAC, Security
 │   │   ├── models/       # SQLAlchemy models (28 tabelas)
 │   │   ├── schemas/      # Pydantic schemas
@@ -99,16 +101,20 @@ Sin-Obras/
 │   ├── tests/            # pytest (auth + obras)
 │   └── alembic/          # Database migrations
 ├── frontend/
-│   └── src/
-│       ├── components/   # Layout, Sidebar, ErrorBoundary, CookieBanner, NotificacoesBell
-│       ├── hooks/        # useDarkMode
-│       ├── pages/        # 15 páginas
-│       ├── services/     # Axios + interceptors (JWT + refresh)
-│       ├── store/        # Zustand (auth persist)
-│       ├── types/        # TypeScript types
-│       └── utils/        # format (currency, date, percent)
+│   ├── src/
+│   │   ├── components/   # Layout, Sidebar, ErrorBoundary, CookieBanner, NotificacoesBell
+│   │   ├── hooks/        # useDarkMode
+│   │   ├── pages/        # 15 páginas
+│   │   ├── services/     # Axios + interceptors (JWT + refresh)
+│   │   ├── store/        # Zustand (auth persist)
+│   │   ├── types/        # TypeScript types
+│   │   └── utils/        # format (currency, date, percent)
+│   ├── Dockerfile         # Dev (node:22-slim + npm run dev)
+│   ├── Dockerfile.prod    # Produção (multi-stage: build → nginx:alpine)
+│   └── nginx.conf         # SPA routing, cache de assets, gzip
 ├── mobile/               # Expo + React Native
-├── docker-compose.yml
+├── docker-compose.yml    # Desenvolvimento
+├── docker-compose.prod.yml # Override de produção
 ├── Makefile
 └── AGENTS.md             # Guia para desenvolvedores
 ```
@@ -120,14 +126,23 @@ Sin-Obras/
 | Nível | Perfil | Acesso |
 |---|---|---|
 | 4 | SECRETARIO | Dashboard executivo, todos os recursos |
-| 3 | COORDENADOR | Monitoramento, alertas, equipes |
+| 3 | COORDENADOR | Monitoramento, alertas, equipes, gestão de usuários |
 | 2 | ENGENHEIRO | Gestão de obras, aprovação de medições |
 | 1 | FISCAL | Vistorias, check-in, checklist |
 | 0 | EMPRESA | Portal restrito à sua obra |
 
+Todos os endpoints da API são protegidos com `require_minimum_role`. Criação de usuários (`POST /auth/registrar`) requer COORDENADOR+.
+
 ---
 
-## Status
+## Deploy em Produção
 
-Veja [PROGRESSO.md](./PROGRESSO.md) para o status detalhado.
+```bash
+# Build e sobe com nginx servindo o frontend
+VITE_API_URL=https://api.sinobras.rn.gov.br/api \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+O frontend é compilado em build-time com `VITE_API_URL` embutido no bundle, depois servido por nginx:alpine (sem Node.js na imagem final).
+
 Para onboarding de devs, veja [AGENTS.md](./AGENTS.md).

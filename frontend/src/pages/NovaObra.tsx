@@ -1,70 +1,99 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, MapPin, Calendar, DollarSign, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import type { UseFormRegisterReturn } from "react-hook-form";
+import { Building2, MapPin, DollarSign, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import api from "@/services/api";
 
 const steps = ["Dados Gerais", "Localização", "Contrato"];
+
+const schema = z.object({
+  titulo: z.string().min(3, "Título deve ter ao menos 3 caracteres"),
+  descricao: z.string().optional(),
+  municipio: z.string().min(2, "Informe o município"),
+  endereco: z.string().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
+  raio_geofencing_metros: z.string(),
+  valor_contrato: z.string().min(1, "Informe o valor do contrato"),
+  data_inicio: z.string().optional(),
+  data_fim_prevista: z.string().optional(),
+});
+
+type NovaObraData = z.infer<typeof schema>;
+
+const STEP_FIELDS: (keyof NovaObraData)[][] = [
+  ["titulo", "municipio"],
+  [],
+  ["valor_contrato"],
+];
 
 interface ObraFormFieldProps {
   label: string;
   id: string;
   type?: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   required?: boolean;
+  error?: string;
+  registration: UseFormRegisterReturn;
 }
 
-const ObraFormField = ({ label, id, type = "text", value, onChange, placeholder, required }: ObraFormFieldProps) => (
+const ObraFormField = ({ label, id, type = "text", placeholder, required, error, registration }: ObraFormFieldProps) => (
   <div className="space-y-1.5">
-    <label htmlFor={id} className="block text-sm font-medium text-slate-700">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
+    <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      {label}{required && <span className="text-rose-500 ml-0.5">*</span>}
+    </label>
     <input
-      id={id} type={type} value={value} onChange={onChange} placeholder={placeholder} required={required}
-      className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+      id={id}
+      type={type}
+      placeholder={placeholder}
+      {...registration}
+      className={`block w-full rounded-xl border ${error ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
     />
+    {error && <p className="text-xs text-rose-600 mt-0.5">{error}</p>}
   </div>
 );
-
-interface NovaObraForm {
-  titulo: string;
-  descricao: string;
-  municipio: string;
-  endereco: string;
-  latitude: string;
-  longitude: string;
-  raio_geofencing_metros: string;
-  valor_contrato: string;
-  data_inicio: string;
-  data_fim_prevista: string;
-  contrato_id: string;
-}
 
 const NovaObra = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [form, setForm] = useState<NovaObraForm>({
-    titulo: "", descricao: "", municipio: "", endereco: "",
-    latitude: "", longitude: "", raio_geofencing_metros: "200",
-    valor_contrato: "", data_inicio: "", data_fim_prevista: "",
-    contrato_id: "",
+  const [apiError, setApiError] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm<NovaObraData>({
+    resolver: zodResolver(schema),
+    defaultValues: { raio_geofencing_metros: "200" },
   });
 
-  const update = (field: keyof NovaObraForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm({ ...form, [field]: e.target.value });
+  const handleNext = async () => {
+    const fields = STEP_FIELDS[step];
+    if (fields.length > 0) {
+      const valid = await trigger(fields);
+      if (!valid) return;
+    }
+    setStep(step + 1);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (step < steps.length - 1) { setStep(step + 1); return; }
-    setLoading(true); setError("");
+  const onSubmit = async (data: NovaObraData) => {
+    setApiError("");
     try {
       await api.post("/obras", {
-        ...form,
-        latitude:                form.latitude  ? Number(form.latitude)  : null,
-        longitude:               form.longitude ? Number(form.longitude) : null,
-        raio_geofencing_metros:  Number(form.raio_geofencing_metros),
-        valor_contrato:          Number(form.valor_contrato),
+        titulo: data.titulo,
+        descricao: data.descricao ?? "",
+        municipio: data.municipio,
+        endereco: data.endereco ?? "",
+        latitude: data.latitude ? Number(data.latitude) : null,
+        longitude: data.longitude ? Number(data.longitude) : null,
+        raio_geofencing_metros: Number(data.raio_geofencing_metros),
+        valor_contrato: Number(data.valor_contrato),
+        data_inicio: data.data_inicio ?? null,
+        data_fim_prevista: data.data_fim_prevista ?? null,
       });
       navigate("/obras");
     } catch (err: unknown) {
@@ -72,14 +101,15 @@ const NovaObra = () => {
         err && typeof err === "object" && "response" in err
           ? (err.response as { data?: { detail?: string } })?.data?.detail
           : undefined;
-      setError(detail || "Erro ao cadastrar a obra.");
-      setLoading(false);
+      setApiError(detail || "Erro ao cadastrar a obra.");
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <button onClick={() => step > 0 ? setStep(step - 1) : navigate("/obras")}
+      <button
+        type="button"
+        onClick={() => step > 0 ? setStep(step - 1) : navigate("/obras")}
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
@@ -110,34 +140,72 @@ const NovaObra = () => {
           <h3 className="text-base font-semibold text-slate-900">{steps[step]}</h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
-            <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm font-medium text-rose-600">{error}</div>
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
+          {apiError && (
+            <div className="rounded-xl bg-rose-50 border border-rose-100 px-4 py-3 text-sm font-medium text-rose-600">{apiError}</div>
           )}
 
           {step === 0 && (
             <>
-              <ObraFormField label="Título da Obra" id="titulo" value={form.titulo} onChange={update("titulo")} placeholder="Ex: Construção do CRAS Cidade Nova" required />
+              <ObraFormField
+                label="Título da Obra"
+                id="titulo"
+                placeholder="Ex: Construção do CRAS Cidade Nova"
+                required
+                error={errors.titulo?.message}
+                registration={register("titulo")}
+              />
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">Descrição</label>
-                <textarea rows={3} value={form.descricao} onChange={update("descricao")} placeholder="Descreva o escopo da obra..."
+                <textarea
+                  rows={3}
+                  placeholder="Descreva o escopo da obra..."
+                  {...register("descricao")}
                   className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
                 />
               </div>
-              <ObraFormField label="Município" id="municipio" value={form.municipio} onChange={update("municipio")} placeholder="Ex: Natal" required />
+              <ObraFormField
+                label="Município"
+                id="municipio"
+                placeholder="Ex: Natal"
+                required
+                error={errors.municipio?.message}
+                registration={register("municipio")}
+              />
             </>
           )}
 
           {step === 1 && (
             <>
-              <ObraFormField label="Endereço Completo" id="endereco" value={form.endereco} onChange={update("endereco")} placeholder="Rua, número, bairro" />
+              <ObraFormField
+                label="Endereço Completo"
+                id="endereco"
+                placeholder="Rua, número, bairro"
+                registration={register("endereco")}
+              />
               <div className="grid grid-cols-2 gap-4">
-                <ObraFormField label="Latitude" id="latitude" type="number" value={form.latitude} onChange={update("latitude")} placeholder="-5.7945" />
-                <ObraFormField label="Longitude" id="longitude" type="number" value={form.longitude} onChange={update("longitude")} placeholder="-35.2110" />
+                <ObraFormField
+                  label="Latitude"
+                  id="latitude"
+                  type="number"
+                  placeholder="-5.7945"
+                  registration={register("latitude")}
+                />
+                <ObraFormField
+                  label="Longitude"
+                  id="longitude"
+                  type="number"
+                  placeholder="-35.2110"
+                  registration={register("longitude")}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-700">Raio de Geofencing (metros)</label>
-                <input type="number" min="50" max="2000" value={form.raio_geofencing_metros} onChange={update("raio_geofencing_metros")}
+                <input
+                  type="number"
+                  min="50"
+                  max="2000"
+                  {...register("raio_geofencing_metros")}
                   className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
                 />
                 <p className="text-xs text-slate-400">Raio máximo para check-in dos fiscais (padrão: 200m)</p>
@@ -148,32 +216,62 @@ const NovaObra = () => {
           {step === 2 && (
             <>
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Valor do Contrato (R$) <span className="text-rose-500">*</span></label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Valor do Contrato (R$) <span className="text-rose-500">*</span>
+                </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-3 flex items-center text-sm text-slate-400">R$</span>
-                  <input type="number" step="0.01" required value={form.valor_contrato} onChange={update("valor_contrato")} placeholder="0,00"
-                    className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    {...register("valor_contrato")}
+                    className={`block w-full rounded-xl border ${errors.valor_contrato ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 pl-9 pr-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
                   />
                 </div>
+                {errors.valor_contrato && (
+                  <p className="text-xs text-rose-600 mt-0.5">{errors.valor_contrato.message}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <ObraFormField label="Data de Início" id="data_inicio" type="date" value={form.data_inicio} onChange={update("data_inicio")} />
-                <ObraFormField label="Data de Conclusão Prevista" id="data_fim_prevista" type="date" value={form.data_fim_prevista} onChange={update("data_fim_prevista")} />
+                <ObraFormField
+                  label="Data de Início"
+                  id="data_inicio"
+                  type="date"
+                  registration={register("data_inicio")}
+                />
+                <ObraFormField
+                  label="Data de Conclusão Prevista"
+                  id="data_fim_prevista"
+                  type="date"
+                  registration={register("data_fim_prevista")}
+                />
               </div>
             </>
           )}
 
           <div className="flex justify-end pt-2">
-            <button
-              type="submit" disabled={loading}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 disabled:opacity-70 transition-all"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-                step < steps.length - 1 ? "Próxima Etapa →" : (
+            {step < steps.length - 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition-all"
+              >
+                Próxima Etapa →
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 disabled:opacity-70 transition-all"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
                   <><CheckCircle2 className="h-4 w-4" /> Cadastrar Obra</>
-                )
-              )}
-            </button>
+                )}
+              </button>
+            )}
           </div>
         </form>
       </div>

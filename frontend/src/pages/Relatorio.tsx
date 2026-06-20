@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChartBar, Building2, Briefcase, DollarSign, TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { Building2, Briefcase, DollarSign, TrendingUp, Loader2, AlertCircle } from "lucide-react";
 import api from "@/services/api";
 import { fmtCurrency } from "@/utils/format";
 

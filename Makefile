@@ -103,12 +103,12 @@ reset-db:
 # Validação e Testes
 # =============================================================================
 
-# Roda os testes do backend (12 testes: auth + obras)
+# Roda os testes do backend com cobertura de código
 # Usa o banco de dados sinobras_test (isolado do dev)
 test:
 	docker compose exec -e PYTHONPATH=/app \
 		-e DATABASE_URL="postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras_test" \
-		backend pytest tests/ -v
+		backend pytest tests/ -v --cov=app --cov-report=term-missing
 
 # Roda linters no backend e frontend
 lint:

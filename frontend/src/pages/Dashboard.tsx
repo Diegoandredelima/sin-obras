@@ -1,6 +1,6 @@
 import {
-  Building2, Clock, CheckCircle2, AlertTriangle,
-  TrendingUp, Briefcase, KanbanSquare, ArrowRight, Activity,
+  Building2, CheckCircle2, AlertTriangle,
+  Briefcase, KanbanSquare, ArrowRight, Activity,
   type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";

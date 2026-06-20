@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Briefcase, Building2, User, MapPin,
@@ -212,7 +212,7 @@ const DetalheContrato = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI label="Valor Inicial" value={fmtCurrency(c.valor_global)} color="slate" />
-        <KPI label="Valor Final" value={fmtCurrency(c.valor_final ?? c.valor_global)} color={variacao && variacao > 0 ? "amber" : "slate"} note={variacaoPct != null && variacao !== 0 ? `${variacao > 0 ? "+" : ""}${variacaoPct.toFixed(1)}% vs. inicial` : null} />
+        <KPI label="Valor Final" value={fmtCurrency(c.valor_final ?? c.valor_global)} color={variacao && variacao > 0 ? "amber" : "slate"} note={variacaoPct != null && variacao != null && variacao !== 0 ? `${variacao > 0 ? "+" : ""}${variacaoPct.toFixed(1)}% vs. inicial` : null} />
         <KPI label="Valor Medido" value={fmtCurrency(obra?.valor_medido, "Não informado")} color="emerald" />
         <KPI label="Saldo a Medir" value={fmtCurrency(obra?.saldo_a_medir, "Não informado")} color="sky" />
       </div>

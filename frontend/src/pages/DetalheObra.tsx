@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, MapPin, Building2, Calendar, TrendingUp, User,
+  ArrowLeft, MapPin, Building2, Calendar, TrendingUp,
   Briefcase, FileText, Clock, ChevronDown, ChevronUp,
   AlertTriangle, CheckCircle2, Activity, Pause, BookOpen, ChartBar, ExternalLink,
   type LucideIcon,

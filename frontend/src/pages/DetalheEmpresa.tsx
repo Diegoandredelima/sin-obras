@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Briefcase, Hash, Calendar, ArrowLeft, Loader2, AlertCircle, HardHat } from "lucide-react";
+import { Building2, Briefcase, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import api from "@/services/api";
 import { fmtCurrency, fmtDate } from "@/utils/format";
 

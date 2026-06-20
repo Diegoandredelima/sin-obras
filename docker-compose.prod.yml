@@ -15,8 +15,18 @@ services:
     volumes: []
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # VITE_API_URL é baked-in no bundle em build-time pelo Vite.
+        # Defina no .env ou na variável de ambiente antes de rodar o build.
+        - VITE_API_URL=${VITE_API_URL:-https://api.sinobras.rn.gov.br/api}
+    # nginx serve os arquivos estáticos buildados (sem Node.js em runtime)
+    command: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "80:80"
     restart: unless-stopped
-    command: npm run preview -- --host 0.0.0.0 --port 5173
     volumes: []
 
   postgres:

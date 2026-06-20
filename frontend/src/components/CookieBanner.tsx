@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Cookie, Shield, X } from "lucide-react";
+import { Cookie, Shield } from "lucide-react";
 
 const CONSENT_KEY = "sinobras-cookie-consent";
 

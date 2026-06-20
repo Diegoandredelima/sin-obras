@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import settings
 from app.core.database import get_db
+from app.core.rbac import Role, require_minimum_role
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -179,11 +180,9 @@ async def logout(
 async def registrar_usuario(
     payload: UsuarioCreateRequest,
     db: AsyncSession = Depends(get_db),
+    _: object = Depends(require_minimum_role(Role.COORDENADOR)),
 ):
-    """
-    Cria um novo usuário no sistema.
-    Em produção, este endpoint deve ser protegido com role COORDENADOR+.
-    """
+    """Cria um novo usuário no sistema. Requer perfil COORDENADOR ou superior."""
     # Verificar duplicidade
     existing = await db.execute(
         select(Usuario).where(
