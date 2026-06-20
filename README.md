@@ -92,7 +92,7 @@ make validate        # Lint + typecheck + testes + build
 Sin-Obras/
 ├── backend/
 │   ├── app/
-│   │   ├── api/          # FastAPI routers (13 módulos)
+│   │   ├── api/          # FastAPI routers (12 módulos)
 │   │   ├── core/         # Config, DB, RBAC, Security
 │   │   ├── models/       # SQLAlchemy models (28 tabelas)
 │   │   ├── schemas/      # Pydantic schemas

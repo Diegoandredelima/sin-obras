@@ -3,7 +3,6 @@
 > **Última atualização:** 20/06/2026
 > **Projeto:** Sistema Integrado de Obras — Secretaria de Infraestrutura do RN (SIN-RN)
 > **Repositório:** https://github.com/Diegoandredelima/sin-obras
-> **Migração:** TypeScript + melhorias full-stack (4 fases) — ver `RELATORIO-MIGRACAO.md`
 
 ---
 
@@ -27,30 +26,32 @@
 |---|---|---|
 | Estrutura de diretórios do monorepo | `backend/`, `frontend/`, `mobile/` | ✅ |
 | Docker Compose (postgres+postgis, backend, frontend, minio) | `docker-compose.yml` | ✅ |
-| Docker Compose produção (sem hot-reload, sem volumes) | `docker-compose.prod.yml` | ✅ |
+| Docker Compose produção (nginx, sem hot-reload, sem volumes) | `docker-compose.prod.yml` | ✅ |
+| Dockerfile de produção do frontend (multi-stage → nginx:alpine) | `frontend/Dockerfile.prod` | ✅ |
+| Config nginx (SPA routing, cache assets, gzip) | `frontend/nginx.conf` | ✅ |
 | Template de variáveis de ambiente | `.env.example` | ✅ |
 | `.env` de desenvolvimento | `.env` | ✅ |
 | `.gitignore` | `.gitignore` | ✅ |
 | GitHub Actions / PR Template | `.github/` | ✅ |
-| CI pipeline (lint + typecheck + testes + build) | `.github/workflows/ci.yml` | ✅ |
-| Makefile com comandos (incl. test, lint, validate) | `Makefile` | ✅ |
+| CI pipeline (lint + typecheck + testes + coverage + build) | `.github/workflows/ci.yml` | ✅ |
+| Makefile com comandos (incl. test com coverage, lint, validate) | `Makefile` | ✅ |
 | Pre-commit hooks (ruff + eslint) | `.pre-commit-config.yaml` | ✅ |
 | README com instruções completas | `README.md` | ✅ |
-| AGENTS.md (guia para agentes de IA) | `AGENTS.md` | ✅ |
+| AGENTS.md (guia para desenvolvedores e agentes de IA) | `AGENTS.md` | ✅ |
 
 ### 1.2 Backend — FastAPI ✅
 
 | Artefato | Arquivo | Status |
 |---|---|---|
 | Projeto FastAPI com lifespan | `backend/app/main.py` | ✅ |
-| Dependências Python (openpyxl, geoalchemy2, slowapi, pytest, ruff) | `backend/requirements.txt` | ✅ |
+| Dependências Python (openpyxl, geoalchemy2, slowapi, pytest, pytest-cov, ruff) | `backend/requirements.txt` | ✅ |
 | Dockerfile do backend | `backend/Dockerfile` | ✅ |
 | Configuração central (Pydantic Settings) | `backend/app/core/__init__.py` | ✅ |
 | Conexão async com PostgreSQL (SQLAlchemy + asyncpg) | `backend/app/core/database.py` | ✅ |
 | Alembic configurado com filtro de tabelas PostGIS | `backend/alembic/env.py` | ✅ |
 | Script de Seed de desenvolvimento (idempotente) | `backend/app/seed.py` | ✅ |
 | Script de importação da planilha oficial (idempotente) | `backend/app/import_acompanhamento.py` | ✅ |
-| Ruff config (lint Python) | `backend/pyproject.toml` | ✅ |
+| Ruff config (lint Python — 0 erros) | `backend/pyproject.toml` | ✅ |
 | Rate limiting (slowapi — 20 req/min no login) | `backend/app/main.py`, `backend/app/api/auth.py` | ✅ |
 | Health check real (DB + MinIO) | `backend/app/main.py` | ✅ |
 | Paginação genérica `PaginatedResponse[T]` | `backend/app/schemas/common.py` | ✅ |
@@ -92,10 +93,12 @@
 |---|---|
 | JWT + bcrypt (pinado em 3.2.2 por compatibilidade com passlib) | ✅ |
 | RBAC com 5 roles: EMPRESA(0) < FISCAL(1) < ENGENHEIRO(2) < COORDENADOR(3) < SECRETARIO(4) | ✅ |
+| Todos os endpoints protegidos com `require_minimum_role` | ✅ |
+| `POST /auth/registrar` protegido (exige COORDENADOR+) | ✅ |
 | Refresh Token — renovação automática no frontend | ✅ |
 | Rate limiting — 20 req/min no `/auth/login` | ✅ |
 | Serviço de Auditoria imutável (RF12) | ✅ |
-| Router de auth: login, refresh, me, logout, registrar | ✅ |
+| Router de auth: login, refresh, me, logout, registrar, update me | ✅ |
 
 **Credenciais de desenvolvimento (seed executado):**
 
@@ -112,6 +115,7 @@
 | Artefato | Status |
 |---|---|
 | pytest configurado com conftest (sync engine + async API) | ✅ |
+| pytest-cov instalado — cobertura de código no `make test` e CI | ✅ |
 | Banco de testes isolado (`sinobras_test`) | ✅ |
 | Limpeza de tabelas entre testes (autouse clean_tables) | ✅ |
 | 12 testes: auth (7) + obras (7) — **100% passando** | ✅ |
@@ -170,15 +174,15 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | ART/RRT | Upload e validação de vencimento |
 | Tarefas | Kanban por obra |
 
-### 2.2 Frontend — Páginas ✅ (TypeScript)
+### 2.2 Frontend — Páginas ✅ (TypeScript `strict: true`)
 
 | Página | Rota | Arquivo | Status |
 |---|---|---|---|
-| Login | `/login` | `pages/Login.tsx` | ✅ |
+| Login | `/login` | `pages/Login.tsx` | ✅ react-hook-form + zod |
 | Dashboard | `/dashboard` | `pages/Dashboard.tsx` | ✅ useQuery — KPIs reais, distribuição, ações |
 | Lista de Obras | `/obras` | `pages/Obras.tsx` | ✅ useQuery + paginação + filtros |
 | Detalhe da Obra | `/obras/:id` | `pages/DetalheObra.tsx` | ✅ Abas Detalhes/Diário/Medições + redirect→contrato |
-| Nova Obra | `/obras/nova` | `pages/NovaObra.tsx` | ✅ Formulário multi-step |
+| Nova Obra | `/obras/nova` | `pages/NovaObra.tsx` | ✅ Multi-step + react-hook-form + zod por etapa |
 | Lista de Contratos | `/contratos` | `pages/Contratos.tsx` | ✅ useQuery + paginação + empresa link |
 | Detalhe do Contrato | `/contratos/:id` | `pages/DetalheContrato.tsx` | ✅ Unificado com dados da obra + abas Diário/Medições |
 | Quadro de Tarefas | `/quadro` | `pages/Quadro.tsx` | ✅ Kanban tipado |
@@ -191,8 +195,10 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | 404 | `*` | `pages/NotFound.tsx` | ✅ |
 
 **Melhorias gerais do frontend:**
-- ✅ TypeScript em todos os arquivos (strict: false, path aliases `@/`)
+- ✅ TypeScript `strict: true` em todos os arquivos — `noUnusedLocals`, `noUnusedParameters` ativos
+- ✅ `tsconfig.node.json` com `composite: true` (corrige project reference com `tsc --noEmit`)
 - ✅ TanStack Query — cache, retry, deduplicação de requests
+- ✅ **Validação de formulários** — react-hook-form + zod em Login e NovaObra; erros inline por campo; validação por etapa no multi-step
 - ✅ Error Boundary — proteção contra crashes de render
 - ✅ Refresh Token — renovação automática com fila de requests
 - ✅ RBAC no frontend — menu lateral filtrado por `user.tipo`
@@ -208,7 +214,6 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 
 - ⏳ `/obras/:id/cronograma` — Árvore Meta → Submeta → Evento (edição inline)
 - ⏳ Calculadora de Engenharia (modal lateral)
-- ⏳ Validação de formulários com react-hook-form + zod (dependências já instaladas)
 
 ---
 
@@ -237,7 +242,7 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 
 ## 🔧 BLOCO 6 — Funcionalidades Transversais e UX
 
-**Status: `✅ Implementado em 20/06/2026`**
+**Status: `✅ Implementado`**
 
 ### 6.1 Melhorias de Interface ✅
 - ✅ Rodapé com "Governo do Estado do RN | infra-RN | Política de Privacidade"
@@ -314,18 +319,25 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 
 ---
 
-## 🛡️ Segurança e Infraestrutura (Melhorias adicionais)
+## 🛡️ Segurança e Infraestrutura
 
 | Artefato | Status |
 |---|---|
 | Rate limiting no `/auth/login` (20 req/min) | ✅ slowapi |
 | Health check real (DB `SELECT 1` + MinIO `list_buckets`) | ✅ |
 | Refresh token automático no frontend | ✅ interceptor Axios |
-| CI pipeline: lint + typecheck + testes + build | ✅ GitHub Actions |
+| Todos os endpoints protegidos com RBAC | ✅ `require_minimum_role` |
+| `POST /auth/registrar` protegido (COORDENADOR+) | ✅ |
+| CI pipeline: lint + typecheck + testes + coverage + build | ✅ GitHub Actions |
 | Lint Python (Ruff — 0 erros) | ✅ `pyproject.toml` |
 | Pre-commit hooks (ruff + eslint) | ✅ `.pre-commit-config.yaml` |
-| `docker-compose.prod.yml` (sem hot-reload, sem volumes) | ✅ |
+| Frontend produção: nginx:alpine (multi-stage Dockerfile) | ✅ `frontend/Dockerfile.prod` |
+| `docker-compose.prod.yml` (nginx, sem hot-reload, sem volumes) | ✅ |
 | `make validate` (ruff + pytest + eslint + tsc + build) | ✅ |
+| Token blacklist (revogação de tokens) | ⏳ Redis ou set em memória |
+| Refresh token rotation (novo refresh a cada uso) | ⏳ |
+| Usuário não-root nos Dockerfiles | ⏳ |
+| Monitoramento (Prometheus + Grafana) | ⏳ |
 
 ---
 
@@ -341,6 +353,9 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | `openpyxl` ausente no container | Não estava em `requirements.txt` | Adicionado `openpyxl==3.1.5` |
 | `@tanstack/react-query` não encontrado (Windows) | `node_modules` local desatualizado | Rodar `npm install` no diretório `frontend/` |
 | `obras.map is not a function` no Dashboard | `/obras` retorna `PaginatedResponse` (não array) | Corrigido `Dashboard.tsx` e `DetalheContrato.tsx` para acessar `data.items` |
+| `tsc --noEmit` falhava com TS6306/TS6310 | `tsconfig.node.json` com `noEmit:true` sendo referenciado como project reference | Substituído `noEmit:true` por `composite:true` |
+| `variacao` possivelmente null em `DetalheContrato` | `variacao !== 0` não narrowava `number \| null` | Adicionado `variacao != null &&` antes da comparação |
+| `POST /auth/registrar` sem autenticação | Endpoint criado sem dependency de role | Adicionado `require_minimum_role(Role.COORDENADOR)` |
 
 ---
 
@@ -351,16 +366,15 @@ Sin-Obras/
 ├── .env / .env.example               ✅
 ├── .gitignore                        ✅
 ├── .pre-commit-config.yaml           ✅ (ruff + eslint)
-├── docker-compose.yml                ✅
-├── docker-compose.prod.yml           ✅
-├── Makefile                          ✅ (test, lint, validate)
+├── docker-compose.yml                ✅ (dev: hot-reload)
+├── docker-compose.prod.yml           ✅ (prod: nginx + uvicorn sem reload)
+├── Makefile                          ✅ (test com coverage, lint, validate)
 ├── README.md                         ✅
 ├── AGENTS.md                         ✅
 ├── PROGRESSO.md                      ✅ (este arquivo)
-├── RELATORIO-MIGRACAO.md             ✅ (relatório 4 fases)
 │
 ├── .github/
-│   ├── workflows/ci.yml              ✅ (2 jobs: frontend + backend)
+│   ├── workflows/ci.yml              ✅ (2 jobs: frontend + backend com coverage)
 │   └── PULL_REQUEST_TEMPLATE.md      ✅
 │
 ├── Docs/
@@ -368,40 +382,40 @@ Sin-Obras/
 │
 ├── backend/
 │   ├── Dockerfile                    ✅
-│   ├── requirements.txt              ✅ (inclui slowapi, pytest, ruff)
+│   ├── requirements.txt              ✅ (inclui slowapi, pytest, pytest-cov, ruff)
 │   ├── pyproject.toml                ✅ (ruff config)
 │   ├── alembic.ini                   ✅
 │   ├── alembic/
 │   │   ├── env.py                    ✅ (filtro PostGIS)
 │   │   └── versions/                 ✅ (3 migrations)
 │   ├── app/
-│   │   ├── main.py                   ✅ (10 routers + health check + rate limiter)
+│   │   ├── main.py                   ✅ (12 routers + health check + rate limiter)
 │   │   ├── seed.py                   ✅ (5 usuários + 1 obra demo)
 │   │   ├── import_acompanhamento.py  ✅ (595 contratos)
 │   │   ├── core/                     ✅ (settings, database, rbac, security)
 │   │   ├── models/                   ✅ (8 arquivos, 28 tabelas)
 │   │   ├── schemas/
 │   │   │   ├── common.py             ✅ (PaginatedResponse)
-│   │   │   ├── auth.py                ✅
-│   │   │   ├── contrato.py            ✅ (EmpresaResumo, OrgaoResumo)
-│   │   │   ├── empresa.py             ✅ (EmpresaDetalhe, ContratoResumo)
-│   │   │   ├── obra.py                ✅
-│   │   │   ├── portal.py              ✅ (Diario, Medicao, Notificacao)
-│   │   │   ├── relatorio.py           ✅ (RelatorioResumo)
-│   │   │   └── tarefa.py              ✅
-│   │   ├── api/                      ✅ (12 routers)
-│   │   │   ├── auth.py                ✅ (login, refresh, me, logout, registrar, update me)
-│   │   │   ├── obras.py               ✅
-│   │   │   ├── contratos.py           ✅
-│   │   │   ├── empresas.py            ✅ (detalhe + contratos vinculados)
-│   │   │   ├── relatorios.py          ✅ (resumo agregado)
-│   │   │   ├── portal.py              ✅ (diário, medições)
-│   │   │   ├── notificacoes.py        ✅
-│   │   │   ├── orgaos.py              ✅
-│   │   │   ├── cronograma.py          ✅
-│   │   │   ├── tarefas.py             ✅
-│   │   │   ├── art_rrt.py             ✅
-│   │   │   └── vistorias.py           ✅
+│   │   │   ├── auth.py               ✅
+│   │   │   ├── contrato.py           ✅ (EmpresaResumo, OrgaoResumo)
+│   │   │   ├── empresa.py            ✅ (EmpresaDetalhe, ContratoResumo)
+│   │   │   ├── obra.py               ✅
+│   │   │   ├── portal.py             ✅ (Diario, Medicao, Notificacao)
+│   │   │   ├── relatorio.py          ✅ (RelatorioResumo)
+│   │   │   └── tarefa.py             ✅
+│   │   ├── api/                      ✅ (12 routers — todos com RBAC)
+│   │   │   ├── auth.py               ✅ (login, refresh, me, logout, registrar[COORDENADOR+], update me)
+│   │   │   ├── obras.py              ✅
+│   │   │   ├── contratos.py          ✅
+│   │   │   ├── empresas.py           ✅ (detalhe + contratos vinculados)
+│   │   │   ├── relatorios.py         ✅ (resumo agregado)
+│   │   │   ├── portal.py             ✅ (diário, medições)
+│   │   │   ├── notificacoes.py       ✅
+│   │   │   ├── orgaos.py             ✅
+│   │   │   ├── cronograma.py         ✅
+│   │   │   ├── tarefas.py            ✅
+│   │   │   ├── art_rrt.py            ✅
+│   │   │   └── vistorias.py          ✅
 │   │   └── services/                 ✅ (10 serviços)
 │   └── tests/
 │       ├── __init__.py               ✅
@@ -410,16 +424,18 @@ Sin-Obras/
 │       └── test_obras.py             ✅ (7 testes)
 │
 ├── frontend/
-│   ├── Dockerfile                    ✅
-│   ├── package.json                  ✅ (React 19, TypeScript, TanStack Query)
-│   ├── tsconfig.json                 ✅
-│   ├── tsconfig.node.json            ✅
+│   ├── Dockerfile                    ✅ (dev: node:22-slim + npm run dev)
+│   ├── Dockerfile.prod               ✅ (prod: multi-stage → nginx:alpine)
+│   ├── nginx.conf                    ✅ (SPA routing, cache assets, gzip)
+│   ├── package.json                  ✅ (React 19, TypeScript, TanStack Query, react-hook-form, zod)
+│   ├── tsconfig.json                 ✅ (strict:true, noUnusedLocals, noUnusedParameters)
+│   ├── tsconfig.node.json            ✅ (composite:true — corrige project reference)
 │   ├── vite-env.d.ts                 ✅
 │   ├── vite.config.ts                ✅
 │   ├── eslint.config.js              ✅ (TypeScript)
 │   └── src/
 │       ├── main.tsx                  ✅ (QueryClientProvider + ErrorBoundary)
-│       ├── App.tsx                   ✅ (React Router v7 — 17 rotas)
+│       ├── App.tsx                   ✅ (React Router v7 — 15 rotas)
 │       ├── types/index.ts            ✅ (tipos centralizados)
 │       ├── utils/format.ts           ✅ (fmtCurrency, fmtDate, fmtPercent)
 │       ├── components/
@@ -433,11 +449,11 @@ Sin-Obras/
 │       ├── hooks/
 │       │   └── useDarkMode.ts        ✅
 │       ├── pages/
-│       │   ├── Login.tsx             ✅
+│       │   ├── Login.tsx             ✅ (react-hook-form + zod)
 │       │   ├── Dashboard.tsx         ✅ (useQuery stats + contratos)
 │       │   ├── Obras.tsx             ✅ (useQuery + paginação)
 │       │   ├── DetalheObra.tsx       ✅ (abas Detalhes/Diário/Medições)
-│       │   ├── NovaObra.tsx          ✅ (formulário multi-step)
+│       │   ├── NovaObra.tsx          ✅ (multi-step + react-hook-form + zod por etapa)
 │       │   ├── Contratos.tsx         ✅ (useQuery + paginação + empresa link)
 │       │   ├── DetalheContrato.tsx   ✅ (unificado obra + abas + ?tab=)
 │       │   ├── Quadro.tsx            ✅ (Kanban)
