@@ -4,9 +4,11 @@ SIN-Obras — Schemas de Tarefa (Kanban)
 
 from datetime import date, datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
-from app.models.tarefa import StatusTarefa, PrioridadeTarefa
+from app.models.tarefa import PrioridadeTarefa, StatusTarefa
+
 
 class TarefaBase(BaseModel):
     titulo: str = Field(..., max_length=200)

@@ -4,11 +4,12 @@ SIN-Obras — Schemas de Obra, Meta, Submeta e Evento
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
-from app.models.obra import StatusObra, SaudeObra, SituacaoObra
+from app.models.obra import SaudeObra, SituacaoObra, StatusObra
+
 
 # ---------------------------------------------------------------------------
 # Evento
@@ -43,7 +44,7 @@ class SubmetaCreate(SubmetaBase):
 class SubmetaResponse(SubmetaBase):
     id: UUID
     meta_id: UUID
-    eventos: List[EventoResponse] = []
+    eventos: list[EventoResponse] = []
 
     model_config = {"from_attributes": True}
 
@@ -61,7 +62,7 @@ class MetaCreate(MetaBase):
 class MetaResponse(MetaBase):
     id: UUID
     obra_id: UUID
-    submetas: List[SubmetaResponse] = []
+    submetas: list[SubmetaResponse] = []
 
     model_config = {"from_attributes": True}
 
@@ -136,4 +137,4 @@ class ObraDetalheResponse(ObraResponse):
     historico: str | None = None
     importante: str | None = None
     observacoes: str | None = None
-    metas: List[MetaResponse] = []
+    metas: list[MetaResponse] = []

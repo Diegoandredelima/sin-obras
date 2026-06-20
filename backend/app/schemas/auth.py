@@ -5,7 +5,7 @@ SIN-Obras — Schemas de Autenticação (Pydantic)
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 from app.core.rbac import Role
 
@@ -68,3 +68,11 @@ class UsuarioResponse(BaseModel):
 class MeResponse(BaseModel):
     """Dados do usuário logado."""
     usuario: UsuarioResponse
+
+
+class UsuarioUpdateRequest(BaseModel):
+    """Campos que o próprio usuário pode alterar no perfil."""
+    nome: str | None = Field(None, min_length=2, max_length=255)
+    email: str | None = Field(None, max_length=255)
+    telefone: str | None = Field(None, max_length=20)
+    cargo: str | None = Field(None, max_length=100)

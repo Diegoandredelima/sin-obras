@@ -8,25 +8,41 @@ Uso (dentro do container ou com venv ativo):
 """
 
 import asyncio
-import sys
 from datetime import date
 
-from sqlalchemy import text, select
+from sqlalchemy import select, text
 
-from app.core.database import AsyncSessionLocal, engine, Base
-from app.core.security import get_password_hash
+from app.core.database import AsyncSessionLocal, engine
 from app.core.rbac import Role
+from app.core.security import get_password_hash
 from app.models import (  # noqa — importa todos para criar as tabelas
-    Usuario, Obra, Contrato, Meta, Submeta, Evento,
-    AuditLog, ArtRrt, Tarefa, DiarioObra, Medicao, Notificacao,
-    Vistoria, ChecklistItem, FotoVistoria,
-    OrdemServico, AditivoPrazo, Paralisacao, TermoRecebimento, Portaria,
+    AditivoPrazo,
+    ArtRrt,
+    AuditLog,
+    ChecklistItem,
+    Contrato,
+    DiarioObra,
+    Evento,
+    FotoVistoria,
+    Medicao,
+    Meta,
+    Notificacao,
+    Obra,
+    OrdemServico,
+    Paralisacao,
+    Portaria,
+    Submeta,
+    Tarefa,
+    TermoRecebimento,
+    Usuario,
+    Vistoria,
 )
-from app.models.obra import StatusObra, SaudeObra
 from app.models.acompanhamento import (
-    TipoParalisacao, TipoTermoRecebimento, TipoPortaria,
+    TipoParalisacao,
+    TipoPortaria,
+    TipoTermoRecebimento,
 )
-
+from app.models.obra import SaudeObra, StatusObra
 
 # ---------------------------------------------------------------------------
 # Usuários de teste — um por perfil

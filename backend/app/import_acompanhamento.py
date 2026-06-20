@@ -34,9 +34,8 @@ import openpyxl
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
-from app.models import Empresa, Orgao, Contrato, Obra
-from app.models.obra import StatusObra, SaudeObra, SituacaoObra
-
+from app.models import Contrato, Empresa, Obra, Orgao
+from app.models.obra import SaudeObra, SituacaoObra, StatusObra
 
 XLSX_PATH = os.environ.get("IMPORT_XLSX", "/app/_import/Acompanhamento.xlsx")
 SHEET = "OBRAS"

@@ -4,8 +4,6 @@ Define os perfis do sistema e decorators para proteger endpoints.
 """
 
 import enum
-import functools
-from typing import List
 
 from fastapi import Depends, HTTPException, status
 

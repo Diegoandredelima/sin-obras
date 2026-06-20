@@ -4,7 +4,8 @@ SIN-Obras — Schemas de Vistoria (Bloco 4 — Mobile)
 
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel
 
 from app.models.vistoria import ResultadoVistoria
 

@@ -4,7 +4,9 @@ SIN-Obras — Schemas de ART/RRT
 
 from datetime import date, datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field
+
 
 class ArtRrtBase(BaseModel):
     numero: str = Field(..., max_length=100)

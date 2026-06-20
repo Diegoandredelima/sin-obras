@@ -3,11 +3,12 @@ SIN-Obras — Schemas do Portal da Empresa (Diário de Obras, Medições, Notifi
 """
 
 from datetime import date, datetime
-from uuid import UUID
 from typing import Any
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
-from app.models.portal import StatusMedicao, CanalNotificacao
+from app.models.portal import CanalNotificacao, StatusMedicao
 
 
 # ---------------------------------------------------------------------------
