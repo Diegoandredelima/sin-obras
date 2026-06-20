@@ -11,7 +11,7 @@ referencial.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -40,7 +40,7 @@ class Empresa(Base):
     )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
@@ -64,7 +64,7 @@ class Orgao(Base):
     nome: Mapped[str | None] = mapped_column(String(200), nullable=True)
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 

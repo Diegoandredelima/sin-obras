@@ -12,19 +12,19 @@ Revision ID: b2f3a1c9d4e7
 Revises: ff6285b72f48
 Create Date: 2026-06-18
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b2f3a1c9d4e7"
-down_revision: Union[str, None] = "ff6285b72f48"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "ff6285b72f48"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 SITUACAO_VALUES = (

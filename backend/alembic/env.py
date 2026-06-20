@@ -6,11 +6,10 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from app.core import settings
 
 # Importar o Base e os modelos
 from app.core.database import Base
-from app.core import settings
-import app.models  # Isso carrega todos os modelos
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -90,7 +89,7 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
-        connection=connection, 
+        connection=connection,
         target_metadata=target_metadata,
         include_object=include_object,
     )

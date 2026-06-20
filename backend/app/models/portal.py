@@ -4,15 +4,12 @@ SIN-Obras — Modelos: Diário de Obras, Medição, Notificação
 
 import enum
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
-from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, ForeignKey,
-    Integer, Numeric, String, Text
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 
@@ -32,7 +29,7 @@ class DiarioObra(Base):
     equipamentos: Mapped[str | None] = mapped_column(Text, nullable=True)
     ocorrencias: Mapped[str | None] = mapped_column(Text, nullable=True)
     atividades_realizadas: Mapped[str | None] = mapped_column(Text, nullable=True)
-    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
         return f"<DiarioObra obra={self.obra_id} data={self.data_registro}>"
@@ -72,7 +69,7 @@ class Medicao(Base):
     hash_assinatura: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # Observações do fiscal ao aprovar/reprovar
     observacao_fiscal: Mapped[str | None] = mapped_column(Text, nullable=True)
-    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
         return f"<Medicao #{self.numero_medicao} obra={self.obra_id} status={self.status}>"
@@ -100,7 +97,7 @@ class Notificacao(Base):
         nullable=False
     )
     lida: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
         return f"<Notificacao usuario={self.usuario_id} lida={self.lida}>"

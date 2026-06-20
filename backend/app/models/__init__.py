@@ -1,23 +1,23 @@
 # Models package
-from .usuario import Usuario
-from .cadastro import Empresa, Orgao
-from .obra import Obra, Contrato, Meta, Submeta, Evento
-from .auditoria import AuditLog
-from .tarefa import Tarefa
-from .art_rrt import ArtRrt
-from .portal import DiarioObra, Medicao, Notificacao
-from .vistoria import Vistoria, ChecklistItem, FotoVistoria
 from .acompanhamento import (
-    OrdemServico,
     AditivoPrazo,
-    Paralisacao,
-    Readequacao,
     Apostilamento,
+    NotificacaoExtrajudicial,
+    OrdemServico,
+    Paralisacao,
+    Portaria,
+    Readequacao,
     Reajuste,
     TermoRecebimento,
-    NotificacaoExtrajudicial,
-    Portaria,
 )
+from .art_rrt import ArtRrt
+from .auditoria import AuditLog
+from .cadastro import Empresa, Orgao
+from .obra import Contrato, Evento, Meta, Obra, Submeta
+from .portal import DiarioObra, Medicao, Notificacao
+from .tarefa import Tarefa
+from .usuario import Usuario
+from .vistoria import ChecklistItem, FotoVistoria, Vistoria
 
 __all__ = [
     "Usuario",

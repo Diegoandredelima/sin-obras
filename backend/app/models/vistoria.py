@@ -5,13 +5,11 @@ SIN-Obras — Modelos: Vistoria, ChecklistItem, FotoVistoria
 
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, String, Text
-)
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -44,7 +42,7 @@ class Vistoria(Base):
     )
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
     finalizada_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
         return f"<Vistoria obra={self.obra_id} fiscal={self.fiscal_id} resultado={self.resultado}>"
@@ -83,7 +81,7 @@ class FotoVistoria(Base):
     # Origem deve ser câmera nativa (não galeria) — validado no upload
     origem_camera: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
         return f"<FotoVistoria vistoria={self.vistoria_id} hash={self.hash_sha256[:8] if self.hash_sha256 else 'N/A'}>"
