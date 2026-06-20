@@ -1,151 +1,133 @@
-# SIN-Obras 🏗️
+# SIN-Obras
 
 **Sistema Integrado de Obras — Secretaria de Estado da Infraestrutura do Rio Grande do Norte**
 
-> Sistema unificado de gestão de obras públicas: do cadastro e fiscalização em campo até a análise preditiva e conformidade legal (LGPD / TCE-RN).
+> Sistema unificado de gestão de obras públicas: do cadastro e fiscalização em campo até a análise preditiva e conformidade legal.
 
 ---
 
-## 🚀 Como Rodar (Desenvolvimento)
+## Como Rodar (Desenvolvimento)
 
 ### Pré-requisitos
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e **rodando**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e rodando
 - Git
 
-### 1. Clone e configure o ambiente
+### 1. Clone e configure
 
 ```bash
-# Clone o repositório
 git clone <url-do-repo>
-
-# Copie o arquivo de ambiente
 cp .env.example .env
-# O .env já vem configurado para desenvolvimento local — não precisa alterar nada
 ```
 
-### 2. Suba a stack completa
+### 2. Suba a stack
 
 ```bash
-docker compose up -d
+make up
 ```
-
-Aguarde ~30 segundos para os containers iniciarem. Depois:
 
 | Serviço | URL |
 |---|---|
-| **API (Swagger Docs)** | http://localhost:8000/api/docs |
-| **Frontend Web** | http://localhost:5173 |
-| **MinIO (Storage)** | http://localhost:9001 |
+| **API (Swagger)** | http://localhost:8000/api/docs |
+| **Frontend** | http://localhost:5173 |
+| **MinIO Console** | http://localhost:9001 |
 
-### 3. Aplique as migrações do banco
-
-```bash
-# Dentro do container do backend:
-docker compose exec backend alembic upgrade head
-```
-
-### 4. Popule o banco com dados de teste
+### 3. Migrations e seed
 
 ```bash
-docker compose exec backend python -m app.seed
+make migrate-apply
+make seed
 ```
 
-Saída esperada com as credenciais de acesso:
+### 4. Login
 
-```
-[SECRETARIO   ] Matrícula/CNPJ: 10001            Senha: sin@2026
-[COORDENADOR  ] Matrícula/CNPJ: 10002            Senha: sin@2026
-[ENGENHEIRO   ] Matrícula/CNPJ: 10003            Senha: sin@2026
-[FISCAL       ] Matrícula/CNPJ: 10004            Senha: sin@2026
-[EMPRESA      ] Matrícula/CNPJ: 12345678000195   Senha: empresa@2026
-```
-
-### 5. Acesse o sistema
-
-Abra http://localhost:5173 e faça login com qualquer credencial acima.
-
----
-
-## 🛠️ Comandos Úteis
-
-```bash
-# Ver logs em tempo real
-docker compose logs -f
-
-# Logs apenas do backend
-docker compose logs -f backend
-
-# Abrir shell no backend
-docker compose exec backend bash
-
-# Abrir psql no banco
-docker compose exec postgres psql -U sinobras -d sinobras
-
-# Parar tudo
-docker compose down
-
-# Parar e apagar volumes (APAGA OS DADOS!)
-docker compose down -v
-```
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-Sin-Obras/
-├── backend/          # FastAPI + SQLAlchemy + PostGIS
-│   ├── app/
-│   │   ├── api/      # Routers (endpoints)
-│   │   ├── core/     # Config, Security, RBAC
-│   │   ├── models/   # SQLAlchemy models
-│   │   ├── schemas/  # Pydantic schemas
-│   │   ├── services/ # Business logic
-│   │   ├── main.py   # FastAPI app entry point
-│   │   └── seed.py   # Script de dados de desenvolvimento
-│   └── alembic/      # Database migrations
-├── frontend/         # Vite + React 19 + Tailwind CSS v4
-│   └── src/
-│       ├── components/
-│       ├── pages/
-│       ├── services/  # API client (Axios)
-│       └── store/     # State management (Zustand)
-├── mobile/           # React Native + Expo (Bloco 4)
-├── Docs/             # Documentação do projeto
-├── docker-compose.yml
-├── Makefile
-└── PROGRESSO.md      # Status detalhado da implementação
-```
-
----
-
-## 🔐 Perfis de Acesso
-
-| Perfil | Acesso | Descrição |
+| Perfil | Matrícula/CNPJ | Senha |
 |---|---|---|
-| **SECRETARIO** | Web | Dashboard executivo, mapa de calor |
-| **COORDENADOR** | Web | Monitoramento global, alertas, equipes |
-| **ENGENHEIRO** | Web | Gestão de obras, aprovação de medições |
-| **FISCAL** | Mobile + Web | Vistorias, check-in, checklist |
-| **EMPRESA** | Web | Portal restrito à sua obra |
+| SECRETARIO | 10001 | sin@2026 |
+| COORDENADOR | 10002 | sin@2026 |
+| ENGENHEIRO | 10003 | sin@2026 |
+| FISCAL | 10004 | sin@2026 |
+| EMPRESA | 12345678000195 | empresa@2026 |
 
 ---
 
-## 📊 Status de Implementação
+## Comandos
 
-Veja o arquivo [PROGRESSO.md](./PROGRESSO.md) para o status detalhado de cada bloco.
+```bash
+make up              # Sobe todos os containers
+make down            # Para os containers
+make build           # Rebuild sem cache
+make logs            # Logs em tempo real
+make seed            # Popula banco com dados dev
+make migrate         # Gera e aplica migrations
+make reset-db        # Apaga e recria banco (DESTRUTIVO)
+
+make test            # Testes do backend (12 testes)
+make lint            # Ruff + ESLint
+make validate        # Lint + typecheck + testes + build
+```
 
 ---
 
-## 🏛️ Stack Tecnológica
+## Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Front-end Web | React 19 + Tailwind CSS v4 + Vite |
-| Front-end Mobile | React Native + Expo |
-| Back-end | Python 3.12 + FastAPI |
-| Banco de Dados | PostgreSQL 16 + PostGIS |
-| Storage | MinIO (local) / AWS S3 (produção) |
-| Auth | JWT + bcrypt |
-| State Management | Zustand |
-| Mapas | Mapbox GL JS |
+| Frontend | React 19, TypeScript, Tailwind CSS v4, Vite |
+| Estado | Zustand + TanStack Query |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0 (async) |
+| Banco | PostgreSQL 16 + PostGIS 3.4 |
+| Storage | MinIO (S3-compatible) |
+| Auth | JWT + bcrypt (5 níveis RBAC) |
+| Testes | pytest (12 testes) |
+| Lint | Ruff (backend) + ESLint/TypeScript (frontend) |
+| CI/CD | GitHub Actions (lint + typecheck + tests + build) |
+
+---
+
+## Estrutura
+
+```
+Sin-Obras/
+├── backend/
+│   ├── app/
+│   │   ├── api/          # FastAPI routers (12 módulos)
+│   │   ├── core/         # Config, DB, RBAC, Security
+│   │   ├── models/       # SQLAlchemy models (28 tabelas)
+│   │   ├── schemas/      # Pydantic schemas
+│   │   ├── services/     # Business logic
+│   │   └── main.py       # Entry point
+│   ├── tests/            # pytest (auth + obras)
+│   └── alembic/          # Database migrations
+├── frontend/
+│   └── src/
+│       ├── components/   # Layout, Sidebar, ErrorBoundary, CookieBanner, NotificacoesBell
+│       ├── hooks/        # useDarkMode
+│       ├── pages/        # 15 páginas
+│       ├── services/     # Axios + interceptors (JWT + refresh)
+│       ├── store/        # Zustand (auth persist)
+│       ├── types/        # TypeScript types
+│       └── utils/        # format (currency, date, percent)
+├── mobile/               # Expo + React Native
+├── docker-compose.yml
+├── Makefile
+└── AGENTS.md             # Guia para desenvolvedores
+```
+
+---
+
+## Perfis de Acesso (RBAC)
+
+| Nível | Perfil | Acesso |
+|---|---|---|
+| 4 | SECRETARIO | Dashboard executivo, todos os recursos |
+| 3 | COORDENADOR | Monitoramento, alertas, equipes |
+| 2 | ENGENHEIRO | Gestão de obras, aprovação de medições |
+| 1 | FISCAL | Vistorias, check-in, checklist |
+| 0 | EMPRESA | Portal restrito à sua obra |
+
+---
+
+## Status
+
+Veja [PROGRESSO.md](./PROGRESSO.md) para o status detalhado.
+Para onboarding de devs, veja [AGENTS.md](./AGENTS.md).
