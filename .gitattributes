@@ -1,0 +1,5 @@
+# Normaliza line endings. Scripts shell e git hooks DEVEM usar LF, senão o
+# bash quebra com erros do tipo $'\r' (interpretador) no Windows.
+* text=auto
+*.sh text eol=lf
+.githooks/* text eol=lf

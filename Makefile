@@ -9,7 +9,7 @@
 
 # .PHONY declara que esses nomes são comandos, não arquivos no disco.
 # Sem isso, se existir um arquivo chamado "up", o make confundiria com o alvo.
-.PHONY: help up down build logs migrate migrate-apply seed shell-backend shell-db reset-db test lint validate
+.PHONY: help up down build logs migrate migrate-apply seed shell-backend shell-db reset-db test lint validate hooks
 
 # Exibe todos os comandos disponíveis (comando padrão ao rodar só "make")
 help:
@@ -29,6 +29,7 @@ help:
 	@echo "  make test           — Roda os testes do backend"
 	@echo "  make lint           — Roda ruff (backend) + eslint (frontend)"
 	@echo "  make validate       — Roda lint + typecheck + testes + build"
+	@echo "  make hooks          — Ativa o hook de pre-push (.githooks/) — valida antes do push"
 	@echo ""
 
 # Sobe a stack completa em modo detached (-d = background)
@@ -143,3 +144,12 @@ validate:
 	@echo "============================================"
 	@echo "  ✅ Validação completa!"
 	@echo "============================================"
+
+# Ativa o hook de pre-push versionado em .githooks/ (validação local antes do push).
+# Substitui o CI do GitHub Actions (desativado para não usar o plano pago).
+hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-push 2>/dev/null || true
+	@echo "✅ Hooks ativados (core.hooksPath = .githooks)."
+	@echo "   O 'make validate' roda automaticamente antes de cada 'git push'."
+	@echo "   Para pular pontualmente: git push --no-verify"
