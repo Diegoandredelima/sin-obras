@@ -52,7 +52,7 @@ const Sidebar = () => {
       icon: Briefcase,
       roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
-    { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/obras/${ctxId}/diario`, icon: BookOpen },
+    { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/obras/${ctxId}/diario`, icon: BookOpen, roles: ["EMPRESA", "FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
     {
       name: "Quadro de Tarefas",
       href: "/quadro",
@@ -65,7 +65,7 @@ const Sidebar = () => {
       icon: ChartBar,
       roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
-    { name: "Medições", href: isContratoCtx ? `/contratos/${ctxId}?tab=medicoes` : `/empresa/obras/${ctxId}/medicoes`, icon: FileText },
+    { name: "Medições", href: isContratoCtx ? `/contratos/${ctxId}?tab=medicoes` : `/empresa/obras/${ctxId}/medicoes`, icon: FileText, roles: ["EMPRESA", "FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
     {
       name: "Gestão",
       href: "/gestao",

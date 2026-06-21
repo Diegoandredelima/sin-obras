@@ -5,7 +5,7 @@ Endpoints: Diário de Obras, Medições (com assinatura e fluxo de fiscalizaçã
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -25,6 +25,12 @@ from app.services import portal as portal_service
 from app.services.auditoria import registrar_auditoria
 from app.services.notificacao import criar_notificacao
 
+
+def _bloquear_apoio_n1(user: Usuario):
+    if user.tipo == Role.APOIO_N1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apoio N1 não tem acesso a medições e diário.")
+
+
 router = APIRouter(prefix="/empresa", tags=["Portal da Empresa"])
 
 
@@ -38,6 +44,7 @@ async def list_diario(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Lista todos os registros do Diário de Obras."""
+    _bloquear_apoio_n1(current_user)
     return await portal_service.get_diario_by_obra(db, obra_id)
 
 
@@ -49,6 +56,7 @@ async def create_diario(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Insere um novo registro no Diário de Obras."""
+    _bloquear_apoio_n1(current_user)
     registro = await portal_service.create_diario(db, obra_id, current_user.id, payload)
     await registrar_auditoria(db, current_user.id, "DiarioObra", str(registro.id), "CREATE",
                                dados_depois=payload.model_dump(mode="json"))
@@ -63,6 +71,7 @@ async def update_diario(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Edita um registro do diário (somente pelo autor)."""
+    _bloquear_apoio_n1(current_user)
     return await portal_service.update_diario(db, id, current_user.id, payload)
 
 
@@ -76,6 +85,7 @@ async def list_medicoes(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Lista as medições de uma obra."""
+    _bloquear_apoio_n1(current_user)
     return await portal_service.get_medicoes_by_obra(db, obra_id)
 
 
@@ -87,6 +97,7 @@ async def create_medicao(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Cria uma medição em rascunho."""
+    _bloquear_apoio_n1(current_user)
     payload.obra_id = obra_id
     medicao = await portal_service.create_medicao(db, current_user.id, payload)
     await registrar_auditoria(db, current_user.id, "Medicao", str(medicao.id), "CREATE",
@@ -101,6 +112,7 @@ async def get_medicao(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Detalhes de uma medição."""
+    _bloquear_apoio_n1(current_user)
     return await portal_service.get_medicao_by_id(db, id)
 
 
@@ -112,6 +124,7 @@ async def update_medicao(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Edita um rascunho de medição."""
+    _bloquear_apoio_n1(current_user)
     return await portal_service.update_medicao(db, id, current_user.id, payload)
 
 
@@ -126,6 +139,7 @@ async def assinar_medicao(
     Assina digitalmente a medição e envia para fiscalização.
     RN01 — Requer ART ativa vinculada à obra.
     """
+    _bloquear_apoio_n1(current_user)
     medicao = await portal_service.assinar_medicao(db, id, current_user.id)
     await registrar_auditoria(db, current_user.id, "Medicao", str(medicao.id), "ASSINAR",
                                descricao=f"Medição #{medicao.numero_medicao} assinada (hash: {medicao.hash_assinatura[:12]}...)")

@@ -98,3 +98,65 @@
     @apply bg-surface-950/80 backdrop-blur-md border border-white/10 shadow-xl;
   }
 }
+
+/* ──────────────────────────────────────────────────────────── */
+/* ANIMAÇÕES                                                     */
+/* ──────────────────────────────────────────────────────────── */
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* IMPRESSÃO — relatórios e documentos (window.print)           */
+/* ──────────────────────────────────────────────────────────── */
+.print-only { display: none; }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  /* Mantém as cores das barras de gráfico e badges no PDF */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Altura automática evita páginas em branco extras (min-h-screen/100vh) */
+  html, body {
+    background: #fff !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Esconde controles que não devem ir para o papel */
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+
+  /*
+   * Apenas blocos PEQUENOS (linhas de tabela, cartões de gráfico, KPIs)
+   * usam avoid-break. Blocos grandes fluem livremente — evita o "salto"
+   * que deixava metade da página em branco.
+   */
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Cartões: sem sombra e SEM forçar avoid-break (podem quebrar entre páginas) */
+  .print-card {
+    box-shadow: none !important;
+  }
+
+  /* Força início em nova página (impressão em lote: 1 obra por página) */
+  .print-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+}

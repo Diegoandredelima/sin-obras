@@ -21,6 +21,7 @@ async def get_obras(
     situacao: SituacaoObra | None = None,
     municipio: str | None = None,
     contrato_id: str | None = None,
+    criado_por_id: UUID | None = None,
 ):
     base = select(Obra).where(Obra.ativo == True)
 
@@ -35,6 +36,8 @@ async def get_obras(
         base = base.where(Obra.municipio.ilike(f"%{municipio}%"))
     if contrato_id:
         base = base.where(Obra.contrato_id == contrato_id)
+    if criado_por_id:
+        base = base.where(Obra.criado_por_id == criado_por_id)
 
     total = await db.scalar(select(func.count()).select_from(base.subquery()))
 
@@ -77,10 +80,12 @@ async def get_obra_by_id(db: AsyncSession, obra_id: UUID) -> Obra:
     return obra
 
 
-async def create_obra(db: AsyncSession, obj_in: ObraCreate) -> Obra:
+async def create_obra(db: AsyncSession, obj_in: ObraCreate, criado_por_id: UUID | None = None) -> Obra:
     data = obj_in.model_dump(exclude={"latitude", "longitude"})
 
     db_obj = Obra(**data)
+    if criado_por_id:
+        db_obj.criado_por_id = criado_por_id
 
     if obj_in.latitude is not None and obj_in.longitude is not None:
         db_obj.localizacao = f"SRID=4326;POINT({obj_in.longitude} {obj_in.latitude})"

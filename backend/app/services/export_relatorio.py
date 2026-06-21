@@ -143,6 +143,73 @@ def gerar_xlsx(data: dict) -> BytesIO:
     return output
 
 
+SITUACAO_LABELS_EXPORT = {
+    "EM_ANDAMENTO": "Em Andamento", "CONCLUIDA": "Concluída",
+    "PARALISADA": "Paralisada", "A_INICIAR": "A Iniciar",
+    "INACABADA": "Inacabada", "RESCINDIDA": "Rescindida",
+    "ARQUIVADA": "Arquivada",
+}
+
+
+def gerar_xlsx_obras(obras: list) -> BytesIO:
+    """Gera planilha XLSX a partir da lista de obras filtradas."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Obras"
+
+    headers = [
+        "Título", "Município", "Órgão", "Empresa", "Nº Contrato",
+        "Situação", "Status", "% Execução",
+        "Valor Contrato (R$)", "Valor Final (R$)", "Valor Medido (R$)",
+        "Vigência Início", "Vigência Fim",
+    ]
+    n_cols = len(headers)
+
+    ws.merge_cells(f"A1:{get_column_letter(n_cols)}1")
+    ws["A1"] = f"Lista de Obras — SIN-Obras | Gerado em {date.today().isoformat()}"
+    ws["A1"].font = TITLE_FONT
+    ws["A1"].alignment = Alignment(horizontal="center")
+    ws.row_dimensions[1].height = 28
+
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=2, column=col, value=h)
+        c.font = HEADER_FONT
+        c.fill = HEADER_FILL
+        c.border = THIN_BORDER
+        c.alignment = Alignment(horizontal="center", wrap_text=True)
+    ws.row_dimensions[2].height = 22
+
+    for row_idx, o in enumerate(obras, 3):
+        row_data = [
+            o.titulo,
+            o.municipio or "",
+            o.orgao or "",
+            o.empresa_razao_social or "",
+            o.contrato_numero or "",
+            SITUACAO_LABELS_EXPORT.get(o.situacao or "", o.situacao or ""),
+            STATUS_LABELS.get(o.status or "", o.status or ""),
+            float(o.percentual_executado or 0),
+            float(o.valor_contrato or 0),
+            float(o.valor_final or o.valor_global or o.valor_contrato or 0),
+            float(o.valor_medido or 0),
+            str(o.vigencia_inicio or ""),
+            str(o.vigencia_fim or ""),
+        ]
+        for col_idx, val in enumerate(row_data, 1):
+            c = ws.cell(row=row_idx, column=col_idx, value=val)
+            c.border = THIN_BORDER
+            if col_idx in (9, 10, 11):
+                c.number_format = "#,##0.00"
+
+    for col_idx, w in enumerate([50, 18, 15, 40, 18, 18, 15, 12, 20, 20, 20, 15, 15], 1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
 def gerar_pdf(data: dict) -> BytesIO:
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.add_font("DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True)

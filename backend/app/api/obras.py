@@ -40,11 +40,13 @@ async def list_obras(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    """Lista obras com filtros opcionais."""
+    """Lista obras com filtros opcionais. Apoio N1 só vê obras que cadastrou."""
+    criador = current_user.id if current_user.tipo == Role.APOIO_N1 else None
     return await obra_service.get_obras(
         db, skip=skip, limit=limit,
         search=search, status=status, situacao=situacao,
         municipio=municipio, contrato_id=contrato_id,
+        criado_por_id=criador,
     )
 
 
@@ -52,9 +54,9 @@ async def list_obras(
 async def create_obra(
     payload: ObraCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N1)),
 ):
-    obra = await obra_service.create_obra(db, payload)
+    obra = await obra_service.create_obra(db, payload, criado_por_id=current_user.id)
     await registrar_auditoria(
         db=db, usuario_id=current_user.id, entidade="Obra", entidade_id=str(obra.id),
         acao="CREATE", dados_depois=payload.model_dump(mode="json"),

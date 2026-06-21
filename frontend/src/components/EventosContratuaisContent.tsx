@@ -23,11 +23,11 @@ const EVENT_CONFIG = {
   aditivo_prazo: { label: "Aditivo de Prazo", icon: Clock, color: "border-amber-400 bg-amber-50 text-amber-700" },
   paralisacao: { label: "Paralisação", icon: Pause, color: "border-orange-400 bg-orange-50 text-orange-700" },
   readequacao: { label: "Readequação", icon: RefreshCw, color: "border-purple-400 bg-purple-50 text-purple-700" },
-  apostilamento: { label: "Apostilamento", icon: DollarSign, color: "border-emerald-400 bg-emerald-50 text-emerald-700" },
-  reajuste: { label: "Reajuste", icon: DollarSign, color: "border-teal-400 bg-teal-50 text-teal-700" },
-  termo_recebimento: { label: "Termo de Recebimento", icon: CheckCheck, color: "border-green-400 bg-green-50 text-green-700" },
+  apostilamento: { label: "Apostilamento", icon: DollarSign, color: "border-brand-300 bg-brand-50 text-brand-700" },
+  reajuste: { label: "Reajuste", icon: DollarSign, color: "border-amber-300 bg-amber-50 text-amber-700" },
+  termo_recebimento: { label: "Termo de Recebimento", icon: CheckCheck, color: "border-emerald-400 bg-emerald-50 text-emerald-700" },
   notificacao_extrajudicial: { label: "Notificação Extrajudicial", icon: AlertTriangle, color: "border-rose-400 bg-rose-50 text-rose-700" },
-  portaria: { label: "Portaria", icon: UserCheck, color: "border-indigo-400 bg-indigo-50 text-indigo-700" },
+  portaria: { label: "Portaria", icon: UserCheck, color: "border-violet-400 bg-violet-50 text-violet-700" },
 } as const;
 
 const TimelineItem = ({

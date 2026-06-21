@@ -5,11 +5,12 @@ import {
   ArrowLeft, Briefcase, Building2, User, MapPin,
   TrendingUp, Calendar, FileText, Hash, AlertTriangle,
   Activity, CheckCircle2, Pause, Clock, BookOpen, ChartBar,
-  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays,
+  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Printer,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
 import type { SaudeObra } from "@/types";
+import { useAuthStore } from "@/store/auth";
 import { fmtCurrency, fmtDate, fmtPercent } from "@/utils/format";
 import { DiarioContent } from "@/pages/DiarioObras";
 import { MedicoesContent } from "@/pages/Medicoes";
@@ -135,6 +136,8 @@ interface ObraDetail {
 const DetalheContrato = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const user = useAuthStore((s) => s.user);
+  const isApoioN1 = user?.tipo === "APOIO_N1";
   const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") || "detalhes";
   const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s">(initialTab);
 
@@ -190,9 +193,33 @@ const DetalheContrato = () => {
     return { text: `${diff}d restantes`, cls: "text-slate-500" };
   })() : null;
 
+  const visibleTabs: ("detalhes" | "cronograma" | "diario" | "medicoes" | "art-rrt" | "eventos" | "curva-s")[] = ["detalhes", "cronograma"];
+  if (!isApoioN1) { visibleTabs.push("diario", "medicoes"); }
+  visibleTabs.push("art-rrt", "eventos", "curva-s");
+  const tabIcons: Record<string, LucideIcon> = { detalhes: FileText, cronograma: CalendarDays, diario: BookOpen, medicoes: ChartBar, "art-rrt": ShieldCheck, eventos: History, "curva-s": TrendingUp };
+  const tabLabels: Record<string, string> = { detalhes: "Detalhes", cronograma: "Cronograma", diario: "Diário", medicoes: "Medições", "art-rrt": "ART/RRT", eventos: "Eventos", "curva-s": "Curva S" };
+
   return (
     <div className="space-y-6">
-      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors"><ArrowLeft className="h-4 w-4" />Contratos</Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-600 transition-colors"><ArrowLeft className="h-4 w-4" />Contratos</Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.open(`/contratos/${c.id}/relatorio`, "_blank", "noopener")}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-700 transition-all"
+          >
+            <Printer className="h-3.5 w-3.5" /> Imprimir contrato
+          </button>
+          {obra && (
+            <button
+              onClick={() => window.open(`/obras/${obra.id}/relatorio`, "_blank", "noopener")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-700 transition-all"
+            >
+              <Printer className="h-3.5 w-3.5" /> Imprimir obra
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -231,10 +258,8 @@ const DetalheContrato = () => {
 
       {obra && (
         <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
-          {(["detalhes", "cronograma", "diario", "medicoes", "art-rrt", "eventos", "curva-s"] as const).map((tab) => {
-            const icons: Record<string, LucideIcon> = { detalhes: FileText, cronograma: CalendarDays, diario: BookOpen, medicoes: ChartBar, "art-rrt": ShieldCheck, eventos: History, "curva-s": TrendingUp };
-            const labels: Record<string, string> = { detalhes: "Detalhes", cronograma: "Cronograma", diario: "Diário", medicoes: "Medições", "art-rrt": "ART/RRT", eventos: "Eventos", "curva-s": "Curva S" };
-            const TabIcon = icons[tab];
+          {visibleTabs.map((tab) => {
+            const TabIcon = tabIcons[tab];
             return (
               <button
                 key={tab}
@@ -243,7 +268,7 @@ const DetalheContrato = () => {
                   activeTab === tab ? "text-brand-700 border-brand-600 bg-brand-50/50" : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <TabIcon className="h-4 w-4" />{labels[tab]}
+                <TabIcon className="h-4 w-4" />{tabLabels[tab]}
               </button>
             );
           })}
