@@ -1,6 +1,6 @@
 # 📊 SIN-Obras — Status de Implementação
 
-> **Última atualização:** 20/06/2026
+> **Última atualização:** 21/06/2026
 > **Projeto:** Sistema Integrado de Obras — Secretaria de Infraestrutura do RN (SIN-RN)
 > **Repositório:** https://github.com/Diegoandredelima/sin-obras
 
@@ -56,7 +56,7 @@
 | Health check real (DB + MinIO) | `backend/app/main.py` | ✅ |
 | Paginação genérica `PaginatedResponse[T]` | `backend/app/schemas/common.py` | ✅ |
 
-**Modelos SQLAlchemy — 28 tabelas mapeadas:**
+**Modelos SQLAlchemy — 30 tabelas mapeadas:**
 
 | Model(s) | Arquivo | Tabela(s) |
 |---|---|---|
@@ -69,8 +69,10 @@
 | `DiarioObra`, `Medicao`, `Notificacao` | `models/portal.py` | 3 tabelas |
 | `Vistoria`, `ChecklistItem`, `FotoVistoria` | `models/vistoria.py` | 3 tabelas |
 | `OrdemServico`, `AditivoPrazo`, `Paralisacao`, `Readequacao`, `Apostilamento`, `Reajuste`, `TermoRecebimento`, `NotificacaoExtrajudicial`, `Portaria` | `models/acompanhamento.py` | 9 tabelas |
+| `Alerta` | `models/alerta.py` | `alertas` |
+| `Delegacao` | `models/delegacao.py` | `delegacoes` |
 
-**12 Routers registrados em `main.py`:**
+**16 Routers registrados em `main.py`:**
 
 | Router | Rota Base | Arquivo |
 |---|---|---|
@@ -86,13 +88,17 @@
 | Relatórios | `/api/relatorios/` | `api/relatorios.py` |
 | Notificações | `/api/notificacoes/` | `api/notificacoes.py` |
 | Vistorias | `/api/vistorias/` | `api/vistorias.py` |
+| Alertas | `/api/alertas/` | `api/alertas.py` |
+| Delegação | `/api/delegacoes/` | `api/delegacao.py` |
+| Acompanhamento | `/api/acompanhamento/` | `api/acompanhamento.py` |
+| Curva-S | `/api/curva-s/` | `api/curva_s.py` |
 
 ### 1.3 Autenticação e RBAC ✅
 
 | Artefato | Status |
 |---|---|
 | JWT + bcrypt (pinado em 3.2.2 por compatibilidade com passlib) | ✅ |
-| RBAC com 5 roles: EMPRESA(0) < FISCAL(1) < ENGENHEIRO(2) < COORDENADOR(3) < SECRETARIO(4) | ✅ |
+| RBAC com 6 roles: EMPRESA(0) < FISCAL(1) < APOIO_N2(1) < ENGENHEIRO(2) < COORDENADOR(3) < SECRETARIO(4) | ✅ |
 | Todos os endpoints protegidos com `require_minimum_role` | ✅ |
 | `POST /auth/registrar` protegido (exige COORDENADOR+) | ✅ |
 | Refresh Token — renovação automática no frontend | ✅ |
@@ -129,7 +135,7 @@
 
 ### 1.5 Banco de Dados — Reestruturação e Carga ✅
 
-Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
+Realizado em 18/06/2026.
 
 **Migrations aplicadas:**
 
@@ -138,6 +144,8 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | `ff6285b72f48` | 9 tabelas de acompanhamento (`ordens_servico`, `aditivos_prazo`, `paralisacoes`, etc.) |
 | `b2f3a1c9d4e7` | Tabelas `empresas` e `orgaos`; enum `situacao_obra_enum`; +14 colunas em `contratos`; +18 colunas em `obras` |
 | `c3d4e5f6a7b8` | `contratos.fiscal_nome` e `contratos.gestor_nome` |
+| `03ce3a3976aa` | Roles APOIO_N2 no enum de usuários |
+| `27b769b34877` | Tabela `delegacoes` (obra → fiscal/apoio) |
 
 **Dados oficiais carregados** (fonte: `Acompanhamento de obras.xlsx`):
 
@@ -184,11 +192,13 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | Detalhe da Obra | `/obras/:id` | `pages/DetalheObra.tsx` | ✅ Abas Detalhes/Diário/Medições + redirect→contrato |
 | Nova Obra | `/obras/nova` | `pages/NovaObra.tsx` | ✅ Multi-step + react-hook-form + zod por etapa |
 | Lista de Contratos | `/contratos` | `pages/Contratos.tsx` | ✅ useQuery + paginação + empresa link |
-| Detalhe do Contrato | `/contratos/:id` | `pages/DetalheContrato.tsx` | ✅ Unificado com dados da obra + abas Diário/Medições |
+| Detalhe do Contrato | `/contratos/:id` | `pages/DetalheContrato.tsx` | ✅ Unificado com dados da obra + abas Diário/Medições/Curva-S/Eventos |
 | Quadro de Tarefas | `/quadro` | `pages/Quadro.tsx` | ✅ Kanban tipado |
 | Diário de Obras | `/empresa/obras/:id/diario` | `pages/DiarioObras.tsx` | ✅ Conectado ao endpoint real (sem mock) |
-| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ Conectado ao endpoint real (sem mock) |
+| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ Modal de assinatura + avaliação fiscal |
 | Relatórios | `/relatorio` | `pages/Relatorio.tsx` | ✅ Gráficos de barras com dados reais |
+| Central de Alertas | `/alertas` | `pages/Alertas.tsx` | ✅ Alertas automáticos + delegação + resolução |
+| Gestão de Equipe | `/gestao` | `pages/Gestao.tsx` | ✅ Delegação de obras para fiscais/apoios |
 | Perfil (modal) | — | `components/layout/PerfilModal.tsx` | ✅ Abre ao clicar no nome do usuário |
 | Política de Privacidade | `/privacidade` | `pages/Privacidade.tsx` | ✅ LGPD |
 | Detalhe da Empresa | `/empresas/:id` | `pages/DetalheEmpresa.tsx` | ✅ Conectado ao endpoint real |
@@ -201,19 +211,21 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 - ✅ **Validação de formulários** — react-hook-form + zod em Login e NovaObra; erros inline por campo; validação por etapa no multi-step
 - ✅ Error Boundary — proteção contra crashes de render
 - ✅ Refresh Token — renovação automática com fila de requests
-- ✅ RBAC no frontend — menu lateral filtrado por `user.tipo`
+- ✅ RBAC no frontend — menu lateral filtrado por `user.tipo` (6 roles)
 - ✅ Título dinâmico no header — baseado na rota atual
 - ✅ Utilitários de formatação — `fmtCurrency`, `fmtDate`, `fmtPercent` em `utils/format.ts`
 - ✅ Sidebar com ID dinâmico — links de Diário/Medições detectam `contratoId` ou `obraId` da URL
 - ✅ Modo escuro — toggle ☀/🌙 no sidebar, persistido em localStorage
 - ✅ Cookie Banner LGPD — consentimento com link para política de privacidade
 - ✅ Notificações — sino no header com badge de não lidas, dropdown com lista
-- ✅ Rodapé — "Governo do Estado do RN | infra-RN | Política de Privacidade"
+- ✅ Rodapé com faixa `.sin-stripe` (laranja→verde→amarelo→azul) + "Governo do Estado do RN | infra-RN"
+- ✅ **Identidade Visual SIN-RN v3** — Barlow/Barlow Condensed, tokens `brand-*`/`accent-*`/`success-*`/`warning-*`, motivo `.sin-stripe`
+- ✅ Calculadora de Engenharia — drawer com cubicagem, conversão de unidades, BDI e INCC
+- ✅ Componentes inline no detalhe do contrato: `CronogramaContent`, `CurvaSContent`, `EventosContratuaisContent`, `ArtRrtContent`, `MedicoesContent`
 
 ### 2.3 Pendências do Bloco 2 ⏳
 
-- ⏳ `/obras/:id/cronograma` — Árvore Meta → Submeta → Evento (edição inline)
-- ⏳ Calculadora de Engenharia (modal lateral)
+- ⏳ `/empresa/obras` — Lista das obras vinculadas à empresa logada
 
 ---
 
@@ -223,9 +235,11 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 
 ### Backend ✅
 - ✅ Diário de Obras — CRUD completo (`GET/POST/PUT /empresa/obras/{id}/diario`)
-- ✅ Medições — rascunho, assinatura digital SHA-256, fluxo de fiscalização
+- ✅ Medições — rascunho, assinatura digital SHA-256, avaliação fiscal, fluxo de aprovação/reprovação
 - ✅ RN01 — Travamento por ART implementado em `services/portal.py`
 - ✅ Notificações — sistema (`GET /notificacoes`, `PATCH /notificacoes/{id}/lida`)
+- ✅ Alertas automáticos — geração por obra (`POST /alertas/gerar`), delegação, resolução
+- ✅ Delegação — CRUD (`POST/GET/DELETE /delegacoes`), vinculo fiscal/apoio por obra
 
 ### Frontend — Páginas ✅
 | Página | Rota | Arquivo | Status |
@@ -235,7 +249,6 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 | Abas na Obra/Contrato | — | `DetalheObra.tsx` / `DetalheContrato.tsx` | ✅ Diário e Medições como abas inline |
 
 ### Pendências do Bloco 3 ⏳
-- ⏳ `/empresa/obras` — Lista das obras da empresa logada
 - ⏳ Wizard de nova medição (Metas → Submetas → Eventos)
 
 ---
@@ -306,16 +319,18 @@ Realizado em 18/06/2026. Documentação completa em `Docs/relatorio_banco/`.
 
 ## 🧠 BLOCO 5 — Inteligência, Analytics e IA
 
-**Status: `⏳ Não iniciado`**
+**Status: `🔄 Parcialmente iniciado`**
 
 | Artefato | Status |
 |---|---|
-| Curva S Preditiva (EVM) | ⏳ |
+| Curva-S de progresso (backend + componente frontend) | ✅ `api/curva_s.py` + `CurvaSContent.tsx` |
+| Alertas automáticos por obra (prazo, vistoria, ART, paralisação) | ✅ `api/alertas.py` + `services/alerta.py` |
+| Export de relatório (Excel/PDF) | ✅ `services/export_relatorio.py` |
 | Mapa de Calor (PostGIS + Mapbox) | ⏳ |
 | Geocodificação de municípios (`obras.localizacao`) | ⏳ |
 | Dashboard Executivo completo | ⏳ |
 | Assistente de IA (Gemini / OpenAI) | ⏳ |
-| Alertas automáticos agendados (APScheduler) | ⏳ |
+| Alertas agendados automaticamente (APScheduler/cron) | ⏳ |
 
 ---
 
@@ -378,7 +393,9 @@ Sin-Obras/
 │   └── PULL_REQUEST_TEMPLATE.md      ✅
 │
 ├── Docs/
-│   └── relatorio_banco/              ✅ (6 arquivos MD + 1 SQL)
+│   ├── Identidade-Visual-SIN-RN-Completa/ ✅ (brand guide v3 — HTML + DESIGN-HANDOFF + MANIFEST)
+│   ├── basico/                        ✅ (história de usuário + requisitos básicos)
+│   └── relatorio_banco/              ✅ (relatório de reestruturação do banco)
 │
 ├── backend/
 │   ├── Dockerfile                    ✅
@@ -387,13 +404,13 @@ Sin-Obras/
 │   ├── alembic.ini                   ✅
 │   ├── alembic/
 │   │   ├── env.py                    ✅ (filtro PostGIS)
-│   │   └── versions/                 ✅ (3 migrations)
+│   │   └── versions/                 ✅ (5 migrations)
 │   ├── app/
-│   │   ├── main.py                   ✅ (12 routers + health check + rate limiter)
+│   │   ├── main.py                   ✅ (16 routers + health check + rate limiter)
 │   │   ├── seed.py                   ✅ (5 usuários + 1 obra demo)
 │   │   ├── import_acompanhamento.py  ✅ (595 contratos)
 │   │   ├── core/                     ✅ (settings, database, rbac, security)
-│   │   ├── models/                   ✅ (8 arquivos, 28 tabelas)
+│   │   ├── models/                   ✅ (10 arquivos, 30 tabelas)
 │   │   ├── schemas/
 │   │   │   ├── common.py             ✅ (PaginatedResponse)
 │   │   │   ├── auth.py               ✅
@@ -402,21 +419,28 @@ Sin-Obras/
 │   │   │   ├── obra.py               ✅
 │   │   │   ├── portal.py             ✅ (Diario, Medicao, Notificacao)
 │   │   │   ├── relatorio.py          ✅ (RelatorioResumo)
-│   │   │   └── tarefa.py             ✅
-│   │   ├── api/                      ✅ (12 routers — todos com RBAC)
+│   │   │   ├── tarefa.py             ✅
+│   │   │   ├── alerta.py             ✅
+│   │   │   ├── delegacao.py          ✅
+│   │   │   └── acompanhamento.py     ✅
+│   │   ├── api/                      ✅ (16 routers — todos com RBAC)
 │   │   │   ├── auth.py               ✅ (login, refresh, me, logout, registrar[COORDENADOR+], update me)
 │   │   │   ├── obras.py              ✅
 │   │   │   ├── contratos.py          ✅
 │   │   │   ├── empresas.py           ✅ (detalhe + contratos vinculados)
 │   │   │   ├── relatorios.py         ✅ (resumo agregado)
-│   │   │   ├── portal.py             ✅ (diário, medições)
+│   │   │   ├── portal.py             ✅ (diário, medições, avaliação fiscal)
 │   │   │   ├── notificacoes.py       ✅
 │   │   │   ├── orgaos.py             ✅
 │   │   │   ├── cronograma.py         ✅
 │   │   │   ├── tarefas.py            ✅
 │   │   │   ├── art_rrt.py            ✅
-│   │   │   └── vistorias.py          ✅
-│   │   └── services/                 ✅ (10 serviços)
+│   │   │   ├── vistorias.py          ✅
+│   │   │   ├── alertas.py            ✅ (gerar, resolver, delegar)
+│   │   │   ├── delegacao.py          ✅ (CRUD delegações)
+│   │   │   ├── acompanhamento.py     ✅ (eventos contratuais)
+│   │   │   └── curva_s.py            ✅ (curva-S de progresso)
+│   │   └── services/                 ✅ (14 serviços)
 │   └── tests/
 │       ├── __init__.py               ✅
 │       ├── conftest.py               ✅ (sync engine + async API)
@@ -435,17 +459,22 @@ Sin-Obras/
 │   ├── eslint.config.js              ✅ (TypeScript)
 │   └── src/
 │       ├── main.tsx                  ✅ (QueryClientProvider + ErrorBoundary)
-│       ├── App.tsx                   ✅ (React Router v7 — 15 rotas)
+│       ├── App.tsx                   ✅ (React Router v7 — 17 rotas)
 │       ├── types/index.ts            ✅ (tipos centralizados)
 │       ├── utils/format.ts           ✅ (fmtCurrency, fmtDate, fmtPercent)
 │       ├── components/
 │       │   ├── layout/
-│       │   │   ├── Layout.tsx        ✅ (ProtectedRoute + header + rodapé)
-│       │   │   ├── Sidebar.tsx       ✅ (RBAC + contratoId/obraId dinâmico + dark toggle)
+│       │   │   ├── Layout.tsx        ✅ (ProtectedRoute + header + calculadora + rodapé stripe)
+│       │   │   ├── Sidebar.tsx       ✅ (RBAC 6 roles + brand azul + condensed logo + stripe)
 │       │   │   └── PerfilModal.tsx   ✅ (abre ao clicar no nome do usuário)
 │       │   ├── ErrorBoundary.tsx     ✅
 │       │   ├── CookieBanner.tsx      ✅ (LGPD consentimento)
-│       │   └── NotificacoesBell.tsx  ✅ (sino + badge + dropdown)
+│       │   ├── NotificacoesBell.tsx  ✅ (sino + badge + dropdown)
+│       │   ├── CalculadoraDrawer.tsx ✅ (cubicagem, conversão, BDI, INCC)
+│       │   ├── CronogramaContent.tsx ✅ (árvore Meta → Submeta → Evento)
+│       │   ├── CurvaSContent.tsx     ✅ (curva-S de progresso físico-financeiro)
+│       │   ├── EventosContratuaisContent.tsx ✅ (aditivos, paralisações, apostilamentos)
+│       │   └── ArtRrtContent.tsx     ✅ (gestão de ART/RRT)
 │       ├── hooks/
 │       │   └── useDarkMode.ts        ✅
 │       ├── pages/
@@ -460,6 +489,8 @@ Sin-Obras/
 │       │   ├── DiarioObras.tsx       ✅ (conectado ao endpoint real)
 │       │   ├── Medicoes.tsx          ✅ (conectado ao endpoint real)
 │       │   ├── Relatorio.tsx         ✅ (gráficos de barras com dados reais)
+│       │   ├── Alertas.tsx           ✅ (central de alertas + delegação + resolução)
+│       │   ├── Gestao.tsx            ✅ (delegação de obras para fiscais/apoios)
 │       │   ├── Privacidade.tsx       ✅ (LGPD)
 │       │   ├── DetalheEmpresa.tsx    ✅ (dados reais + contratos)
 │       │   ├── RedirectObra.tsx      ✅ (redireciona /obras/:id → /contratos/:id)
