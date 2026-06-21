@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
-from app.models.obra import SituacaoObra, StatusObra
+from app.models.obra import SaudeObra, SituacaoObra, StatusObra
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.obra import ObraCreate, ObraDetalheResponse, ObraResponse, ObraUpdate
@@ -24,8 +24,8 @@ async def get_obras_stats(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    """Contagens agregadas para o Dashboard."""
-    return await obra_service.get_obras_stats(db)
+    """Contagens agregadas para o Dashboard, recortadas ao escopo do usuário."""
+    return await obra_service.get_obras_stats(db, scope_user=current_user)
 
 
 @router.get("", response_model=PaginatedResponse[ObraResponse])
@@ -35,18 +35,21 @@ async def list_obras(
     search: str | None = Query(None, description="Busca por título ou município"),
     status: StatusObra | None = Query(None),
     situacao: SituacaoObra | None = Query(None),
+    saude: SaudeObra | None = Query(None),
     municipio: str | None = Query(None),
     contrato_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    """Lista obras com filtros opcionais. Apoio N1 só vê obras que cadastrou."""
-    criador = current_user.id if current_user.tipo == Role.APOIO_N1 else None
+    """Lista obras com filtros opcionais, recortadas ao escopo do usuário.
+
+    Cada perfil vê apenas as obras do seu painel (ver `scope_obras_por_usuario`).
+    """
     return await obra_service.get_obras(
         db, skip=skip, limit=limit,
-        search=search, status=status, situacao=situacao,
+        search=search, status=status, situacao=situacao, saude=saude,
         municipio=municipio, contrato_id=contrato_id,
-        criado_por_id=criador,
+        scope_user=current_user,
     )
 
 

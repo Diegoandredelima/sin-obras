@@ -8,8 +8,54 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Obra, SituacaoObra, StatusObra
+from app.core.rbac import Role
+from app.models.obra import Contrato, Obra, SaudeObra, SituacaoObra, StatusObra
 from app.schemas.obra import ObraCreate, ObraUpdate
+
+
+# Perfis com visão completa do portfólio (não recebem recorte por usuário).
+_ROLES_PORTFOLIO_COMPLETO = {
+    Role.APOIO_N2,
+    Role.ENGENHEIRO,
+    Role.COORDENADOR,
+    Role.SECRETARIO,
+}
+
+
+def scope_obras_por_usuario(stmt, user):
+    """Restringe uma query de `Obra` ao escopo visível pelo `user`.
+
+    Cada perfil enxerga seu próprio painel:
+      • EMPRESA   → obras cujos contratos estão vinculados à sua conta;
+      • FISCAL    → obras em que é responsável/gestor (ou fiscal do contrato);
+      • APOIO_N1  → obras que cadastrou;
+      • APOIO_N2+ → portfólio completo (sem recorte).
+
+    `user` pode ser ``None`` (uso interno/sistêmico) → sem recorte.
+    """
+    if user is None:
+        return stmt
+
+    role = Role(user.tipo)
+    if role in _ROLES_PORTFOLIO_COMPLETO:
+        return stmt
+    if role == Role.APOIO_N1:
+        return stmt.where(Obra.criado_por_id == user.id)
+    if role == Role.FISCAL:
+        contratos_do_fiscal = select(Contrato.id).where(
+            or_(Contrato.fiscal_id == user.id, Contrato.gestor_id == user.id)
+        )
+        return stmt.where(
+            or_(
+                Obra.responsavel_id == user.id,
+                Obra.gestor_id == user.id,
+                Obra.contrato_id.in_(contratos_do_fiscal),
+            )
+        )
+    if role == Role.EMPRESA:
+        contratos_da_empresa = select(Contrato.id).where(Contrato.empresa_id == user.id)
+        return stmt.where(Obra.contrato_id.in_(contratos_da_empresa))
+    return stmt
 
 
 async def get_obras(
@@ -19,11 +65,14 @@ async def get_obras(
     search: str | None = None,
     status: StatusObra | None = None,
     situacao: SituacaoObra | None = None,
+    saude: SaudeObra | None = None,
     municipio: str | None = None,
     contrato_id: str | None = None,
     criado_por_id: UUID | None = None,
+    scope_user=None,
 ):
     base = select(Obra).where(Obra.ativo == True)
+    base = scope_obras_por_usuario(base, scope_user)
 
     if search:
         term = f"%{search}%"
@@ -32,6 +81,8 @@ async def get_obras(
         base = base.where(Obra.status == status)
     if situacao:
         base = base.where(Obra.situacao == situacao)
+    if saude:
+        base = base.where(Obra.saude == saude)
     if municipio:
         base = base.where(Obra.municipio.ilike(f"%{municipio}%"))
     if contrato_id:
@@ -48,27 +99,31 @@ async def get_obras(
     return {"items": list(items), "total": total or 0, "skip": skip, "limit": limit}
 
 
-async def get_obras_stats(db: AsyncSession) -> dict:
-    total = await db.scalar(select(func.count()).select_from(Obra).where(Obra.ativo == True))
+async def get_obras_stats(db: AsyncSession, scope_user=None) -> dict:
+    """Contagens agregadas do Dashboard, recortadas ao escopo do usuário."""
+    ativos = scope_obras_por_usuario(select(Obra).where(Obra.ativo == True), scope_user)
+    total = await db.scalar(select(func.count()).select_from(ativos.subquery()))
 
-    rows = await db.execute(
-        select(Obra.situacao, func.count().label("n"))
-        .where(Obra.ativo == True)
-        .group_by(Obra.situacao)
-    )
+    def _agg(coluna):
+        return scope_obras_por_usuario(
+            select(coluna, func.count().label("n")).where(Obra.ativo == True),
+            scope_user,
+        ).group_by(coluna)
+
+    rows = await db.execute(_agg(Obra.situacao))
     por_situacao = {(r.situacao or "SEM_SITUACAO"): r.n for r in rows}
 
-    rows2 = await db.execute(
-        select(Obra.status, func.count().label("n"))
-        .where(Obra.ativo == True)
-        .group_by(Obra.status)
-    )
+    rows2 = await db.execute(_agg(Obra.status))
     por_status = {r.status: r.n for r in rows2}
+
+    rows3 = await db.execute(_agg(Obra.saude))
+    por_saude = {(r.saude or "VERDE"): r.n for r in rows3}
 
     return {
         "total": total or 0,
         "por_situacao": por_situacao,
         "por_status": por_status,
+        "por_saude": por_saude,
     }
 
 

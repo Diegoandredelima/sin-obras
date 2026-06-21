@@ -1,30 +1,111 @@
 import {
-  Building2, CheckCircle2, AlertTriangle,
-  Briefcase, KanbanSquare, ArrowRight, Activity,
-  Search, Filter,
-  type LucideIcon,
+  Building2, CheckCircle2, AlertTriangle, HeartPulse,
+  Briefcase, KanbanSquare, ArrowRight, Activity, Bell,
+  FileBarChart, ListChecks, Settings2, PlusCircle, Hourglass,
+  Search, Filter, type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import api from "@/services/api";
-import type { Obra, ObraStats, PaginatedResponse, RelatorioResumo } from "@/types";
-import { useState } from "react";
-import RelatorioCharts from "@/components/RelatorioCharts";
+import type { Obra, ObraStats, PaginatedResponse, RelatorioResumo, Role } from "@/types";
+import { lazy, Suspense, useState } from "react";
 
-interface KPICardProps {
-  icon: LucideIcon;
-  label: string;
-  value: string | number;
-  sub: string;
-  color?: "brand" | "amber" | "rose" | "sky" | "success";
-  loading?: boolean;
+// recharts é pesado (~700 KB); carregamos os gráficos sob demanda.
+const DashboardCharts = lazy(() => import("@/components/DashboardCharts"));
+
+// ---------------------------------------------------------------------------
+// Config por papel — cada usuário tem o seu painel
+// ---------------------------------------------------------------------------
+const RANK: Record<string, number> = {
+  EMPRESA: 0, FISCAL: 1, APOIO_N1: 2, APOIO_N2: 3, ENGENHEIRO: 3, COORDENADOR: 4, SECRETARIO: 5,
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  EMPRESA: "Empresa", FISCAL: "Fiscal", APOIO_N1: "Apoio N1", APOIO_N2: "Apoio N2",
+  ENGENHEIRO: "Engenharia", COORDENADOR: "Coordenação", SECRETARIO: "Secretaria",
+};
+
+const SAUDACAO: Record<string, string> = {
+  EMPRESA:    "Acompanhe o andamento das obras dos seus contratos.",
+  FISCAL:     "Acompanhe a saúde e a execução das obras sob sua fiscalização.",
+  APOIO_N1:   "Resumo das obras que você cadastrou e acompanha.",
+  APOIO_N2:   "Visão técnica do portfólio de obras.",
+  ENGENHEIRO: "Visão técnica do portfólio de obras.",
+  COORDENADOR:"Visão consolidada do portfólio de obras do estado.",
+  SECRETARIO: "Panorama executivo das obras e contratos da Secretaria.",
+};
+
+interface Metricas {
+  total: number; emExecucao: number; paralisadas: number; concluidas: number;
+  planejadas: number; aIniciar: number; critico: number; atencao: number; emDia: number;
 }
 
-const KPICard = ({ icon: Icon, label, value, sub, color = "brand", loading }: KPICardProps) => {
+interface KPIDef {
+  icon: LucideIcon; label: string; value: number; sub: string;
+  color: "brand" | "amber" | "rose" | "sky" | "success";
+}
+
+function kpisDoPapel(role: string, m: Metricas): KPIDef[] {
+  switch (role) {
+    case "EMPRESA":
+      return [
+        { icon: Briefcase,     label: "Minhas Obras",  value: m.total,       sub: "total",   color: "sky" },
+        { icon: Activity,      label: "Em Execução",   value: m.emExecucao,  sub: "ativas",  color: "brand" },
+        { icon: HeartPulse,    label: "Saúde Crítica", value: m.critico,     sub: "alertas", color: "rose" },
+        { icon: CheckCircle2,  label: "Concluídas",    value: m.concluidas,  sub: "total",   color: "success" },
+      ];
+    case "FISCAL":
+      return [
+        { icon: Building2,     label: "Sob Fiscalização", value: m.total,      sub: "obras",   color: "sky" },
+        { icon: Activity,      label: "Em Execução",      value: m.emExecucao, sub: "ativas",  color: "brand" },
+        { icon: AlertTriangle, label: "Atenção",          value: m.atencao,    sub: "amarelo", color: "amber" },
+        { icon: HeartPulse,    label: "Crítico",          value: m.critico,    sub: "vermelho",color: "rose" },
+      ];
+    case "APOIO_N1":
+      return [
+        { icon: Briefcase,    label: "Cadastradas", value: m.total,       sub: "por você", color: "sky" },
+        { icon: Activity,     label: "Em Execução", value: m.emExecucao,  sub: "ativas",   color: "brand" },
+        { icon: Hourglass,    label: "A Iniciar",   value: m.aIniciar,    sub: "pendentes",color: "amber" },
+        { icon: CheckCircle2, label: "Concluídas",  value: m.concluidas,  sub: "total",    color: "success" },
+      ];
+    default: // APOIO_N2, ENGENHEIRO, COORDENADOR, SECRETARIO
+      return [
+        { icon: Briefcase,     label: "Total de Obras", value: m.total,       sub: "portfólio", color: "sky" },
+        { icon: Activity,      label: "Em Execução",    value: m.emExecucao,  sub: "ativas",    color: "brand" },
+        { icon: AlertTriangle, label: "Paralisadas",    value: m.paralisadas, sub: "alertas",   color: "amber" },
+        { icon: CheckCircle2,  label: "Concluídas",     value: m.concluidas,  sub: "total",     color: "success" },
+      ];
+  }
+}
+
+interface AcaoDef { to: string; icon: LucideIcon; title: string; desc: string; color: string; }
+
+function acoesDoPapel(role: string, total: number): AcaoDef[] {
+  const obras: AcaoDef    = { to: "/obras",      icon: Building2,    title: "Obras",            desc: `${total} no seu painel`,        color: "text-sky-600 bg-sky-50" };
+  const quadro: AcaoDef   = { to: "/quadro",     icon: KanbanSquare, title: "Quadro de Tarefas",desc: "Acompanhe as tarefas Kanban",   color: "text-violet-600 bg-violet-50" };
+  const alertas: AcaoDef  = { to: "/alertas",    icon: Bell,         title: "Alertas",          desc: "Pendências e notificações",     color: "text-rose-600 bg-rose-50" };
+  const contratos: AcaoDef= { to: "/contratos",  icon: Briefcase,    title: "Contratos",        desc: "Gerir contratos de obra",       color: "text-brand-700 bg-brand-50" };
+  const novaObra: AcaoDef = { to: "/obras/nova", icon: PlusCircle,   title: "Nova Obra",        desc: "Cadastrar contrato de obra",    color: "text-brand-700 bg-brand-50" };
+  const relatorio: AcaoDef= { to: "/relatorio",  icon: FileBarChart, title: "Relatórios",       desc: "Gerar e exportar relatórios",   color: "text-emerald-600 bg-emerald-50" };
+  const gestao: AcaoDef   = { to: "/gestao",     icon: Settings2,    title: "Gestão",           desc: "Usuários, órgãos e delegações",  color: "text-slate-600 bg-slate-100" };
+  const tarefas: AcaoDef  = { to: "/quadro",     icon: ListChecks,   title: "Minhas Tarefas",   desc: "Pendências atribuídas a você",  color: "text-violet-600 bg-violet-50" };
+
+  switch (role) {
+    case "EMPRESA":   return [obras, tarefas, alertas];
+    case "FISCAL":    return [obras, alertas, relatorio];
+    case "APOIO_N1":  return [obras, contratos, quadro];
+    case "COORDENADOR":
+    case "SECRETARIO":return [novaObra, relatorio, gestao];
+    default:          return [novaObra, contratos, quadro];
+  }
+}
+
+// ---------------------------------------------------------------------------
+const KPICard = ({ icon: Icon, label, value, sub, color, loading }: KPIDef & { loading?: boolean }) => {
   const colors: Record<string, string> = {
     brand:   "bg-brand-50 text-brand-700 border-brand-200",
-    success: "bg-success-50 text-success-500 border-success-200",
+    success: "bg-emerald-50 text-emerald-600 border-emerald-100",
     amber:   "bg-amber-50 text-amber-600 border-amber-100",
     rose:    "bg-rose-50 text-rose-600 border-rose-100",
     sky:     "bg-sky-50 text-sky-600 border-sky-100",
@@ -40,7 +121,7 @@ const KPICard = ({ icon: Icon, label, value, sub, color = "brand", loading }: KP
       {loading ? (
         <div className="h-9 w-16 bg-slate-100 animate-pulse rounded-lg mb-1" />
       ) : (
-        <p className="text-3xl font-bold text-slate-900 mb-1">{value}</p>
+        <p className="text-3xl font-bold text-slate-900 mb-1">{value || "—"}</p>
       )}
       <p className="text-sm text-slate-500">{label}</p>
     </div>
@@ -54,15 +135,27 @@ const SAUDE_CONFIG = {
 };
 
 const SITUACAO_LABEL: Record<string, string> = {
-  EM_ANDAMENTO: "Em Andamento",
-  CONCLUIDA:    "Concluída",
-  PARALISADA:   "Paralisada",
-  A_INICIAR:    "A Iniciar",
-  INACABADA:    "Inacabada",
-  RESCINDIDA:   "Rescindida",
-  ARQUIVADA:    "Arquivada",
-  EXTINTA:      "Extinta",
-  CEDIDA:       "Cedida",
+  EM_ANDAMENTO: "Em Andamento", CONCLUIDA: "Concluída", PARALISADA: "Paralisada",
+  A_INICIAR: "A Iniciar", INACABADA: "Inacabada", RESCINDIDA: "Rescindida",
+  ARQUIVADA: "Arquivada", EXTINTA: "Extinta", CEDIDA: "Cedida",
+  SEM_SITUACAO: "Sem situação",
+};
+
+// Placeholder enquanto o bundle dos gráficos (recharts) carrega — reserva a
+// altura para evitar salto de layout.
+const ChartsSkeleton = ({ dupla }: { dupla: boolean }) => {
+  const Bloco = () => (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <div className="h-4 w-40 bg-slate-100 animate-pulse rounded mb-4" />
+      <div className="h-44 bg-slate-50 animate-pulse rounded-xl" />
+    </div>
+  );
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Bloco /><Bloco /></div>
+      {dupla && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Bloco /><Bloco /></div>}
+    </div>
+  );
 };
 
 const Dashboard = () => {
@@ -70,20 +163,18 @@ const Dashboard = () => {
   const [filtroSituacao, setFiltroSituacao] = useState<string | null>(null);
   const [filtroSaude, setFiltroSaude] = useState<string | null>(null);
 
+  const role = (user?.tipo as Role) ?? "EMPRESA";
+  const podeVerOrgaos = (RANK[role] ?? 0) >= RANK.FISCAL;
+
   const { data: stats, isLoading: statsLoading } = useQuery<ObraStats>({
     queryKey: ["obras", "stats"],
-    queryFn: async () => {
-      const { data } = await api.get("/obras/stats");
-      return data;
-    },
+    queryFn: async () => (await api.get("/obras/stats")).data,
   });
 
   const { data: resumo } = useQuery<RelatorioResumo>({
     queryKey: ["relatorio", "resumo"],
-    queryFn: async () => {
-      const { data } = await api.get("/relatorios/resumo");
-      return data;
-    },
+    queryFn: async () => (await api.get("/relatorios/resumo")).data,
+    enabled: podeVerOrgaos, // EMPRESA não tem acesso (evita 403)
   });
 
   const { data: obrasData, isLoading: obrasLoading } = useQuery<PaginatedResponse<Obra>>({
@@ -92,17 +183,33 @@ const Dashboard = () => {
       const params: Record<string, unknown> = { limit: 20, sort: "criado_em", order: "desc" };
       if (filtroSituacao) params.situacao = filtroSituacao;
       if (filtroSaude) params.saude = filtroSaude;
-      const { data } = await api.get("/obras", { params });
-      return data;
+      return (await api.get("/obras", { params })).data;
     },
   });
 
   const obras = obrasData?.items ?? [];
   const loading = statsLoading || obrasLoading;
-  const s = stats?.por_situacao || {};
-  const emExecucao = (s.EM_ANDAMENTO || 0) + (stats?.por_status?.EM_EXECUCAO || 0);
-  const atencao = (s.PARALISADA || 0) + (s.INACABADA || 0);
-  const concluidas = s.CONCLUIDA || 0;
+
+  const ps = stats?.por_status ?? {};
+  const psit = stats?.por_situacao ?? {};
+  const psaude = stats?.por_saude ?? {};
+  const m: Metricas = {
+    total:       stats?.total ?? 0,
+    emExecucao:  ps.EM_EXECUCAO ?? 0,
+    paralisadas: ps.PARALISADA ?? 0,
+    concluidas:  ps.CONCLUIDA ?? 0,
+    planejadas:  ps.PLANEJADA ?? 0,
+    aIniciar:    psit.A_INICIAR ?? 0,
+    critico:     psaude.VERMELHO ?? 0,
+    atencao:     psaude.AMARELO ?? 0,
+    emDia:       psaude.VERDE ?? 0,
+  };
+
+  const kpis = kpisDoPapel(role, m);
+  const acoes = acoesDoPapel(role, m.total);
+  const temFiltro = Boolean(filtroSituacao || filtroSaude);
+
+  const toggleSaude = (s: string) => setFiltroSaude((cur) => (cur === s ? null : s));
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -112,63 +219,52 @@ const Dashboard = () => {
         </div>
         <div className="absolute top-0 left-0 right-0 h-1 sin-stripe opacity-70" />
         <div className="relative">
-          <p className="text-sm font-medium text-white/70 mb-1">Bem-vindo ao painel,</p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-sm font-medium text-white/70">Bem-vindo ao painel,</p>
+            <span className="text-[11px] font-semibold uppercase tracking-wide bg-white/15 px-2 py-0.5 rounded-full">
+              {ROLE_LABEL[role] ?? role}
+            </span>
+          </div>
           <h2 className="text-3xl font-bold mb-2">{user?.nome || "Usuário"}</h2>
-          <p className="text-white/65 text-sm">Confira o resumo dos contratos e obras sob sua responsabilidade.</p>
+          <p className="text-white/65 text-sm">{SAUDACAO[role] ?? "Confira o resumo das obras sob sua responsabilidade."}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KPICard icon={Briefcase}      label="Contratos Ativos"   value={stats?.total ?? "—"}  sub="total"       color="sky"     loading={loading} />
-        <KPICard icon={Activity}       label="Em Execução"        value={emExecucao || "—"}     sub="ativas"      color="brand"   loading={loading} />
-        <KPICard icon={AlertTriangle}  label="Paralisadas"        value={atencao || "—"}        sub="alertas"     color="amber"   loading={loading} />
-        <KPICard icon={CheckCircle2}   label="Concluídas"         value={concluidas || "—"}     sub="total"       color="success" loading={loading} />
+        {kpis.map((kpi) => <KPICard key={kpi.label} {...kpi} loading={loading} />)}
       </div>
 
       {stats && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Distribuição por situação oficial</h3>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(stats.por_situacao || {}).sort((a, b) => b[1] - a[1]).map(([sit, n]) => (
-                <button
-                  key={sit}
-                  onClick={() => setFiltroSituacao(filtroSituacao === sit ? null : sit)}
-                  className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
-                    filtroSituacao === sit
-                      ? "bg-brand-50 text-brand-700 border-brand-300"
-                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <span className="font-semibold">{n}</span>
-                  <span>{SITUACAO_LABEL[sit] || sit}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+        <Suspense fallback={<ChartsSkeleton dupla={podeVerOrgaos} />}>
+          <DashboardCharts
+            porStatus={ps}
+            porSaude={psaude}
+            filtroSaude={filtroSaude}
+            onToggleSaude={toggleSaude}
+            resumo={podeVerOrgaos ? resumo : undefined}
+          />
+        </Suspense>
+      )}
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Saúde do portfólio</h3>
-            <div className="flex gap-3">
-              {(["VERDE", "AMARELO", "VERMELHO"] as const).map((saude) => {
-                const cfg = SAUDE_CONFIG[saude];
-                return (
-                  <button
-                    key={saude}
-                    onClick={() => setFiltroSaude(filtroSaude === saude ? null : saude)}
-                    className={`flex-1 rounded-xl p-4 text-center border-2 transition-all ${
-                      filtroSaude === saude
-                        ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
-                        : "bg-slate-50 border-slate-100 hover:border-slate-200"
-                    }`}
-                  >
-                    <span className={`inline-block h-3 w-3 rounded-full ${cfg.dot} mb-2`} />
-                    <p className="text-lg font-bold">{saude === "VERDE" ? emExecucao || "—" : saude === "AMARELO" ? atencao || "—" : 0}</p>
-                    <p className="text-[10px] font-semibold uppercase mt-1">{cfg.label}</p>
-                  </button>
-                );
-              })}
-            </div>
+      {Object.keys(psit).length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+          <h3 className="text-sm font-semibold text-slate-900 mb-4">Distribuição por situação oficial</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(psit).sort((a, b) => b[1] - a[1]).map(([sit, n]) => (
+              <button
+                key={sit}
+                disabled={sit === "SEM_SITUACAO"}
+                onClick={() => setFiltroSituacao(filtroSituacao === sit ? null : sit)}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all disabled:cursor-default disabled:opacity-60 ${
+                  filtroSituacao === sit
+                    ? "bg-brand-50 text-brand-700 border-brand-300"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <span className="font-semibold">{n}</span>
+                <span>{SITUACAO_LABEL[sit] || sit}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -178,11 +274,11 @@ const Dashboard = () => {
           <div>
             <h3 className="text-base font-semibold text-slate-900">Obras Recentes</h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              {(filtroSituacao || filtroSaude) ? "Filtro ativo" : "Últimas obras cadastradas"}
+              {temFiltro ? "Filtro ativo" : "Últimas obras do seu painel"}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {(filtroSituacao || filtroSaude) && (
+            {temFiltro && (
               <button
                 onClick={() => { setFiltroSituacao(null); setFiltroSaude(null); }}
                 className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
@@ -191,10 +287,7 @@ const Dashboard = () => {
                 Limpar filtros
               </button>
             )}
-            <Link
-              to="/obras"
-              className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors"
-            >
+            <Link to="/obras" className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors">
               Ver todas
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -216,67 +309,44 @@ const Dashboard = () => {
                   <p className="text-sm">Nenhuma obra encontrada com os filtros atuais.</p>
                 </div>
               )
-            : obras.map((obra) => (
-                <Link
-                  key={obra.id}
-                  to={`/obras/${obra.id}`}
-                  className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/80 transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate group-hover:text-brand-700">{obra.titulo}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{obra.municipio}</p>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="hidden sm:block w-28">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-xs text-slate-500">{Number(obra.percentual_executado || 0).toFixed(0)}%</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-slate-100">
-                        <div
-                          className="h-1.5 rounded-full bg-brand-500 transition-all"
-                          style={{ width: `${obra.percentual_executado || 0}%` }}
-                        />
-                      </div>
+            : obras.map((obra) => {
+                const cfg = SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG];
+                return (
+                  <Link
+                    key={obra.id}
+                    to={`/obras/${obra.id}`}
+                    className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/80 transition-colors group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate group-hover:text-brand-700">{obra.titulo}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{obra.municipio}</p>
                     </div>
-                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.bg || "bg-slate-50"} ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.text || "text-slate-500"} ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.border || "border-slate-200"}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.dot || "bg-slate-400"}`} />
-                      {SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.label || obra.saude}
-                    </span>
-                    <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-brand-500 transition-colors" />
-                  </div>
-                </Link>
-              ))
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="hidden sm:block w-28">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-xs text-slate-500">{Number(obra.percentual_executado || 0).toFixed(0)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded-full bg-slate-100">
+                          <div className="h-1.5 rounded-full bg-brand-500 transition-all" style={{ width: `${obra.percentual_executado || 0}%` }} />
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                        {cfg.label}
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-brand-500 transition-colors" />
+                    </div>
+                  </Link>
+                );
+              })
           }
         </div>
       </div>
 
-      {resumo && (resumo.obras_por_status.length > 0 || resumo.obras_por_orgao.length > 0) && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">Análise gráfica</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Distribuição de obras e valores por status e órgão</p>
-            </div>
-            <Link
-              to="/relatorio"
-              className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors"
-            >
-              Gerar relatório
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <RelatorioCharts data={resumo} />
-        </div>
-      )}
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { to: "/obras/nova",  icon: Briefcase,    title: "Novo Contrato",    desc: "Cadastre um novo contrato de obra",    color: "text-brand-700 bg-brand-50" },
-          { to: "/contratos",  icon: Briefcase,    title: "Ver Contratos",     desc: `${stats?.total ?? "—"} contratos no sistema`,          color: "text-sky-600 bg-sky-50" },
-          { to: "/quadro",     icon: KanbanSquare, title: "Quadro de Tarefas", desc: "Acompanhe as tarefas Kanban",           color: "text-violet-600 bg-violet-50" },
-        ].map((item) => (
+        {acoes.map((item) => (
           <Link
-            key={item.to}
+            key={item.to + item.title}
             to={item.to}
             className="flex items-center gap-4 p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all group"
           >
