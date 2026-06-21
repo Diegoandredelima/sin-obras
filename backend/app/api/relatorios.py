@@ -2,7 +2,8 @@
 SIN-Obras — Router de Relatórios
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +13,7 @@ from app.models.cadastro import Empresa
 from app.models.obra import Contrato, Obra
 from app.models.usuario import Usuario
 from app.schemas.relatorio import RelatorioResumo, ResumoPorOrgao, ResumoPorStatus
+from app.services import export_relatorio as export_svc
 
 router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
@@ -81,4 +83,29 @@ async def resumo_relatorio(
         obras_por_status=obras_por_status,
         obras_por_orgao=obras_por_orgao,
         valor_total_contratos=float(valor_total or 0),
+    )
+
+
+@router.get("/export")
+async def export_relatorio(
+    formato: str = Query("xlsx", regex="^(xlsx|pdf)$"),
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
+):
+    """Exporta o relatório-resumo em XLSX ou PDF."""
+    data = await export_svc._fetch_data(db)
+
+    if formato == "xlsx":
+        buf = export_svc.gerar_xlsx(data)
+        filename = f"relatorio_obras_{data['total_obras']}_obras.xlsx"
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    else:
+        buf = export_svc.gerar_pdf(data)
+        filename = f"relatorio_obras_{data['total_obras']}_obras.pdf"
+        media_type = "application/pdf"
+
+    return StreamingResponse(
+        buf,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

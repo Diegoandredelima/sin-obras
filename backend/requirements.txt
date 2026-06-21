@@ -20,6 +20,8 @@ boto3==1.35.0
 python-dotenv==1.0.1
 # Leitura das planilhas oficiais (.xlsx) para importação de dados
 openpyxl==3.1.5
+# Exportação de relatórios (PDF)
+fpdf2==2.8.7
 # Testes
 pytest==8.3.0
 pytest-cov==5.0.0

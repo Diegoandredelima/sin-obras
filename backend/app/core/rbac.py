@@ -1,6 +1,9 @@
 """
 SIN-Obras — RBAC (Role-Based Access Control)
 Define os perfis do sistema e decorators para proteger endpoints.
+
+Hierarquia:
+  EMPRESA < FISCAL < APOIO_N1 < APOIO_N2 < COORDENADOR < SECRETARIO
 """
 
 import enum
@@ -14,18 +17,23 @@ class Role(str, enum.Enum):
     """Perfis do sistema, ordenados do menor ao maior privilégio."""
     EMPRESA = "EMPRESA"
     FISCAL = "FISCAL"
-    ENGENHEIRO = "ENGENHEIRO"
+    APOIO_N1 = "APOIO_N1"
+    APOIO_N2 = "APOIO_N2"
     COORDENADOR = "COORDENADOR"
     SECRETARIO = "SECRETARIO"
+    # --- legado (mantido para compatibilidade) ---
+    ENGENHEIRO = "ENGENHEIRO"
 
 
 # Hierarquia de privilégios (índice maior = mais privilégio)
 _ROLE_HIERARCHY = {
     Role.EMPRESA: 0,
     Role.FISCAL: 1,
-    Role.ENGENHEIRO: 2,
-    Role.COORDENADOR: 3,
-    Role.SECRETARIO: 4,
+    Role.APOIO_N1: 2,
+    Role.APOIO_N2: 3,
+    Role.ENGENHEIRO: 3,   # legado ≈ APOIO_N2
+    Role.COORDENADOR: 4,
+    Role.SECRETARIO: 5,
 }
 
 

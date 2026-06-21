@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install system dependencies for PostGIS / asyncpg
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc && \
+    libpq-dev gcc fonts-dejavu && \
     rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

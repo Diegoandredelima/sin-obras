@@ -10,9 +10,11 @@ from .acompanhamento import (
     Reajuste,
     TermoRecebimento,
 )
+from .alerta import Alerta
 from .art_rrt import ArtRrt
 from .auditoria import AuditLog
 from .cadastro import Empresa, Orgao
+from .delegacao import DelegacaoObra
 from .obra import Contrato, Evento, Meta, Obra, Submeta
 from .portal import DiarioObra, Medicao, Notificacao
 from .tarefa import Tarefa
@@ -46,4 +48,6 @@ __all__ = [
     "TermoRecebimento",
     "NotificacaoExtrajudicial",
     "Portaria",
+    "Alerta",
+    "DelegacaoObra",
 ]

@@ -13,10 +13,14 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy import text
 
+from app.api.acompanhamento import router as acompanhamento_router
+from app.api.alertas import router as alertas_router
 from app.api.art_rrt import router as art_rrt_router
 from app.api.auth import router as auth_router
 from app.api.contratos import router as contratos_router
 from app.api.cronograma import router as cronograma_router
+from app.api.curva_s import router as curva_s_router
+from app.api.delegacao import router as delegacao_router
 from app.api.empresas import router as empresas_router
 from app.api.notificacoes import router as notificacoes_router
 from app.api.obras import router as obras_router
@@ -89,6 +93,10 @@ app.include_router(relatorios_router, prefix="/api")
 app.include_router(notificacoes_router, prefix="/api")
 app.include_router(vistorias_router, prefix="/api")
 app.include_router(orgaos_router, prefix="/api")
+app.include_router(acompanhamento_router, prefix="/api")
+app.include_router(curva_s_router, prefix="/api")
+app.include_router(delegacao_router, prefix="/api")
+app.include_router(alertas_router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

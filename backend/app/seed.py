@@ -62,15 +62,23 @@ USUARIOS_SEED = [
         "matricula_cnpj": "10002",
         "senha": "sin@2026",
         "tipo": Role.COORDENADOR,
-        "cargo": "Coordenadora da COS",
+        "cargo": "Chefe de Setor — COS",
     },
     {
-        "nome": "Eng. Carlos Souza",
-        "email": "engenheiro@sin.rn.gov.br",
+        "nome": "Apoio N2 João Silva",
+        "email": "apoio_n2@sin.rn.gov.br",
         "matricula_cnpj": "10003",
         "senha": "sin@2026",
-        "tipo": Role.ENGENHEIRO,
-        "cargo": "Engenheiro Civil de Apoio",
+        "tipo": Role.APOIO_N2,
+        "cargo": "Apoio Nível 2 — Engenharia",
+    },
+    {
+        "nome": "Apoio N1 Ana Lima",
+        "email": "apoio_n1@sin.rn.gov.br",
+        "matricula_cnpj": "10005",
+        "senha": "sin@2026",
+        "tipo": Role.APOIO_N1,
+        "cargo": "Apoio Nível 1 — Cadastro",
     },
     {
         "nome": "Fiscal Pedro Lima",
@@ -333,7 +341,7 @@ async def seed():
         print("\n  🏗️  Criando obra de demonstração...\n")
         await criar_obra_demo(
             db,
-            engenheiro_id=usuarios_criados[Role.ENGENHEIRO].id,
+            engenheiro_id=usuarios_criados[Role.APOIO_N2].id,
             empresa_id=usuarios_criados[Role.EMPRESA].id,
             fiscal_id=usuarios_criados[Role.FISCAL].id,
             coordenador_id=usuarios_criados[Role.COORDENADOR].id,
