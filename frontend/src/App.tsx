@@ -12,6 +12,8 @@ import RedirectObra from "@/pages/RedirectObra";
 import DetalheContrato from "@/pages/DetalheContrato";
 import Relatorio from "@/pages/Relatorio";
 import DetalheEmpresa from "@/pages/DetalheEmpresa";
+import Gestao from "@/pages/Gestao";
+import Alertas from "@/pages/Alertas";
 import Privacidade from "@/pages/Privacidade";
 import NotFound from "@/pages/NotFound";
 import CookieBanner from "@/components/CookieBanner";
@@ -34,6 +36,8 @@ function App() {
           <Route path="/empresa/obras/:obraId/diario" element={<DiarioObras />} />
           <Route path="/empresa/obras/:obraId/medicoes" element={<Medicoes />} />
           <Route path="/relatorio" element={<Relatorio />} />
+          <Route path="/gestao" element={<Gestao />} />
+          <Route path="/alertas" element={<Alertas />} />
           <Route path="/empresas/:id" element={<DetalheEmpresa />} />
         </Route>
 
