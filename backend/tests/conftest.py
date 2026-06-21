@@ -2,10 +2,12 @@ import os
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 from starlette.testclient import TestClient
 
-from app.core.database import Base
+from app.core.database import Base, get_db
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -54,7 +56,34 @@ def db_session(sync_engine):
 
 
 @pytest.fixture
-def client():
+def client(sync_engine):
+    """TestClient com `get_db` apontado ao banco de teste (`sinobras_test`).
+
+    Sem este override o app consultaria o banco de `DATABASE_URL` (o principal),
+    onde os usuários semeados pelas fixtures não existem — fazendo o login
+    retornar 401. Usamos NullPool para que cada request abra/feche sua própria
+    conexão no event loop atual do TestClient (evita reuso de conexão asyncpg
+    entre loops distintos).
+    """
     from app.main import app
-    with TestClient(app) as c:
-        yield c
+
+    async_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    TestSession = async_sessionmaker(
+        bind=async_engine, class_=AsyncSession, expire_on_commit=False
+    )
+
+    async def _get_db_override():
+        async with TestSession() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.dependency_overrides[get_db] = _get_db_override
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        app.dependency_overrides.pop(get_db, None)
