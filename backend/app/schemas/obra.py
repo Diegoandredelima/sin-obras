@@ -109,6 +109,7 @@ class ObraUpdate(BaseModel):
 class ObraResponse(ObraBase):
     id: UUID
     ativo: bool
+    criado_por_id: UUID | None = None
     criado_em: datetime
     atualizado_em: datetime
 

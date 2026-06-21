@@ -8,8 +8,9 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import api from "@/services/api";
-import type { Obra, ObraStats, PaginatedResponse } from "@/types";
+import type { Obra, ObraStats, PaginatedResponse, RelatorioResumo } from "@/types";
 import { useState } from "react";
+import RelatorioCharts from "@/components/RelatorioCharts";
 
 interface KPICardProps {
   icon: LucideIcon;
@@ -73,6 +74,14 @@ const Dashboard = () => {
     queryKey: ["obras", "stats"],
     queryFn: async () => {
       const { data } = await api.get("/obras/stats");
+      return data;
+    },
+  });
+
+  const { data: resumo } = useQuery<RelatorioResumo>({
+    queryKey: ["relatorio", "resumo"],
+    queryFn: async () => {
+      const { data } = await api.get("/relatorios/resumo");
       return data;
     },
   });
@@ -240,6 +249,25 @@ const Dashboard = () => {
           }
         </div>
       </div>
+
+      {resumo && (resumo.obras_por_status.length > 0 || resumo.obras_por_orgao.length > 0) && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">Análise gráfica</h3>
+              <p className="text-xs text-slate-400 mt-0.5">Distribuição de obras e valores por status e órgão</p>
+            </div>
+            <Link
+              to="/relatorio"
+              className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors"
+            >
+              Gerar relatório
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <RelatorioCharts data={resumo} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[

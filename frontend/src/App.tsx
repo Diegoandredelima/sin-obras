@@ -17,6 +17,10 @@ import Alertas from "@/pages/Alertas";
 import Privacidade from "@/pages/Privacidade";
 import NotFound from "@/pages/NotFound";
 import CookieBanner from "@/components/CookieBanner";
+import RelatorioImpressao from "@/pages/print/RelatorioImpressao";
+import ObraImpressao from "@/pages/print/ObraImpressao";
+import ObrasLoteImpressao from "@/pages/print/ObrasLoteImpressao";
+import ContratoImpressao from "@/pages/print/ContratoImpressao";
 
 function App() {
   return (
@@ -40,6 +44,12 @@ function App() {
           <Route path="/alertas" element={<Alertas />} />
           <Route path="/empresas/:id" element={<DetalheEmpresa />} />
         </Route>
+
+        {/* Rotas de impressão — standalone, sem o Layout (sidebar) */}
+        <Route path="/relatorio/imprimir" element={<RelatorioImpressao />} />
+        <Route path="/relatorio/imprimir-obras" element={<ObrasLoteImpressao />} />
+        <Route path="/obras/:id/relatorio" element={<ObraImpressao />} />
+        <Route path="/contratos/:id/relatorio" element={<ContratoImpressao />} />
 
         <Route path="/privacidade" element={<Privacidade />} />
 

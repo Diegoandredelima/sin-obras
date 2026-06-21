@@ -251,6 +251,62 @@ export interface EventoCreatePayload {
   valor_unitario?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Relatórios
+// ---------------------------------------------------------------------------
+export interface ResumoPorStatus {
+  status: string;
+  label: string;
+  total: number;
+}
+
+export interface ResumoPorOrgao {
+  orgao: string;
+  total_obras: number;
+  valor_total: number;
+}
+
+export interface RelatorioResumo {
+  total_obras: number;
+  total_contratos: number;
+  total_empresas: number;
+  obras_por_status: ResumoPorStatus[];
+  obras_por_orgao: ResumoPorOrgao[];
+  valor_total_contratos: number;
+}
+
+/** Linha denormalizada da view `vw_relatorio_obras` (GET /relatorios/obras). */
+export interface RelatorioObraRow {
+  obra_id: string;
+  titulo: string;
+  municipio?: string | null;
+  status?: string | null;
+  situacao?: string | null;
+  situacao_origem?: string | null;
+  ano_referencia?: number | null;
+  saude?: string | null;
+  percentual_executado?: number | null;
+  orgao?: string | null;
+  valor_contrato?: number | null;
+  valor_medido?: number | null;
+  saldo_a_medir?: number | null;
+  data_inicio?: string | null;
+  data_fim_prevista?: string | null;
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+  execucao_fim?: string | null;
+  contrato_id?: string | null;
+  contrato_numero?: string | null;
+  numero_processo?: string | null;
+  valor_global?: number | null;
+  valor_final?: number | null;
+  fiscal_nome?: string | null;
+  gestor_nome?: string | null;
+  empresa_razao_social?: string | null;
+  empresa_cnpj?: string | null;
+  dias_restantes_vigencia?: number | null;
+}
+
 export interface CurvaSData {
   error?: string;
   datas: string[];
