@@ -22,6 +22,7 @@ from app.schemas.relatorio import (
     ResumoPorStatus,
 )
 from app.services import export_relatorio as export_svc
+from app.services.obra import scope_obras_por_usuario
 
 router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
@@ -40,7 +41,10 @@ async def resumo_relatorio(
 ):
     """Retorna dados agregados para a tela de relatórios."""
 
-    total_obras = await db.scalar(select(func.count(Obra.id)).where(Obra.ativo == True))
+    obras_no_escopo = scope_obras_por_usuario(
+        select(Obra).where(Obra.ativo == True), current_user
+    ).subquery()
+    total_obras = await db.scalar(select(func.count()).select_from(obras_no_escopo))
     total_contratos = await db.scalar(select(func.count(Contrato.id)))
     total_empresas = await db.scalar(select(func.count(Empresa.id)))
     valor_total = await db.scalar(
@@ -49,9 +53,12 @@ async def resumo_relatorio(
 
     # Obras por status
     status_rows = await db.execute(
-        select(Obra.status, func.count(Obra.id))
-        .where(Obra.ativo == True, Obra.status != None)
-        .group_by(Obra.status)
+        scope_obras_por_usuario(
+            select(Obra.status, func.count(Obra.id)).where(
+                Obra.ativo == True, Obra.status != None
+            ),
+            current_user,
+        ).group_by(Obra.status)
     )
     obras_por_status = [
         ResumoPorStatus(
@@ -64,13 +71,16 @@ async def resumo_relatorio(
 
     # Obras por órgão (top 10)
     orgao_rows = await db.execute(
-        select(
-            Obra.orgao,
-            func.count(Obra.id),
-            func.coalesce(func.sum(Contrato.valor_global), 0),
+        scope_obras_por_usuario(
+            select(
+                Obra.orgao,
+                func.count(Obra.id),
+                func.coalesce(func.sum(Contrato.valor_global), 0),
+            )
+            .join(Contrato, Obra.contrato_id == Contrato.id, isouter=True)
+            .where(Obra.ativo == True),
+            current_user,
         )
-        .join(Contrato, Obra.contrato_id == Contrato.id, isouter=True)
-        .where(Obra.ativo == True)
         .group_by(Obra.orgao)
         .order_by(func.count(Obra.id).desc())
         .limit(10)

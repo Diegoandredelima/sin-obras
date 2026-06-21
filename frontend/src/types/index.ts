@@ -47,6 +47,7 @@ export interface ObraStats {
   total: number;
   por_situacao: Record<string, number>;
   por_status?: Record<string, number>;
+  por_saude?: Record<string, number>;
 }
 
 export interface PaginatedResponse<T> {
