@@ -63,7 +63,7 @@ const Row = ({ label, value, mono = false }: RowProps) => (
 
 interface KPIProps { label: string; value: string; sub?: string | null; color?: string }
 const KPI = ({ label, value, sub, color = "slate" }: KPIProps) => {
-  const colors: Record<string, string> = { slate: "text-slate-900", emerald: "text-emerald-700", sky: "text-sky-700", amber: "text-amber-700" };
+  const colors: Record<string, string> = { slate: "text-slate-900", brand: "text-brand-700", emerald: "text-emerald-700", sky: "text-sky-700", amber: "text-amber-700" };
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-1">
       <span className="text-xs font-medium text-slate-400">{label}</span>
@@ -100,7 +100,7 @@ const ObservacoesBlock = ({ text }: { text: string }) => {
   return (
     <div>
       {renderLines(expanded ? lines : preview)}
-      {hasMore && <button onClick={() => setExpanded((v) => !v)} className="mt-3 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-500 transition-colors">{expanded ? <><ChevronUp className="h-3.5 w-3.5" /> Mostrar menos</> : <><ChevronDown className="h-3.5 w-3.5" /> Ver mais {lines.length - 4} itens</>}</button>}
+      {hasMore && <button onClick={() => setExpanded((v) => !v)} className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-500 transition-colors">{expanded ? <><ChevronUp className="h-3.5 w-3.5" /> Mostrar menos</> : <><ChevronDown className="h-3.5 w-3.5" /> Ver mais {lines.length - 4} itens</>}</button>}
     </div>
   );
 };
@@ -160,7 +160,7 @@ const DetalheObra = () => {
     <div className="flex flex-col items-center justify-center py-32 text-center">
       <AlertTriangle className="h-12 w-12 text-amber-400 mb-4" />
       <p className="text-lg font-semibold text-slate-700">Obra não encontrada.</p>
-      <Link to="/obras" className="mt-4 text-sm text-emerald-600 hover:underline">← Voltar para obras</Link>
+      <Link to="/obras" className="mt-4 text-sm text-brand-700 hover:underline">← Voltar para obras</Link>
     </div>
   );
   if (!obra) return null;
@@ -181,7 +181,7 @@ const DetalheObra = () => {
 
   return (
     <div className="space-y-6">
-      <Link to="/obras" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-600 transition-colors"><ArrowLeft className="h-4 w-4" />Obras</Link>
+      <Link to="/obras" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors"><ArrowLeft className="h-4 w-4" />Obras</Link>
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -237,7 +237,7 @@ const DetalheObra = () => {
       <><div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI label="Valor Inicial" value={fmtCurrency(contrato?.valor_global ?? obra.valor_contrato)} color="slate" />
         <KPI label="Valor Final" value={fmtCurrency(contrato?.valor_final ?? obra.valor_contrato)} sub={contrato?.valor_aditivo ? `+ ${fmtCurrency(contrato.valor_aditivo)} aditivo` : null} color={contrato && contrato.valor_final && contrato.valor_global && contrato.valor_final > contrato.valor_global ? "amber" : "slate"} />
-        <KPI label="Valor Medido" value={fmtCurrency(obra.valor_medido, "Não informado")} color="emerald" />
+        <KPI label="Valor Medido" value={fmtCurrency(obra.valor_medido, "Não informado")} color="brand" />
         <KPI label="Saldo a Medir" value={fmtCurrency(obra.saldo_a_medir, "Não informado")} color="sky" />
       </div>
 

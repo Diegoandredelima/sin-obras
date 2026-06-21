@@ -56,7 +56,7 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
       <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-        <Plus className="h-4 w-4 text-emerald-500" />
+        <Plus className="h-4 w-4 text-brand-500" />
         Novo Registro — {new Date().toLocaleDateString("pt-BR")}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,13 +64,13 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Data</label>
             <input type="date" value={form.data_registro} onChange={update("data_registro")} required
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Clima</label>
             <select value={form.clima} onChange={update("clima")}
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
             >
               <option value="">Selecione</option>
               {CLIMA_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
@@ -79,7 +79,7 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Nº de Funcionários</label>
             <input type="number" min="0" value={form.qtd_funcionarios} onChange={update("qtd_funcionarios")} required
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
             />
           </div>
         </div>
@@ -87,20 +87,20 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
           <label className="text-sm font-medium text-slate-700">Atividades Realizadas <span className="text-rose-500">*</span></label>
           <textarea rows={3} required value={form.atividades_realizadas} onChange={update("atividades_realizadas")}
             placeholder="Descreva as atividades executadas hoje..."
-            className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
+            className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Equipamentos</label>
             <textarea rows={2} value={form.equipamentos} onChange={update("equipamentos")} placeholder="Ex: 1 betoneira, 1 grua..."
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Ocorrências</label>
             <textarea rows={2} value={form.ocorrencias} onChange={update("ocorrencias")} placeholder="Ocorrências, paralisações, acidentes..."
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
             />
           </div>
         </div>
@@ -110,7 +110,7 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
             Cancelar
           </button>
           <button type="submit" disabled={loading}
-            className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-200 transition-all disabled:opacity-70">
+            className="px-4 py-2 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-70">
             {loading ? "Salvando..." : "Salvar Registro"}
           </button>
         </div>
@@ -138,7 +138,7 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
         <span className="text-sm text-slate-500">{registros.length} registros</span>
         {!showForm && (
           <button onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 transition-all">
+            className="inline-flex items-center gap-2 px-3 py-2 bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-brand-700/20 hover:bg-brand-500 transition-all">
             <Plus className="h-3.5 w-3.5" />
             Novo Registro
           </button>
@@ -173,8 +173,8 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
         <div className="space-y-6">
           {registros.map((r) => (
             <div key={r.id} className="relative flex gap-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white border-2 border-emerald-200 shadow-sm z-10">
-                <BookOpen className="h-5 w-5 text-emerald-500" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white border-2 border-brand-200 shadow-sm z-10">
+                <BookOpen className="h-5 w-5 text-brand-500" />
               </div>
               <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
                 <div className="flex flex-wrap items-center gap-3">

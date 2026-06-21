@@ -5,7 +5,7 @@ import {
   ArrowLeft, Briefcase, Building2, User, MapPin,
   TrendingUp, Calendar, FileText, Hash, AlertTriangle,
   Activity, CheckCircle2, Pause, Clock, BookOpen, ChartBar,
-  ChevronDown, ChevronUp, ExternalLink,
+  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
@@ -13,6 +13,10 @@ import type { SaudeObra } from "@/types";
 import { fmtCurrency, fmtDate, fmtPercent } from "@/utils/format";
 import { DiarioContent } from "@/pages/DiarioObras";
 import { MedicoesContent } from "@/pages/Medicoes";
+import { ArtRrtContent } from "@/components/ArtRrtContent";
+import { EventosContratuaisContent } from "@/components/EventosContratuaisContent";
+import { CronogramaContent } from "@/components/CronogramaContent";
+import { CurvaSContent } from "@/components/CurvaSContent";
 
 interface LabelConfig { label: string; cls: string }
 interface StatusConfig { label: string; icon: LucideIcon; cls: string }
@@ -61,7 +65,7 @@ const Row = ({ label, value, mono = false, highlight = false }: RowProps) => (
 
 interface KPIProps { label: string; value: string; sub?: string | null; color?: string; note?: string | null }
 const KPI = ({ label, value, sub, color = "slate", note }: KPIProps) => {
-  const colors: Record<string, string> = { slate: "text-slate-900", emerald: "text-emerald-700", sky: "text-sky-700", amber: "text-amber-700", rose: "text-rose-700" };
+  const colors: Record<string, string> = { slate: "text-slate-900", brand: "text-brand-700", emerald: "text-emerald-700", sky: "text-sky-700", amber: "text-amber-700", rose: "text-rose-700" };
   return <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col gap-1"><span className="text-xs font-medium text-slate-400">{label}</span><span className={`text-xl font-bold leading-tight ${colors[color]}`}>{value}</span>{sub && <span className="text-xs text-slate-400">{sub}</span>}{note && <span className="text-xs font-medium text-amber-600 mt-1">{note}</span>}</div>;
 };
 
@@ -92,7 +96,7 @@ const ObservacoesBlock = ({ text }: { text: string }) => {
   return (
     <div>
       {renderLines(expanded ? lines : preview)}
-      {hasMore && <button onClick={() => setExpanded((v) => !v)} className="mt-3 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-500 transition-colors">{expanded ? <><ChevronDown className="h-3.5 w-3.5" /> Mostrar menos</> : <><ChevronUp className="h-3.5 w-3.5" /> Ver mais {lines.length - 4} itens</>}</button>}
+      {hasMore && <button onClick={() => setExpanded((v) => !v)} className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-500 transition-colors">{expanded ? <><ChevronDown className="h-3.5 w-3.5" /> Mostrar menos</> : <><ChevronUp className="h-3.5 w-3.5" /> Ver mais {lines.length - 4} itens</>}</button>}
     </div>
   );
 };
@@ -131,10 +135,10 @@ interface ObraDetail {
 const DetalheContrato = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes") || "detalhes";
-  const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes">(initialTab);
+  const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") || "detalhes";
+  const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s">(initialTab);
 
-  const handleTabChange = (tab: "detalhes" | "diario" | "medicoes") => {
+  const handleTabChange = (tab: "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") => {
     setActiveTab(tab);
     if (tab === "detalhes") {
       searchParams.delete("tab");
@@ -164,7 +168,7 @@ const DetalheContrato = () => {
 
   if (contratoLoading) return <Skeleton />;
   if (contratoError) return (
-    <div className="flex flex-col items-center justify-center py-32 text-center"><AlertTriangle className="h-12 w-12 text-amber-400 mb-4" /><p className="text-lg font-semibold text-slate-700">Contrato não encontrado.</p><Link to="/contratos" className="mt-4 text-sm text-emerald-600 hover:underline">← Voltar para contratos</Link></div>
+    <div className="flex flex-col items-center justify-center py-32 text-center"><AlertTriangle className="h-12 w-12 text-amber-400 mb-4" /><p className="text-lg font-semibold text-slate-700">Contrato não encontrado.</p><Link to="/contratos" className="mt-4 text-sm text-brand-700 hover:underline">← Voltar para contratos</Link></div>
   );
   if (!contrato) return null;
 
@@ -188,7 +192,7 @@ const DetalheContrato = () => {
 
   return (
     <div className="space-y-6">
-      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-600 transition-colors"><ArrowLeft className="h-4 w-4" />Contratos</Link>
+      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors"><ArrowLeft className="h-4 w-4" />Contratos</Link>
 
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -227,9 +231,9 @@ const DetalheContrato = () => {
 
       {obra && (
         <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
-          {(["detalhes", "diario", "medicoes"] as const).map((tab) => {
-            const icons: Record<string, LucideIcon> = { detalhes: FileText, diario: BookOpen, medicoes: ChartBar };
-            const labels: Record<string, string> = { detalhes: "Detalhes", diario: "Diário", medicoes: "Medições" };
+          {(["detalhes", "cronograma", "diario", "medicoes", "art-rrt", "eventos", "curva-s"] as const).map((tab) => {
+            const icons: Record<string, LucideIcon> = { detalhes: FileText, cronograma: CalendarDays, diario: BookOpen, medicoes: ChartBar, "art-rrt": ShieldCheck, eventos: History, "curva-s": TrendingUp };
+            const labels: Record<string, string> = { detalhes: "Detalhes", cronograma: "Cronograma", diario: "Diário", medicoes: "Medições", "art-rrt": "ART/RRT", eventos: "Eventos", "curva-s": "Curva S" };
             const TabIcon = icons[tab];
             return (
               <button
@@ -313,8 +317,12 @@ const DetalheContrato = () => {
       </div>
       </>)}
 
+      {activeTab === "cronograma" && obra && <CronogramaContent obraId={obra.id} />}
       {activeTab === "diario" && obra && <DiarioContent obraId={obra.id} />}
       {activeTab === "medicoes" && obra && <MedicoesContent obraId={obra.id} />}
+      {activeTab === "art-rrt" && obra && <ArtRrtContent obraId={obra.id} />}
+      {activeTab === "eventos" && obra && <EventosContratuaisContent obraId={obra.id} />}
+      {activeTab === "curva-s" && obra && <CurvaSContent obraId={obra.id} />}
     </div>
   );
 };

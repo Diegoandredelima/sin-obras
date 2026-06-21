@@ -50,7 +50,7 @@ const ObraFormField = ({ label, id, type = "text", placeholder, required, error,
       type={type}
       placeholder={placeholder}
       {...registration}
-      className={`block w-full rounded-xl border ${error ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
+      className={`block w-full rounded-xl border ${error ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
     />
     {error && <p className="text-xs text-rose-600 mt-0.5">{error}</p>}
   </div>
@@ -124,8 +124,8 @@ const NovaObra = () => {
       <div className="flex gap-2">
         {steps.map((s, i) => (
           <div key={s} className="flex-1 flex flex-col gap-1.5">
-            <div className={`h-1.5 rounded-full transition-all ${i <= step ? "bg-emerald-500" : "bg-slate-200"}`} />
-            <span className={`text-xs font-medium ${i === step ? "text-emerald-600" : i < step ? "text-slate-500" : "text-slate-300"}`}>
+            <div className={`h-1.5 rounded-full transition-all ${i <= step ? "bg-brand-700" : "bg-slate-200"}`} />
+            <span className={`text-xs font-medium ${i === step ? "text-brand-700" : i < step ? "text-slate-500" : "text-slate-300"}`}>
               {i + 1}. {s}
             </span>
           </div>
@@ -134,9 +134,9 @@ const NovaObra = () => {
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
         <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-          {step === 0 && <Building2 className="h-5 w-5 text-emerald-600" />}
-          {step === 1 && <MapPin className="h-5 w-5 text-emerald-600" />}
-          {step === 2 && <DollarSign className="h-5 w-5 text-emerald-600" />}
+          {step === 0 && <Building2 className="h-5 w-5 text-brand-700" />}
+          {step === 1 && <MapPin className="h-5 w-5 text-brand-700" />}
+          {step === 2 && <DollarSign className="h-5 w-5 text-brand-700" />}
           <h3 className="text-base font-semibold text-slate-900">{steps[step]}</h3>
         </div>
 
@@ -161,7 +161,7 @@ const NovaObra = () => {
                   rows={3}
                   placeholder="Descreva o escopo da obra..."
                   {...register("descricao")}
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
+                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
                 />
               </div>
               <ObraFormField
@@ -206,7 +206,7 @@ const NovaObra = () => {
                   min="50"
                   max="2000"
                   {...register("raio_geofencing_metros")}
-                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                  className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
                 />
                 <p className="text-xs text-slate-400">Raio máximo para check-in dos fiscais (padrão: 200m)</p>
               </div>
@@ -226,7 +226,7 @@ const NovaObra = () => {
                     step="0.01"
                     placeholder="0,00"
                     {...register("valor_contrato")}
-                    className={`block w-full rounded-xl border ${errors.valor_contrato ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 pl-9 pr-3 text-sm focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all`}
+                    className={`block w-full rounded-xl border ${errors.valor_contrato ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 pl-9 pr-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
                   />
                 </div>
                 {errors.valor_contrato && (
@@ -255,7 +255,7 @@ const NovaObra = () => {
               <button
                 type="button"
                 onClick={handleNext}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-700/20 hover:bg-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-700/30 transition-all"
               >
                 Próxima Etapa →
               </button>
@@ -263,7 +263,7 @@ const NovaObra = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 disabled:opacity-70 transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-md shadow-brand-700/20 hover:bg-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-700/30 disabled:opacity-70 transition-all"
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -1,6 +1,9 @@
 import { Outlet, Navigate, useLocation, Link } from "react-router-dom";
+import { Calculator } from "lucide-react";
+import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import NotificacoesBell from "@/components/NotificacoesBell";
+import { CalculadoraDrawer } from "@/components/CalculadoraDrawer";
 import { useAuthStore } from "@/store/auth";
 
 const TITLES: Record<string, string> = {
@@ -10,6 +13,8 @@ const TITLES: Record<string, string> = {
   "/contratos": "Contratos",
   "/quadro": "Quadro de Tarefas",
   "/relatorio": "Relatórios",
+  "/gestao": "Gestão de Obras e Equipe",
+  "/alertas": "Central de Alertas",
 };
 
 function getPageTitle(pathname: string): string {
@@ -25,6 +30,7 @@ function getPageTitle(pathname: string): string {
 const Layout = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
+  const [calcOpen, setCalcOpen] = useState(false);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -39,21 +45,35 @@ const Layout = () => {
           <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
             {getPageTitle(location.pathname)}
           </h1>
-          <NotificacoesBell />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCalcOpen(true)}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              title="Calculadora de Engenharia"
+            >
+              <Calculator className="h-5 w-5" />
+            </button>
+            <NotificacoesBell />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/50 p-8">
           <Outlet />
         </main>
 
-        <footer className="shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-8 py-3 text-center text-xs text-slate-500 dark:text-slate-400">
-          2023 &copy; Governo do Estado do Rio Grande do Norte &nbsp;|&nbsp;
-          Desenvolvimento: Assessoria de Informática - infra-RN &nbsp;|&nbsp;
-          <Link to="/privacidade" className="underline hover:text-brand-700 transition-colors">
-            Política de Privacidade
-          </Link>
+        <footer className="shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+          <div className="h-0.5 w-full sin-stripe" />
+          <div className="px-8 py-2.5">
+            2026 &copy; Governo do Estado do Rio Grande do Norte &nbsp;|&nbsp;
+            Secretaria de Infraestrutura — infra-RN &nbsp;|&nbsp;
+            <Link to="/privacidade" className="underline hover:text-brand-700 transition-colors">
+              Política de Privacidade
+            </Link>
+          </div>
         </footer>
       </div>
+
+      <CalculadoraDrawer open={calcOpen} onClose={() => setCalcOpen(false)} />
     </div>
   );
 };

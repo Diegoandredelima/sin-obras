@@ -1,6 +1,7 @@
 import {
   Building2, CheckCircle2, AlertTriangle,
   Briefcase, KanbanSquare, ArrowRight, Activity,
+  Search, Filter,
   type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -8,19 +9,21 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import api from "@/services/api";
 import type { Obra, ObraStats, PaginatedResponse } from "@/types";
+import { useState } from "react";
 
 interface KPICardProps {
   icon: LucideIcon;
   label: string;
   value: string | number;
   sub: string;
-  color?: string;
+  color?: "brand" | "amber" | "rose" | "sky" | "success";
   loading?: boolean;
 }
 
-const KPICard = ({ icon: Icon, label, value, sub, color = "emerald", loading }: KPICardProps) => {
+const KPICard = ({ icon: Icon, label, value, sub, color = "brand", loading }: KPICardProps) => {
   const colors: Record<string, string> = {
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    brand:   "bg-brand-50 text-brand-700 border-brand-200",
+    success: "bg-success-50 text-success-500 border-success-200",
     amber:   "bg-amber-50 text-amber-600 border-amber-100",
     rose:    "bg-rose-50 text-rose-600 border-rose-100",
     sky:     "bg-sky-50 text-sky-600 border-sky-100",
@@ -43,22 +46,10 @@ const KPICard = ({ icon: Icon, label, value, sub, color = "emerald", loading }: 
   );
 };
 
-interface StatusBadgeProps {
-  status: string;
-}
-
-const StatusBadge = ({ status }: StatusBadgeProps) => {
-  const map: Record<string, { label: string; cls: string }> = {
-    VERDE:    { label: "Em dia",  cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    AMARELO:  { label: "Atenção", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-    VERMELHO: { label: "Crítico", cls: "bg-rose-50 text-rose-700 border-rose-200" },
-  };
-  const item = map[status] || map.VERDE;
-  return (
-    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${item.cls}`}>
-      {item.label}
-    </span>
-  );
+const SAUDE_CONFIG = {
+  VERDE:    { label: "Em dia", dot: "bg-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  AMARELO:  { label: "Atenção", dot: "bg-amber-400", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  VERMELHO: { label: "Crítico", dot: "bg-rose-400", bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200" },
 };
 
 const SITUACAO_LABEL: Record<string, string> = {
@@ -75,6 +66,8 @@ const SITUACAO_LABEL: Record<string, string> = {
 
 const Dashboard = () => {
   const { user } = useAuthStore();
+  const [filtroSituacao, setFiltroSituacao] = useState<string | null>(null);
+  const [filtroSaude, setFiltroSaude] = useState<string | null>(null);
 
   const { data: stats, isLoading: statsLoading } = useQuery<ObraStats>({
     queryKey: ["obras", "stats"],
@@ -85,9 +78,12 @@ const Dashboard = () => {
   });
 
   const { data: obrasData, isLoading: obrasLoading } = useQuery<PaginatedResponse<Obra>>({
-    queryKey: ["obras", "recentes"],
+    queryKey: ["obras", "dashboard", filtroSituacao, filtroSaude],
     queryFn: async () => {
-      const { data } = await api.get("/obras", { params: { limit: 10 } });
+      const params: Record<string, unknown> = { limit: 20, sort: "criado_em", order: "desc" };
+      if (filtroSituacao) params.situacao = filtroSituacao;
+      if (filtroSaude) params.saude = filtroSaude;
+      const { data } = await api.get("/obras", { params });
       return data;
     },
   });
@@ -101,34 +97,69 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-700 to-emerald-500 p-8 text-white shadow-xl shadow-emerald-200 relative overflow-hidden">
+      <div className="rounded-2xl bg-gradient-to-r from-brand-700 to-brand-500 p-8 text-white shadow-xl shadow-brand-700/20 relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-64 opacity-10">
           <Building2 className="h-full w-full" />
         </div>
+        <div className="absolute top-0 left-0 right-0 h-1 sin-stripe opacity-70" />
         <div className="relative">
-          <p className="text-sm font-medium text-emerald-100 mb-1">Bem-vindo ao painel,</p>
+          <p className="text-sm font-medium text-white/70 mb-1">Bem-vindo ao painel,</p>
           <h2 className="text-3xl font-bold mb-2">{user?.nome || "Usuário"}</h2>
-          <p className="text-emerald-100 text-sm">Confira o resumo dos contratos e obras sob sua responsabilidade.</p>
+          <p className="text-white/65 text-sm">Confira o resumo dos contratos e obras sob sua responsabilidade.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KPICard icon={Briefcase}      label="Contratos Ativos"   value={stats?.total ?? "—"}  sub="total"       color="sky"     loading={loading} />
-        <KPICard icon={Activity}      label="Em Execução"        value={emExecucao || "—"}     sub="ativas"      color="emerald" loading={loading} />
-        <KPICard icon={AlertTriangle} label="Paralisadas"        value={atencao || "—"}        sub="alertas"     color="amber"   loading={loading} />
-        <KPICard icon={CheckCircle2}  label="Concluídas"         value={concluidas || "—"}     sub="total"       color="sky"     loading={loading} />
+        <KPICard icon={Activity}       label="Em Execução"        value={emExecucao || "—"}     sub="ativas"      color="brand"   loading={loading} />
+        <KPICard icon={AlertTriangle}  label="Paralisadas"        value={atencao || "—"}        sub="alertas"     color="amber"   loading={loading} />
+        <KPICard icon={CheckCircle2}   label="Concluídas"         value={concluidas || "—"}     sub="total"       color="success" loading={loading} />
       </div>
 
       {stats && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Distribuição por situação oficial</h3>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(stats.por_situacao || {}).sort((a, b) => b[1] - a[1]).map(([sit, n]) => (
-              <span key={sit} className="inline-flex items-center gap-1.5 text-xs font-medium bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
-                <span className="font-semibold text-slate-900">{n}</span>
-                <span className="text-slate-500">{SITUACAO_LABEL[sit] || sit}</span>
-              </span>
-            ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">Distribuição por situação oficial</h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(stats.por_situacao || {}).sort((a, b) => b[1] - a[1]).map(([sit, n]) => (
+                <button
+                  key={sit}
+                  onClick={() => setFiltroSituacao(filtroSituacao === sit ? null : sit)}
+                  className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
+                    filtroSituacao === sit
+                      ? "bg-brand-50 text-brand-700 border-brand-300"
+                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  <span className="font-semibold">{n}</span>
+                  <span>{SITUACAO_LABEL[sit] || sit}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">Saúde do portfólio</h3>
+            <div className="flex gap-3">
+              {(["VERDE", "AMARELO", "VERMELHO"] as const).map((saude) => {
+                const cfg = SAUDE_CONFIG[saude];
+                return (
+                  <button
+                    key={saude}
+                    onClick={() => setFiltroSaude(filtroSaude === saude ? null : saude)}
+                    className={`flex-1 rounded-xl p-4 text-center border-2 transition-all ${
+                      filtroSaude === saude
+                        ? `${cfg.bg} ${cfg.text} ${cfg.border} shadow-sm`
+                        : "bg-slate-50 border-slate-100 hover:border-slate-200"
+                    }`}
+                  >
+                    <span className={`inline-block h-3 w-3 rounded-full ${cfg.dot} mb-2`} />
+                    <p className="text-lg font-bold">{saude === "VERDE" ? emExecucao || "—" : saude === "AMARELO" ? atencao || "—" : 0}</p>
+                    <p className="text-[10px] font-semibold uppercase mt-1">{cfg.label}</p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -137,15 +168,28 @@ const Dashboard = () => {
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Obras Recentes</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Últimas obras cadastradas</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {(filtroSituacao || filtroSaude) ? "Filtro ativo" : "Últimas obras cadastradas"}
+            </p>
           </div>
-          <Link
-            to="/obras"
-            className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors"
-          >
-            Ver todas
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {(filtroSituacao || filtroSaude) && (
+              <button
+                onClick={() => { setFiltroSituacao(null); setFiltroSaude(null); }}
+                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                Limpar filtros
+              </button>
+            )}
+            <Link
+              to="/obras"
+              className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors"
+            >
+              Ver todas
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
         <div className="divide-y divide-slate-50">
           {loading
@@ -157,6 +201,12 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))
+            : obras.length === 0 ? (
+                <div className="px-6 py-12 text-center text-slate-400">
+                  <Search className="h-8 w-8 mx-auto mb-2" />
+                  <p className="text-sm">Nenhuma obra encontrada com os filtros atuais.</p>
+                </div>
+              )
             : obras.map((obra) => (
                 <Link
                   key={obra.id}
@@ -164,23 +214,26 @@ const Dashboard = () => {
                   className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/80 transition-colors group"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate group-hover:text-emerald-700">{obra.titulo}</p>
+                    <p className="text-sm font-medium text-slate-900 truncate group-hover:text-brand-700">{obra.titulo}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{obra.municipio}</p>
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="hidden sm:block w-28">
                       <div className="flex justify-between mb-1">
-                        <span className="text-xs text-slate-500">{obra.percentual_executado}%</span>
+                        <span className="text-xs text-slate-500">{Number(obra.percentual_executado || 0).toFixed(0)}%</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-slate-100">
                         <div
-                          className="h-1.5 rounded-full bg-emerald-500 transition-all"
+                          className="h-1.5 rounded-full bg-brand-500 transition-all"
                           style={{ width: `${obra.percentual_executado || 0}%` }}
                         />
                       </div>
                     </div>
-                    <StatusBadge status={obra.saude || "VERDE"} />
-                    <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.bg || "bg-slate-50"} ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.text || "text-slate-500"} ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.border || "border-slate-200"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.dot || "bg-slate-400"}`} />
+                      {SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG]?.label || obra.saude}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-brand-500 transition-colors" />
                   </div>
                 </Link>
               ))
@@ -190,7 +243,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { to: "/obras/nova",  icon: Briefcase,    title: "Novo Contrato",    desc: "Cadastre um novo contrato de obra",    color: "text-emerald-600 bg-emerald-50" },
+          { to: "/obras/nova",  icon: Briefcase,    title: "Novo Contrato",    desc: "Cadastre um novo contrato de obra",    color: "text-brand-700 bg-brand-50" },
           { to: "/contratos",  icon: Briefcase,    title: "Ver Contratos",     desc: `${stats?.total ?? "—"} contratos no sistema`,          color: "text-sky-600 bg-sky-50" },
           { to: "/quadro",     icon: KanbanSquare, title: "Quadro de Tarefas", desc: "Acompanhe as tarefas Kanban",           color: "text-violet-600 bg-violet-50" },
         ].map((item) => (
@@ -203,7 +256,7 @@ const Dashboard = () => {
               <item.icon className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">{item.title}</p>
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-brand-700 transition-colors">{item.title}</p>
               <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
             </div>
           </Link>

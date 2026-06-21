@@ -161,7 +161,7 @@ interface KPIProps {
 
 const KPI = ({ icon: Icon, label, value, color, large }: KPIProps) => {
   const colors: Record<string, string> = {
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    emerald: "bg-brand-50 text-brand-700 border-brand-100",
     sky: "bg-sky-50 text-sky-600 border-sky-100",
     amber: "bg-amber-50 text-amber-600 border-amber-100",
     violet: "bg-violet-50 text-violet-600 border-violet-100",

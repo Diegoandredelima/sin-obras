@@ -70,7 +70,7 @@ const ContratoRow = ({ c }: { c: ContratoItem }) => {
           Vigência: {fmtDate(c.data_vigencia)}
         </div>
       )}
-      <span className="flex items-center gap-1 font-medium text-emerald-600 group-hover:text-emerald-500 mt-1">
+      <span className="flex items-center gap-1 font-medium text-brand-700 group-hover:text-brand-500 mt-1">
         Ver <ArrowRight className="h-3.5 w-3.5" />
       </span>
     </div>
@@ -125,7 +125,7 @@ const Contratos = () => {
             {!isLoading ? `${total} contratos` : "..."}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-500 transition-all">
+        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-700/20 hover:bg-brand-500 transition-all">
           <Plus className="h-4 w-4" />
           Novo Contrato
         </button>
@@ -138,7 +138,7 @@ const Contratos = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por número, objeto ou fiscal..."
-          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
         />
       </div>
 

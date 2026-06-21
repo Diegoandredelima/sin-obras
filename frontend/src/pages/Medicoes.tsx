@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileText, Plus, CheckCircle2, Clock, XCircle,
-  AlertCircle, ChevronRight, Shield, Lock, Loader2,
+  AlertCircle, ChevronRight, Shield, Lock, Loader2, Eye,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
@@ -28,6 +28,213 @@ const STATUS_CONFIG: Record<MedicaoStatus, { label: string; cls: string; icon: L
   REPROVADA: { label: "Reprovada", cls: "bg-rose-100 text-rose-700", icon: XCircle },
 };
 
+interface VistoriaResumo {
+  id: string;
+  fiscal_id: string;
+  resultado: string;
+  checkin_em: string | null;
+  dentro_raio: boolean;
+  observacoes: string | null;
+  finalizada_em: string | null;
+}
+
+interface AvaliarModalProps {
+  medicao: Medicao;
+  obraId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const AvaliarModal = ({ medicao, obraId, onClose, onSuccess }: AvaliarModalProps) => {
+  const queryClient = useQueryClient();
+  const [aprovada, setAprovada] = useState<boolean>(true);
+  const [observacao, setObservacao] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: vistoria, isLoading: vistoriaLoading } = useQuery<VistoriaResumo | null>({
+    queryKey: ["vistoria-medicao", medicao.id],
+    queryFn: async () => {
+      const { data } = await api.get(`/vistorias`, { params: { medicao_id: medicao.id, limit: 1 } });
+      return Array.isArray(data) ? data[0] || null : null;
+    },
+    enabled: !!medicao.id,
+  });
+
+  const handleSubmit = async () => {
+    if (!observacao.trim()) {
+      setError("A justificativa é obrigatória.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post(`/empresa/medicoes/${medicao.id}/avaliar`, {
+        aprovada,
+        observacao_fiscal: observacao,
+      });
+      queryClient.invalidateQueries({ queryKey: ["medicoes", obraId] });
+      onSuccess();
+    } catch {
+      setError("Erro ao avaliar medição. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Avaliar Medição #{medicao.numero_medicao}</h3>
+              <p className="text-sm text-slate-500">Confronte o declarado pela empresa com a vistoria do fiscal</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-sky-100 flex items-center justify-center">
+                <FileText className="h-4 w-4 text-sky-600" />
+              </div>
+              <h4 className="text-sm font-semibold text-slate-800">Declarado pela Empresa</h4>
+            </div>
+            <div className="bg-sky-50/50 rounded-xl border border-sky-100 p-4">
+              <p className="text-xs text-slate-500 mb-2">Medição submetida com os seguintes eventos declarados:</p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Status atual</span>
+                  <span className="font-semibold text-sky-700">{STATUS_CONFIG[medicao.status]?.label || medicao.status}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Criada em</span>
+                  <span className="text-slate-800">{fmtDate(medicao.criado_em)}</span>
+                </div>
+                {medicao.assinada_em && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Assinada em</span>
+                    <span className="text-slate-800">{fmtDate(medicao.assinada_em)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Eye className="h-4 w-4 text-amber-600" />
+              </div>
+              <h4 className="text-sm font-semibold text-slate-800">Vistoria do Fiscal</h4>
+            </div>
+            {vistoriaLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 text-slate-300 animate-spin" />
+              </div>
+            ) : vistoria ? (
+              <div className="bg-amber-50/50 rounded-xl border border-amber-100 p-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Check-in</span>
+                    <span className="text-slate-800">{vistoria.checkin_em ? fmtDate(vistoria.checkin_em) : "—"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Dentro do raio</span>
+                    <span className={`font-semibold ${vistoria.dentro_raio ? "text-emerald-600" : "text-rose-600"}`}>
+                      {vistoria.dentro_raio ? "Sim" : "Não"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Resultado</span>
+                    <span className="font-semibold text-slate-800">{vistoria.resultado}</span>
+                  </div>
+                  {vistoria.observacoes && (
+                    <div className="pt-2 border-t border-amber-200">
+                      <p className="text-xs text-slate-500 mb-1">Observações do fiscal:</p>
+                      <p className="text-xs text-slate-700">{vistoria.observacoes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 rounded-xl border border-slate-100 p-4 text-center">
+                <p className="text-xs text-slate-400">Nenhuma vistoria vinculada a esta medição.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAprovada(true)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                aprovada
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-200"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-emerald-300"
+              }`}
+            >
+              <CheckCircle2 className="h-4 w-4 inline mr-1.5" />
+              Aprovar
+            </button>
+            <button
+              onClick={() => setAprovada(false)}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                !aprovada
+                  ? "bg-rose-600 text-white shadow-md shadow-rose-200"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-rose-300"
+              }`}
+            >
+              <XCircle className="h-4 w-4 inline mr-1.5" />
+              Reprovar
+            </button>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700">
+              Justificativa <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              rows={3}
+              placeholder="Descreva o motivo da aprovação ou reprovação..."
+              className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-rose-500">{error}</p>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Confirmar {aprovada ? "Aprovação" : "Reprovação"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface AssinaturaModalProps {
   medicao: Medicao;
   onConfirm: () => void;
@@ -39,8 +246,8 @@ const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }: AssinaturaMo
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 border border-emerald-100">
-          <Shield className="h-6 w-6 text-emerald-600" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 border border-brand-100">
+          <Shield className="h-6 w-6 text-brand-700" />
         </div>
         <div>
           <h3 className="text-lg font-bold text-slate-900">Assinar Medição #{medicao.numero_medicao}</h3>
@@ -61,7 +268,7 @@ const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }: AssinaturaMo
           Cancelar
         </button>
         <button onClick={onConfirm} disabled={loading}
-          className="flex-1 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70">
+          className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all flex items-center justify-center gap-2 disabled:opacity-70">
           {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Assinando...</> : <><Shield className="h-4 w-4" /> Assinar e Enviar</>}
         </button>
       </div>
@@ -73,6 +280,7 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [assinarModal, setAssinarModal] = useState<Medicao | null>(null);
+  const [avaliarModal, setAvaliarModal] = useState<Medicao | null>(null);
   const [assinarLoading, setAssinarLoading] = useState(false);
 
   const { data: medicoes = [], isLoading, isError } = useQuery<Medicao[]>({
@@ -107,7 +315,7 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">{medicoes.length} medições</span>
         <button onClick={() => navigate("/empresa/medicoes/nova")}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-200 hover:bg-emerald-500 transition-all">
+          className="inline-flex items-center gap-2 px-3 py-2 bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-brand-700/20 hover:bg-brand-500 transition-all">
           <Plus className="h-3.5 w-3.5" />
           Nova Medição
         </button>
@@ -161,8 +369,14 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
                 </span>
                 {m.status === "RASCUNHO" && (
                   <button onClick={() => setAssinarModal(m)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition-all">
+                    className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-xl transition-all">
                     <Shield className="h-3.5 w-3.5" /> Assinar
+                  </button>
+                )}
+                {(m.status === "ASSINADA" || m.status === "EM_FISCALIZACAO") && (
+                  <button onClick={() => setAvaliarModal(m)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition-all">
+                    <Eye className="h-3.5 w-3.5" /> Avaliar
                   </button>
                 )}
                 <button className="flex items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors">
@@ -180,6 +394,15 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
           onConfirm={handleAssinar}
           onCancel={() => setAssinarModal(null)}
           loading={assinarLoading}
+        />
+      )}
+
+      {avaliarModal && (
+        <AvaliarModal
+          medicao={avaliarModal}
+          obraId={obraId}
+          onClose={() => setAvaliarModal(null)}
+          onSuccess={() => setAvaliarModal(null)}
         />
       )}
     </div>

@@ -42,7 +42,7 @@ const ObraCard = ({ obra }: { obra: Obra }) => {
   return (
     <Link
       to={`/obras/${obra.id}`}
-      className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-200 flex flex-col gap-4"
+      className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-brand-200 transition-all duration-200 flex flex-col gap-4"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -50,7 +50,7 @@ const ObraCard = ({ obra }: { obra: Obra }) => {
             <span className={`h-2 w-2 rounded-full shrink-0 ${saude.dot}`} />
             <span className="text-xs font-medium text-slate-400">{saude.label}</span>
           </div>
-          <h3 className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 leading-snug transition-colors line-clamp-2">
+          <h3 className="text-sm font-semibold text-slate-900 group-hover:text-brand-700 leading-snug transition-colors line-clamp-2">
             {obra.titulo}
           </h3>
         </div>
@@ -102,7 +102,7 @@ const ObraCard = ({ obra }: { obra: Obra }) => {
       </div>
 
       <div className="flex items-center justify-end pt-1">
-        <span className="text-xs font-medium text-emerald-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+        <span className="text-xs font-medium text-brand-700 flex items-center gap-1 group-hover:gap-2 transition-all">
           Ver detalhes
           <ArrowRight className="h-3.5 w-3.5" />
         </span>
@@ -173,7 +173,7 @@ const Obras = () => {
         </div>
         <Link
           to="/obras/nova"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:bg-emerald-500 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-700/20 hover:bg-brand-500 transition-all"
         >
           <Plus className="h-4 w-4" />
           Cadastrar Obra
@@ -186,13 +186,13 @@ const Obras = () => {
           <input
             type="text"
             placeholder="Buscar por nome ou município..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className="rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+          className="rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-700 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
           value={situacao}
           onChange={(e) => setSituacao(e.target.value)}
         >

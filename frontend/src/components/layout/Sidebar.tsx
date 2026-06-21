@@ -6,6 +6,8 @@ import {
   KanbanSquare,
   ChartBar,
   FileText,
+  Users,
+  Bell,
   Moon,
   Sun,
   LogOut,
@@ -38,11 +40,38 @@ const Sidebar = () => {
 
   const allNav: NavItem[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Contratos", href: "/contratos", icon: Briefcase, roles: ["FISCAL", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"] },
+    {
+      name: "Alertas",
+      href: "/alertas",
+      icon: Bell,
+      roles: ["APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
+    {
+      name: "Contratos",
+      href: "/contratos",
+      icon: Briefcase,
+      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
     { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/obras/${ctxId}/diario`, icon: BookOpen },
-    { name: "Quadro de Tarefas", href: "/quadro", icon: KanbanSquare, roles: ["FISCAL", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"] },
-    { name: "Relatório", href: "/relatorio", icon: ChartBar, roles: ["FISCAL", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"] },
+    {
+      name: "Quadro de Tarefas",
+      href: "/quadro",
+      icon: KanbanSquare,
+      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
+    {
+      name: "Relatório",
+      href: "/relatorio",
+      icon: ChartBar,
+      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
     { name: "Medições", href: isContratoCtx ? `/contratos/${ctxId}?tab=medicoes` : `/empresa/obras/${ctxId}/medicoes`, icon: FileText },
+    {
+      name: "Gestão",
+      href: "/gestao",
+      icon: Users,
+      roles: ["COORDENADOR", "SECRETARIO"],
+    },
   ];
 
   const userRole = (user?.tipo as Role) || "EMPRESA";
@@ -51,33 +80,38 @@ const Sidebar = () => {
   );
 
   return (
-    <div className="flex h-full w-64 flex-col bg-slate-900 text-slate-300 shadow-2xl transition-all duration-300">
-      <div className="flex h-16 shrink-0 items-center px-6 bg-slate-950/50 backdrop-blur-md border-b border-white/5">
+    <div className="flex h-full w-64 flex-col bg-brand-700 text-white/80 shadow-2xl transition-all duration-300">
+      {/* Logo */}
+      <div className="flex h-16 shrink-0 items-center px-6 bg-brand-800/60 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg shadow-green-500/20">
-            <span className="text-white font-bold text-lg">S</span>
-          </div>
-          <span className="text-xl font-bold tracking-tight text-white">SIN-Obras</span>
+          <div className="h-1 w-6 sin-stripe rounded-full opacity-90" />
+          <span
+            className="text-xl font-black tracking-wider text-white uppercase"
+            style={{ fontFamily: "var(--font-condensed)" }}
+          >
+            SIN-Obras
+          </span>
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col px-4 py-6 overflow-y-auto">
-        <ul className="flex flex-col gap-2">
+      {/* Navegação */}
+      <nav className="flex flex-1 flex-col px-3 py-5 overflow-y-auto">
+        <ul className="flex flex-col gap-1">
           {navigation.map((item) => {
             const isActive = location.pathname.startsWith(item.href);
             return (
               <li key={item.name}>
                 <Link
                   to={item.href}
-                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                     isActive
-                      ? "bg-emerald-500/10 text-emerald-400 shadow-[inset_4px_0_0_0_#10b981]"
-                      : "hover:bg-white/5 hover:text-white"
+                      ? "bg-white/10 text-white shadow-[inset_3px_0_0_0_#C84918]"
+                      : "hover:bg-white/8 hover:text-white"
                   }`}
                 >
                   <item.icon
                     className={`h-5 w-5 shrink-0 transition-colors ${
-                      isActive ? "text-emerald-400" : "text-slate-400 group-hover:text-white"
+                      isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
                     }`}
                   />
                   {item.name}
@@ -88,36 +122,37 @@ const Sidebar = () => {
         </ul>
       </nav>
 
-      <div className="p-4 bg-slate-950/30 border-t border-white/5">
+      {/* Rodapé do sidebar */}
+      <div className="p-3 bg-brand-800/40 border-t border-white/10">
         <button
           onClick={() => setPerfilOpen(true)}
-          className="flex w-full items-center gap-3 mb-4 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors text-left"
+          className="flex w-full items-center gap-3 mb-3 px-2 py-1.5 rounded-lg hover:bg-white/8 transition-colors text-left"
         >
-          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 flex items-center justify-center text-white font-semibold shadow-inner shrink-0">
+          <div className="h-9 w-9 rounded-full bg-accent-500 flex items-center justify-center text-white font-bold text-sm shadow-inner shrink-0">
             {user?.nome?.charAt(0) || "U"}
           </div>
           <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-medium text-white">{user?.nome || "Usuário"}</span>
-            <span className="truncate text-xs text-slate-500">{user?.tipo || "Perfil"}</span>
+            <span className="truncate text-sm font-semibold text-white">{user?.nome || "Usuário"}</span>
+            <span className="truncate text-xs text-white/50">{user?.tipo || "Perfil"}</span>
           </div>
         </button>
 
         <button
           onClick={toggleTheme}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-300 mb-1"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/50 transition-colors hover:bg-white/8 hover:text-white/80 mb-1"
         >
           {theme === "dark" ? (
-            <><Sun className="h-5 w-5" /> Modo claro</>
+            <><Sun className="h-4 w-4" /> Modo claro</>
           ) : (
-            <><Moon className="h-5 w-5" /> Modo escuro</>
+            <><Moon className="h-4 w-4" /> Modo escuro</>
           )}
         </button>
 
         <button
           onClick={logout}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-rose-500/10 hover:text-rose-400"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/50 transition-colors hover:bg-accent-500/20 hover:text-accent-200"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4" />
           Sair do sistema
         </button>
       </div>

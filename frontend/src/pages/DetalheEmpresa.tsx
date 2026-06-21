@@ -55,13 +55,13 @@ const DetalheEmpresa = () => {
     <div className="flex flex-col items-center justify-center py-32 text-center">
       <AlertCircle className="h-12 w-12 text-rose-300 mb-4" />
       <p className="text-lg font-semibold text-slate-700">Empresa não encontrada.</p>
-      <Link to="/contratos" className="mt-4 text-sm text-emerald-600 hover:underline">← Voltar para Contratos</Link>
+      <Link to="/contratos" className="mt-4 text-sm text-brand-700 hover:underline">← Voltar para Contratos</Link>
     </div>
   );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-600 transition-colors">
+      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />Contratos
       </Link>
 
@@ -85,9 +85,9 @@ const DetalheEmpresa = () => {
               <p className="text-2xl font-bold text-sky-700">{empresa.total_contratos}</p>
               <p className="text-xs text-sky-600 font-medium">Contratos</p>
             </div>
-            <div className="bg-emerald-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-emerald-700">{empresa.total_obras}</p>
-              <p className="text-xs text-emerald-600 font-medium">Obras</p>
+            <div className="bg-brand-50 rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-brand-700">{empresa.total_obras}</p>
+              <p className="text-xs text-brand-600 font-medium">Obras</p>
             </div>
             <div className="bg-slate-50 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-slate-700">{contratos.length}</p>

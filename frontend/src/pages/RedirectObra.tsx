@@ -18,7 +18,7 @@ const RedirectObra = () => {
   if (contratoId === null) return (
     <div className="flex flex-col items-center justify-center py-32 text-center">
       <p className="text-lg font-semibold text-slate-700">Obra sem contrato vinculado.</p>
-      <a href="/contratos" className="mt-4 text-sm text-emerald-600 hover:underline">← Ir para Contratos</a>
+      <a href="/contratos" className="mt-4 text-sm text-brand-700 hover:underline">← Ir para Contratos</a>
     </div>
   );
   if (contratoId) return <Navigate to={`/contratos/${contratoId}`} replace />;
