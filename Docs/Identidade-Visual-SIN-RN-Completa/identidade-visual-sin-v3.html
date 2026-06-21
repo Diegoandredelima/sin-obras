@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Identidade Visual SIN/RN — Guia Completo v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --azul:        #1B3C73;
+      --azul-vivo:   #2457A4;
+      --azul-claro:  #EBF0F8;
+      --laranja:     #C84918;
+      --verde:       #2A7A3E;
+      --amarelo:     #D9A812;
+      --bg:          #F3F5FA;
+      --surface:     #FFFFFF;
+      --fg:          #1A1E2A;
+      --muted:       #6B7080;
+      --border:      #DDE2EC;
+      --stripe: linear-gradient(to right, #C84918 25%, #2A7A3E 25% 50%, #D9A812 50% 75%, #2457A4 75%);
+      --r-sm: 8px; --r-md: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Barlow', system-ui, sans-serif; background: var(--bg); color: var(--fg); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* STRIPE */
+    .stripe { height: 6px; background: var(--stripe); }
+    .stripe.lg { height: 10px; }
+
+    /* COVER */
+    .cover { background: var(--azul); color: #fff; min-height: 480px; padding: 72px 80px 60px; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+    .cover::after { content: ''; position: absolute; inset: 0; left: auto; width: 40%; background: var(--azul-vivo); clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%); opacity: 0.4; pointer-events: none; }
+    .cover h1 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(48px, 7vw, 96px); font-weight: 800; line-height: 0.95; letter-spacing: -0.025em; position: relative; z-index: 2; max-width: 600px; }
+    .cover-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 14px; position: relative; z-index: 2; }
+    .cover-sub { font-size: 15px; color: rgba(255,255,255,0.6); margin-top: 20px; max-width: 420px; position: relative; z-index: 2; }
+    .cover-rule { width: 40px; height: 4px; background: var(--laranja); border-radius: 2px; margin-bottom: 14px; position: relative; z-index: 2; }
+    .cover-version { position: absolute; top: 40px; right: 72px; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.35); z-index: 2; }
+    .cover-toc { position: relative; z-index: 2; margin-top: 40px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .toc-chip { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; padding: 5px 12px; border-radius: 20px; text-decoration: none; transition: background 0.15s; }
+    .toc-chip:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* SECTIONS */
+    .wrap { max-width: 1060px; margin: 0 auto; padding: 80px 40px; }
+    .wrap.tight { padding-top: 60px; padding-bottom: 60px; }
+    .section-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    h2 { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(36px, 5vw, 64px); font-weight: 800; line-height: 1.0; letter-spacing: -0.02em; color: var(--azul); margin-bottom: 40px; }
+    h3 { font-size: 15px; font-weight: 700; color: var(--fg); margin-bottom: 8px; }
+    .divider { height: 1px; background: var(--border); margin: 0 40px; }
+
+    /* PALETA */
+    .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .color-card { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); background: var(--surface); }
+    .color-swatch { height: 100px; position: relative; display: flex; align-items: flex-end; padding: 10px 14px; }
+    .color-name { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .color-meta { padding: 14px 16px; }
+    .color-hex { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 700; color: var(--fg); display: block; margin-bottom: 6px; }
+    .color-codes { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); line-height: 1.8; }
+    .color-use { font-size: 12px; color: var(--muted); margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
+
+    /* NEUTRALS */
+    .neutral-row { display: flex; gap: 8px; margin-bottom: 32px; }
+    .neutral-chip { flex: 1; height: 60px; border-radius: var(--r-sm); border: 1px solid var(--border); display: flex; align-items: flex-end; padding: 6px 8px; }
+    .neutral-chip span { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+    .neutral-chip.dark span { color: rgba(255,255,255,0.6); }
+
+    /* STRIPE DEMO */
+    .stripe-demo { border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--border); }
+    .stripe-demo .stripe { height: 12px; }
+    .stripe-info { padding: 16px 20px; background: var(--surface); font-size: 13px; color: var(--muted); }
+
+    /* TIPOGRAFIA */
+    .type-scale { display: flex; flex-direction: column; gap: 20px; }
+    .type-row { display: flex; align-items: baseline; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .type-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); width: 90px; flex-shrink: 0; }
+    .type-sample { color: var(--fg); }
+    .type-spec { font-size: 11px; font-family: ui-monospace, monospace; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
+    /* ICONOGRAFIA */
+    .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 16px; }
+    .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); }
+    .icon-cell svg { width: 28px; height: 28px; stroke: var(--azul); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-label { font-size: 10px; font-weight: 600; color: var(--muted); text-align: center; letter-spacing: 0.04em; }
+    .icon-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+    .rule-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 20px; }
+    .rule-card h4 { font-size: 13px; font-weight: 700; color: var(--azul); margin-bottom: 6px; }
+    .rule-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .do-tag { display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 8px; border-radius: 3px; margin-bottom: 8px; }
+    .do-tag.do { background: #e6f4ea; color: var(--verde); }
+    .do-tag.dont { background: #fdecea; color: var(--laranja); }
+
+    /* COMPONENTES */
+    .comp-section { margin-bottom: 48px; }
+    .comp-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: var(--r-sm); font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; border: 1.5px solid transparent; transition: all 0.15s; }
+    .btn-primary { background: var(--azul); color: #fff; }
+    .btn-primary:hover { background: var(--azul-vivo); }
+    .btn-secondary { background: transparent; color: var(--azul); border-color: var(--azul); }
+    .btn-secondary:hover { background: var(--azul-claro); }
+    .btn-danger { background: var(--laranja); color: #fff; }
+    .btn-danger:hover { opacity: 0.9; }
+    .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
+    .btn-ghost:hover { background: var(--bg); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-sm { padding: 7px 14px; font-size: 13px; }
+    .btn-lg { padding: 13px 28px; font-size: 16px; }
+
+    /* INPUTS */
+    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    .input-label { font-size: 13px; font-weight: 600; color: var(--fg); }
+    .input-field { padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-family: 'Barlow', sans-serif; font-size: 14px; color: var(--fg); background: var(--surface); transition: border-color 0.15s; outline: none; }
+    .input-field:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(27,60,115,0.12); }
+    .input-field.error { border-color: var(--laranja); }
+    .input-field.success { border-color: var(--verde); }
+    .input-field:disabled { background: var(--bg); color: var(--muted); }
+    .input-helper { font-size: 12px; color: var(--muted); }
+    .input-helper.error { color: var(--laranja); }
+    .input-helper.success { color: var(--verde); }
+
+    /* CARDS */
+    .cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }
+    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .card-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--azul-claro); }
+    .card-icon svg { width: 18px; height: 18px; stroke: var(--azul); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--fg); }
+    .card-sub { font-size: 11px; color: var(--muted); }
+    .card-body { padding: 16px 20px; }
+    .card-metric { font-family: 'Barlow Condensed', sans-serif; font-size: 36px; font-weight: 800; color: var(--azul); letter-spacing: -0.02em; line-height: 1; }
+    .card-delta { font-size: 12px; color: var(--verde); font-weight: 600; margin-top: 4px; }
+
+    /* ALERTS */
+    .alert { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-sm); border: 1px solid; margin-bottom: 10px; align-items: flex-start; }
+    .alert svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .alert-msg { font-size: 14px; line-height: 1.4; }
+    .alert-msg strong { font-weight: 700; display: block; font-size: 13px; margin-bottom: 2px; }
+    .alert.info { background: #EBF0F8; border-color: #B8CAED; color: var(--azul); }
+    .alert.info svg { stroke: var(--azul); }
+    .alert.success { background: #E6F4EA; border-color: #A7D4B3; color: var(--verde); }
+    .alert.success svg { stroke: var(--verde); }
+    .alert.warning { background: #FEF8E6; border-color: #EDD98A; color: #92690B; }
+    .alert.warning svg { stroke: #C49A0D; }
+    .alert.danger { background: #FDECEA; border-color: #F0B4AC; color: #8B2512; }
+    .alert.danger svg { stroke: var(--laranja); }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-md); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead { background: var(--bg); }
+    th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--fg); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-em-andamento { background: #FEF8E6; color: #92690B; }
+    .badge-concluida { background: #E6F4EA; color: var(--verde); }
+    .badge-paralisada { background: #FDECEA; color: #8B2512; }
+    .badge-planejamento { background: var(--azul-claro); color: var(--azul); }
+
+    /* NAVBAR */
+    .nav-demo { background: var(--azul); display: flex; align-items: center; padding: 0 24px; height: 56px; gap: 24px; border-radius: var(--r-md); }
+    .nav-logo-txt { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; color: #fff; letter-spacing: 0.02em; }
+    .nav-links { display: flex; gap: 4px; margin-left: 16px; }
+    .nav-link { color: rgba(255,255,255,0.65); font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+    .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.12); color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--laranja); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+
+    /* FOOTER */
+    .footer-demo { background: var(--fg); color: rgba(255,255,255,0.6); border-radius: var(--r-md); overflow: hidden; }
+    .footer-body { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px; padding: 36px 32px; }
+    .footer-brand { display: flex; flex-direction: column; gap: 10px; }
+    .footer-brand-name { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 0.04em; }
+    .footer-desc { font-size: 13px; line-height: 1.5; max-width: 280px; }
+    .footer-col h4 { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 14px; }
+    .footer-link { display: block; font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 8px; text-decoration: none; }
+    .footer-link:hover { color: #fff; }
+    .footer-bar { background: rgba(255,255,255,0.05); padding: 14px 32px; display: flex; justify-content: space-between; font-size: 11px; }
+
+    /* WIREFRAMES */
+    .wf { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; margin-bottom: 32px; }
+    .wf-header { background: var(--bg); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+    .wf-dots { display: flex; gap: 6px; }
+    .wf-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+    .wf-name { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .wf-body { padding: 20px; }
+    .wf-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); text-align: center; display: block; margin-bottom: 16px; }
+    .wf-block { background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ESPACAMENTO */
+    .spacing-row { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 24px; }
+    .spacing-block { background: var(--azul-claro); border: 1px solid #B8CAED; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+    .spacing-meta { font-size: 11px; font-weight: 700; color: var(--azul); margin-top: 6px; text-align: center; font-family: ui-monospace, monospace; }
+
+    /* TOM DE VOZ */
+    .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+    .voice-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 24px; }
+    .voice-card h4 { font-size: 16px; font-weight: 700; color: var(--fg); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .voice-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .voice-ex { margin-top: 24px; }
+    .voice-ex-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+    .voice-ex-box { padding: 14px 16px; border-radius: var(--r-sm); font-size: 14px; line-height: 1.5; }
+    .voice-ex-box.correct { background: #E6F4EA; border: 1px solid #A7D4B3; color: #1A3B22; }
+    .voice-ex-box.wrong { background: #FDECEA; border: 1px solid #F0B4AC; color: #5B1A0E; text-decoration: line-through; text-decoration-color: rgba(200,73,24,0.4); }
+    .voice-ex-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+    .voice-ex-label.correct { color: var(--verde); }
+    .voice-ex-label.wrong { color: var(--laranja); }
+
+    /* SHADOWS + BORDERS */
+    .shadow-row { display: flex; gap: 20px; align-items: center; }
+    .shadow-card { background: var(--surface); border-radius: var(--r-md); width: 100px; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--muted); text-align: center; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* DARK SECTION */
+    .dark-section { background: var(--azul); color: #fff; }
+    .dark-section h2 { color: #fff; }
+    .dark-section .section-tag { color: rgba(255,255,255,0.45); }
+    .dark-section h3 { color: rgba(255,255,255,0.85); }
+    .dark-section p { color: rgba(255,255,255,0.7); }
+
+    /* DOT NAV */
+    .dot-nav { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 200; }
+    .dot-nav a { width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: 1.5px solid var(--muted); display: block; transition: all 0.2s; }
+    .dot-nav a:hover, .dot-nav a.active { background: var(--azul); border-color: var(--azul); transform: scale(1.35); }
+
+    @media (max-width: 768px) {
+      .wrap { padding: 48px 20px; }
+      .cover { padding: 48px 24px 40px; }
+      .color-grid { grid-template-columns: 1fr 1fr; }
+      .cards-row { grid-template-columns: 1fr; }
+      .input-row { grid-template-columns: 1fr; }
+      .icon-rules { grid-template-columns: 1fr; }
+      .voice-grid { grid-template-columns: 1fr; }
+      .voice-ex-row { grid-template-columns: 1fr; }
+      .footer-body { grid-template-columns: 1fr; gap: 24px; }
+      .dot-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- DOT NAV -->
+<nav class="dot-nav" aria-label="Navegação por seção">
+  <a href="#paleta" title="Paleta"></a>
+  <a href="#tipografia" title="Tipografia"></a>
+  <a href="#iconografia" title="Iconografia"></a>
+  <a href="#componentes" title="Componentes"></a>
+  <a href="#wireframes" title="Wireframes"></a>
+  <a href="#elementos" title="Elementos Gráficos"></a>
+  <a href="#voz" title="Tom de Voz"></a>
+  <a href="#aplicacoes" title="Aplicações"></a>
+</nav>
+
+<!-- COVER -->
+<div class="stripe lg"></div>
+<header class="cover">
+  <span class="cover-version">v3.0 — Junho 2026</span>
+  <div class="cover-rule"></div>
+  <p class="cover-tag">Secretaria de Estado da Infraestrutura — Rio Grande do Norte</p>
+  <h1>Identidade<br>Visual SIN/RN</h1>
+  <p class="cover-sub">Guia completo de marca, sistema de design e diretrizes de comunicação para designers, desenvolvedores e equipes de comunicação.</p>
+  <div class="cover-toc">
+    <a class="toc-chip" href="#paleta">Paleta</a>
+    <a class="toc-chip" href="#tipografia">Tipografia</a>
+    <a class="toc-chip" href="#iconografia">Iconografia</a>
+    <a class="toc-chip" href="#componentes">Componentes</a>
+    <a class="toc-chip" href="#wireframes">Wireframes</a>
+    <a class="toc-chip" href="#elementos">Elementos Gráficos</a>
+    <a class="toc-chip" href="#voz">Tom de Voz</a>
+    <a class="toc-chip" href="#aplicacoes">Aplicações</a>
+  </div>
+</header>
+<div class="stripe"></div>
+
+<!-- ══ 1. PALETA ══════════════════════════════════════════════════════ -->
+<section class="wrap" id="paleta" data-od-id="paleta">
+  <p class="section-tag">01 — Paleta Cromática</p>
+  <h2>As cores da<br>infraestrutura potiguar</h2>
+
+  <div class="color-grid">
+    <!-- AZUL -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#1B3C73;">
+        <span class="color-name">Azul Institucional</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#1B3C73</span>
+        <div class="color-codes">
+          RGB 27 · 60 · 115<br>
+          CMYK 76 · 48 · 0 · 55<br>
+          Pantone 648 C
+        </div>
+        <p class="color-use">Cor principal da marca. Fundos de cabeçalhos, barras de navegação, botões primários e elementos de destaque institucional.</p>
+      </div>
+    </div>
+    <!-- AZUL VIVO -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#2457A4;">
+        <span class="color-name">Azul Vivo</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#2457A4</span>
+        <div class="color-codes">
+          RGB 36 · 87 · 164<br>
+          CMYK 78 · 47 · 0 · 36<br>
+          Pantone 2945 C
+        </div>
+        <p class="color-use">Variação interativa do azul. Usada em hover de botões, links ativos e gradientes complementares ao Azul Institucional.</p>
+      </div>
+    </div>
+    <!-- LARANJA -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#C84918;">
+        <span class="color-name">Laranja Potiguar</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#C84918</span>
+        <div class="color-codes">
+          RGB 200 · 73 · 24<br>
+          CMYK 0 · 64 · 88 · 22<br>
+          Pantone 1665 C
+        </div>
+        <p class="color-use">Cor de ação e urgência. CTAs secundários, alertas críticos, faixas de destaque e ênfases na comunicação visual.</p>
+      </div>
+    </div>
+    <!-- VERDE -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#2A7A3E;">
+        <span class="color-name">Verde RN</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#2A7A3E</span>
+        <div class="color-codes">
+          RGB 42 · 122 · 62<br>
+          CMYK 66 · 0 · 49 · 52<br>
+          Pantone 7728 C
+        </div>
+        <p class="color-use">Cor de sucesso e progresso. Indicadores de status positivo, obras concluídas, confirmações e mensagens de sucesso.</p>
+      </div>
+    </div>
+    <!-- AMARELO -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#D9A812;">
+        <span class="color-name">Amarelo Potiguar</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#D9A812</span>
+        <div class="color-codes">
+          RGB 217 · 168 · 18<br>
+          CMYK 0 · 23 · 92 · 15<br>
+          Pantone 7549 C
+        </div>
+        <p class="color-use">Cor de atenção e alerta. Avisos não críticos, status pendente, obras em andamento e destaques de informação.</p>
+      </div>
+    </div>
+    <!-- AZUL CLARO -->
+    <div class="color-card">
+      <div class="color-swatch" style="background:#EBF0F8; border-bottom:1px solid #DDE2EC;">
+        <span class="color-name" style="color:var(--azul); text-shadow:none;">Azul Claro</span>
+      </div>
+      <div class="color-meta">
+        <span class="color-hex">#EBF0F8</span>
+        <div class="color-codes">
+          RGB 235 · 240 · 248<br>
+          CMYK 5 · 3 · 0 · 3<br>
+          Uso: Digital apenas
+        </div>
+        <p class="color-use">Fundo de ícones, chips, estados hover e áreas de destaque suave em interfaces digitais.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:14px;">Neutros do sistema</h3>
+  <div class="neutral-row">
+    <div style="flex:1;">
+      <div class="neutral-chip dark" style="background:#1A1E2A; height:60px;"><span>Foreground</span></div>
+      <p class="spacing-meta">#1A1E2A</p>
+    </div>
+    <div style="flex:1;">
+      <div class="neutral-chip dark" style="background:#6B7080; height:60px;"><span>Muted</span></div>
+      <p class="spacing-meta">#6B7080</p>
+    </div>
+    <div style="flex:1;">
+      <div class="neutral-chip" style="background:#DDE2EC; height:60px;"><span>Border</span></div>
+      <p class="spacing-meta">#DDE2EC</p>
+    </div>
+    <div style="flex:1;">
+      <div class="neutral-chip" style="background:#F3F5FA; height:60px;"><span>Background</span></div>
+      <p class="spacing-meta">#F3F5FA</p>
+    </div>
+    <div style="flex:1;">
+      <div class="neutral-chip" style="background:#FFFFFF; height:60px; border:1px solid #DDE2EC;"><span>Surface</span></div>
+      <p class="spacing-meta">#FFFFFF</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; margin-top:32px;">Elemento gráfico — As quatro listras</h3>
+  <div class="stripe-demo">
+    <div class="stripe" style="height:14px;"></div>
+    <div class="stripe-info">
+      As quatro listras representam as cores do brasão do RN em sequência: <strong>Laranja · Verde · Amarelo · Azul</strong>. Sempre nesta ordem, nunca invertidas. Largura mínima de uso: 240px. Altura mínima: 4px.
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 2. TIPOGRAFIA ══════════════════════════════════════════════════ -->
+<section class="wrap tight" id="tipografia" data-od-id="tipografia">
+  <p class="section-tag">02 — Tipografia</p>
+  <h2>Barlow — força<br>e clareza técnica</h2>
+
+  <div class="type-scale">
+    <div class="type-row">
+      <span class="type-label">Display</span>
+      <span class="type-sample" style="font-family:'Barlow Condensed',sans-serif; font-size:56px; font-weight:800; line-height:1.0; letter-spacing:-0.025em; color:var(--azul);">Infraestrutura RN</span>
+      <span class="type-spec">Barlow Condensed 800 · 56px · −0.025em</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H1</span>
+      <span class="type-sample" style="font-family:'Barlow Condensed',sans-serif; font-size:40px; font-weight:800; line-height:1.05; letter-spacing:-0.02em; color:var(--azul);">Dashboard de Obras</span>
+      <span class="type-spec">Barlow Condensed 800 · 40px · −0.02em</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2</span>
+      <span class="type-sample" style="font-size:28px; font-weight:700; line-height:1.1; letter-spacing:-0.015em;">Relatório de Execução</span>
+      <span class="type-spec">Barlow 700 · 28px · −0.015em</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H3</span>
+      <span class="type-sample" style="font-size:20px; font-weight:700; line-height:1.2; letter-spacing:-0.01em;">Status da obra em andamento</span>
+      <span class="type-spec">Barlow 700 · 20px · −0.01em</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body</span>
+      <span class="type-sample" style="font-size:15px; font-weight:400; line-height:1.6; max-width:560px;">O Sistema de Obras integra dados de execução financeira, cronograma e acompanhamento de campo em um único ambiente de gestão pública.</span>
+      <span class="type-spec">Barlow 400 · 15px · 1.6</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">UI Label</span>
+      <span class="type-sample" style="font-size:13px; font-weight:600; letter-spacing:0.02em;">Nome da Obra · Contrato · Fiscal</span>
+      <span class="type-spec">Barlow 600 · 13px · 0.02em</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Caption</span>
+      <span class="type-sample" style="font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted);">Atualizado em junho de 2026</span>
+      <span class="type-spec">Barlow 700 · 11px · 0.14em ALL CAPS</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono</span>
+      <span class="type-sample" style="font-family:ui-monospace,monospace; font-size:13px; color:var(--muted);">CON-2026-0047 · R$ 4.750.000,00</span>
+      <span class="type-spec">System mono · 13px — códigos, valores</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 3. ICONOGRAFIA ════════════════════════════════════════════════ -->
+<section class="wrap tight" id="iconografia" data-od-id="iconografia">
+  <p class="section-tag">03 — Iconografia</p>
+  <h2>Ícones de linha<br>com propósito técnico</h2>
+
+  <p style="font-size:15px; color:var(--muted); max-width:600px; margin-bottom:32px; line-height:1.6;">O sistema usa ícones de linha monocrômica com espessura de 1,5px. Cantos arredondados (stroke-linecap: round). Tamanhos padronizados em 16, 20 e 24px. Sempre usados com rótulo textual visível — nunca como elemento decorativo isolado.</p>
+
+  <div class="icon-grid">
+    <!-- Obras -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="icon-label">Obras</span>
+    </div>
+    <!-- Relatório -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="icon-label">Relatório</span>
+    </div>
+    <!-- Mapa -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span class="icon-label">Mapa</span>
+    </div>
+    <!-- Financeiro -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span class="icon-label">Financeiro</span>
+    </div>
+    <!-- Contrato -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M20 14.66V20a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h5.34"/><polygon points="18 2 22 6 12 16 8 16 8 12 18 2"/></svg>
+      <span class="icon-label">Contrato</span>
+    </div>
+    <!-- Usuário -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="icon-label">Usuário</span>
+    </div>
+    <!-- Configurações -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="icon-label">Config.</span>
+    </div>
+    <!-- Alerta -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span class="icon-label">Alerta</span>
+    </div>
+    <!-- Busca -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span class="icon-label">Busca</span>
+    </div>
+    <!-- Download -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="icon-label">Download</span>
+    </div>
+    <!-- Filtro -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span class="icon-label">Filtro</span>
+    </div>
+    <!-- Localização -->
+    <div class="icon-cell">
+      <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span class="icon-label">Local</span>
+    </div>
+  </div>
+
+  <div class="icon-rules">
+    <div class="rule-card">
+      <span class="do-tag do">Usar</span>
+      <h4>Traço 1.5px, cantos arredondados</h4>
+      <p>Stroke-width 1.5, stroke-linecap: round, stroke-linejoin: round. Cor via <code>currentColor</code> ou <code>var(--azul)</code>. Grid 24×24px com padding interno de 2px.</p>
+    </div>
+    <div class="rule-card">
+      <span class="do-tag dont">Evitar</span>
+      <h4>Ícones preenchidos e emojis</h4>
+      <p>Não usar ícones filled como padrão. Não substituir ícones por emojis (✨🔧🏗️). Não misturar estilos de diferentes bibliotecas no mesmo produto.</p>
+    </div>
+    <div class="rule-card">
+      <span class="do-tag do">Usar</span>
+      <h4>Três tamanhos padronizados</h4>
+      <p>16px em UI compactas e tabelas · 20px em navegação e cards · 24px em destaques e alertas. Sempre acompanhar de rótulo textual visível.</p>
+    </div>
+    <div class="rule-card">
+      <span class="do-tag dont">Evitar</span>
+      <h4>Ícone sem contexto textual</h4>
+      <p>Botões com ícone isolado exigem tooltip ou aria-label obrigatório. Nunca usar ícone como único elemento identificador de uma funcionalidade crítica.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 4. COMPONENTES ══════════════════════════════════════════════════ -->
+<section class="wrap tight" id="componentes" data-od-id="componentes">
+  <p class="section-tag">04 — Componentes do Sistema</p>
+  <h2>Padrões de interface<br>e interação</h2>
+
+  <!-- BOTÕES -->
+  <div class="comp-section">
+    <p class="comp-title">Botões</p>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="btn btn-primary">Salvar Obra</button>
+      <button class="btn btn-secondary">Cancelar</button>
+      <button class="btn btn-danger">Excluir</button>
+      <button class="btn btn-ghost">Ver mais</button>
+      <button class="btn btn-primary" disabled>Desabilitado</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm">Pequeno</button>
+      <button class="btn btn-primary">Padrão</button>
+      <button class="btn btn-primary btn-lg">Grande</button>
+    </div>
+    <div style="margin-top:16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--r-sm); padding:14px 16px; font-size:12px; color:var(--muted); font-family:ui-monospace,monospace; line-height:1.8;">
+      Botão Primário: padding 10px 20px · radius 8px · Barlow 600 · letter-spacing 0.02em<br>
+      Estados: normal → hover (azul-vivo) → focus (ring 3px 12% azul) → disabled (opacity 0.4)
+    </div>
+  </div>
+
+  <!-- CAMPOS -->
+  <div class="comp-section">
+    <p class="comp-title">Campos de Formulário</p>
+    <div class="input-row">
+      <div class="input-group">
+        <label class="input-label">Nome da Obra</label>
+        <input class="input-field" type="text" placeholder="Ex: Pavimentação da RN-160" />
+        <span class="input-helper">Campo obrigatório</span>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Valor Contratado</label>
+        <input class="input-field" type="text" value="R$ 4.750.000,00" />
+        <span class="input-helper success">Valor validado</span>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Município</label>
+        <input class="input-field error" type="text" value="Mosso" />
+        <span class="input-helper error">Município não encontrado</span>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Fiscal Responsável</label>
+        <input class="input-field" type="text" placeholder="Nome do fiscal" disabled />
+        <span class="input-helper">Preenchimento automático</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARDS DE MÉTRICAS -->
+  <div class="comp-section">
+    <p class="comp-title">Cards de Métricas</p>
+    <div class="cards-row">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div>
+            <p class="card-title">Obras Ativas</p>
+            <p class="card-sub">Em execução no estado</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-metric">247</p>
+          <p class="card-delta">↑ 18 novas este mês</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:#FEF8E6;">
+            <svg viewBox="0 0 24 24" style="stroke:#C49A0D;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div>
+            <p class="card-title">Volume Investido</p>
+            <p class="card-sub">Exercício 2026</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-metric" style="font-size:28px;">R$ 1,2 bi</p>
+          <p class="card-delta">72% executado do previsto</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon" style="background:#E6F4EA;">
+            <svg viewBox="0 0 24 24" style="stroke:var(--verde);"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <p class="card-title">Concluídas</p>
+            <p class="card-sub">Entregues em 2026</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="card-metric" style="color:var(--verde);">84</p>
+          <p class="card-delta" style="color:var(--azul);">34% acima da meta trimestral</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="comp-section">
+    <p class="comp-title">Alertas e Mensagens do Sistema</p>
+    <div class="alert info">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div class="alert-msg"><strong>Informação</strong>O relatório mensal estará disponível no dia 05 de cada mês.</div>
+    </div>
+    <div class="alert success">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="alert-msg"><strong>Sucesso</strong>Obra CON-2026-0047 atualizada com sucesso.</div>
+    </div>
+    <div class="alert warning">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div class="alert-msg"><strong>Atenção</strong>Prazo contratual da obra RN-304 vence em 12 dias.</div>
+    </div>
+    <div class="alert danger">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <div class="alert-msg"><strong>Erro crítico</strong>Falha ao sincronizar dados com o SIAFI. Tente novamente em alguns minutos.</div>
+    </div>
+  </div>
+
+  <!-- TABELA -->
+  <div class="comp-section">
+    <p class="comp-title">Tabela de Obras</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Contrato</th>
+            <th>Obra</th>
+            <th>Município</th>
+            <th>Valor</th>
+            <th>% Exec.</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-family:ui-monospace,monospace; font-size:12px;">CON-2026-0047</span></td>
+            <td>Pavimentação BR-304 (trecho Mossoró)</td>
+            <td>Mossoró</td>
+            <td style="font-family:ui-monospace,monospace; font-size:13px;">R$ 4,75 M</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; height:4px; background:var(--border); border-radius:2px;"><div style="width:68%; height:100%; background:var(--azul); border-radius:2px;"></div></div>
+                <span style="font-size:12px; font-weight:600; white-space:nowrap;">68%</span>
+              </div>
+            </td>
+            <td><span class="badge badge-em-andamento">Em andamento</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-family:ui-monospace,monospace; font-size:12px;">CON-2025-0198</span></td>
+            <td>Construção de Ponte sobre Rio Seridó</td>
+            <td>Caicó</td>
+            <td style="font-family:ui-monospace,monospace; font-size:13px;">R$ 12,3 M</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; height:4px; background:var(--border); border-radius:2px;"><div style="width:100%; height:100%; background:var(--verde); border-radius:2px;"></div></div>
+                <span style="font-size:12px; font-weight:600; white-space:nowrap;">100%</span>
+              </div>
+            </td>
+            <td><span class="badge badge-concluida">Concluída</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-family:ui-monospace,monospace; font-size:12px;">CON-2026-0089</span></td>
+            <td>Drenagem Urbana — Zona Norte</td>
+            <td>Natal</td>
+            <td style="font-family:ui-monospace,monospace; font-size:13px;">R$ 8,1 M</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; height:4px; background:var(--border); border-radius:2px;"><div style="width:23%; height:100%; background:var(--amarelo); border-radius:2px;"></div></div>
+                <span style="font-size:12px; font-weight:600; white-space:nowrap;">23%</span>
+              </div>
+            </td>
+            <td><span class="badge badge-paralisada">Paralisada</span></td>
+          </tr>
+          <tr>
+            <td><span style="font-family:ui-monospace,monospace; font-size:12px;">CON-2026-0112</span></td>
+            <td>Reforma do Terminal Rodoviário</td>
+            <td>Mossoró</td>
+            <td style="font-family:ui-monospace,monospace; font-size:13px;">R$ 2,9 M</td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="flex:1; height:4px; background:var(--border); border-radius:2px;"><div style="width:5%; height:100%; background:var(--azul-vivo); border-radius:2px;"></div></div>
+                <span style="font-size:12px; font-weight:600; white-space:nowrap;">5%</span>
+              </div>
+            </td>
+            <td><span class="badge badge-planejamento">Planejamento</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NAVBAR -->
+  <div class="comp-section">
+    <p class="comp-title">Barra de Navegação</p>
+    <div class="nav-demo">
+      <span class="nav-logo-txt">SIN-OBRAS</span>
+      <div class="nav-links">
+        <span class="nav-link active">Dashboard</span>
+        <span class="nav-link">Obras</span>
+        <span class="nav-link">Contratos</span>
+        <span class="nav-link">Relatórios</span>
+      </div>
+      <div class="nav-right">
+        <span style="color:rgba(255,255,255,0.5); font-size:12px;">João Silva — Fiscal</span>
+        <div class="nav-avatar">JS</div>
+      </div>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-top:10px;">Navbar: background Azul Institucional · altura 56px · Barlow 600 · itens ativos com overlay rgba(255,255,255,0.12)</p>
+  </div>
+
+  <!-- RODAPÉ -->
+  <div class="comp-section">
+    <p class="comp-title">Rodapé Institucional</p>
+    <div class="footer-demo">
+      <div class="stripe" style="height:4px;"></div>
+      <div class="footer-body">
+        <div class="footer-brand">
+          <span class="footer-brand-name">SIN / RN</span>
+          <p class="footer-desc">Secretaria de Estado da Infraestrutura do Rio Grande do Norte. Transparência, eficiência e desenvolvimento para o povo potiguar.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Sistema</h4>
+          <a class="footer-link" href="#">Dashboard</a>
+          <a class="footer-link" href="#">Obras</a>
+          <a class="footer-link" href="#">Relatórios</a>
+          <a class="footer-link" href="#">Configurações</a>
+        </div>
+        <div class="footer-col">
+          <h4>Institucional</h4>
+          <a class="footer-link" href="#">Portal da Transparência</a>
+          <a class="footer-link" href="#">Licitações</a>
+          <a class="footer-link" href="#">Contato</a>
+          <a class="footer-link" href="#">Ouvidoria</a>
+        </div>
+      </div>
+      <div class="footer-bar">
+        <span>© 2026 Secretaria de Estado da Infraestrutura — RN</span>
+        <span>v2.4.1 · Sistema SIN-Obras</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 5. WIREFRAMES ═════════════════════════════════════════════════ -->
+<section class="wrap tight" id="wireframes" data-od-id="wireframes">
+  <p class="section-tag">05 — Wireframes das Principais Páginas</p>
+  <h2>Arquitetura das<br>telas do sistema</h2>
+
+  <!-- LOGIN -->
+  <div class="wf">
+    <div class="wf-header">
+      <div class="wf-dots"><div class="wf-dot"></div><div class="wf-dot"></div><div class="wf-dot"></div></div>
+      <span class="wf-name">Login — Autenticação</span>
+    </div>
+    <div class="wf-body">
+      <span class="wf-label">Tela 1 de 5 — /login</span>
+      <div style="display:grid; grid-template-columns:1fr 1.2fr; gap:0; border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden;">
+        <div style="background:var(--azul); padding:40px 32px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:800; color:#fff; letter-spacing:0.02em; margin-bottom:8px;">SIN-OBRAS</div>
+            <div style="font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:0.1em; text-transform:uppercase;">Sistema de Gestão</div>
+          </div>
+          <div>
+            <div style="height:4px; background:var(--stripe); border-radius:2px; margin-bottom:24px;"></div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.55); max-width:200px; line-height:1.5;">Secretaria de Estado da Infraestrutura do Rio Grande do Norte</div>
+          </div>
+        </div>
+        <div style="background:var(--surface); padding:40px 32px; display:flex; flex-direction:column; justify-content:center; gap:18px;">
+          <div style="font-size:20px; font-weight:700; color:var(--fg); margin-bottom:4px;">Entrar no sistema</div>
+          <div class="input-group">
+            <label class="input-label">Login (matrícula ou e-mail)</label>
+            <div class="wf-block" style="height:40px; border-radius:var(--r-sm);">campo de texto</div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Senha</label>
+            <div class="wf-block" style="height:40px; border-radius:var(--r-sm);">campo senha</div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+            <span style="display:flex; gap:6px; align-items:center;"><span style="width:14px; height:14px; border:1.5px solid var(--border); border-radius:3px; display:inline-block;"></span> Manter conectado</span>
+            <span style="color:var(--azul); font-weight:600;">Esqueci a senha</span>
+          </div>
+          <div class="btn btn-primary" style="justify-content:center;">Entrar</div>
+          <div style="font-size:11px; color:var(--muted); text-align:center;">Acesso exclusivo para servidores autorizados</div>
+        </div>
+      </div>
+      <div style="margin-top:16px; font-size:12px; color:var(--muted); line-height:1.8;">
+        <strong>Comportamento:</strong> Erro de login exibe alert danger inline. Primeiro acesso redireciona para troca de senha. Sessão expira após 8h. SSO via Gov.br disponível para servidores estaduais.
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="wf">
+    <div class="wf-header">
+      <div class="wf-dots"><div class="wf-dot"></div><div class="wf-dot"></div><div class="wf-dot"></div></div>
+      <span class="wf-name">Dashboard — Visão Geral</span>
+    </div>
+    <div class="wf-body">
+      <span class="wf-label">Tela 2 de 5 — /dashboard</span>
+      <div style="border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden;">
+        <div class="nav-demo" style="border-radius:0;">
+          <span class="nav-logo-txt">SIN-OBRAS</span>
+          <div class="nav-links"><span class="nav-link active">Dashboard</span><span class="nav-link">Obras</span><span class="nav-link">Contratos</span><span class="nav-link">Relatórios</span></div>
+          <div class="nav-right"><div class="nav-avatar">JS</div></div>
+        </div>
+        <div style="padding:24px; background:var(--bg); display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:800; color:var(--azul);">Visão Geral — Jun 2026</span>
+            <div style="display:flex; gap:8px;">
+              <div class="wf-block" style="height:34px; width:120px; border-radius:var(--r-sm);">Filtro período</div>
+              <div class="btn btn-primary btn-sm">Exportar PDF</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
+            <div class="card"><div class="card-body" style="padding:14px 16px;"><p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Obras Ativas</p><p class="card-metric" style="font-size:32px;">247</p><p class="card-delta">↑ 18 este mês</p></div></div>
+            <div class="card"><div class="card-body" style="padding:14px 16px;"><p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Concluídas</p><p class="card-metric" style="font-size:32px; color:var(--verde);">84</p><p class="card-delta">Meta: 80</p></div></div>
+            <div class="card"><div class="card-body" style="padding:14px 16px;"><p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Paralisadas</p><p class="card-metric" style="font-size:32px; color:var(--laranja);">12</p><p class="card-delta" style="color:var(--laranja);">↑ 3 alertas</p></div></div>
+            <div class="card"><div class="card-body" style="padding:14px 16px;"><p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Volume</p><p class="card-metric" style="font-size:28px;">R$ 1,2bi</p><p class="card-delta">72% executado</p></div></div>
+          </div>
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+            <div class="wf-block" style="height:160px; border-radius:var(--r-md);">Gráfico — evolução mensal de execução física e financeira</div>
+            <div class="wf-block" style="height:160px; border-radius:var(--r-md);">Mapa RN — obras por município</div>
+          </div>
+          <div class="wf-block" style="height:120px; border-radius:var(--r-md);">Tabela — últimas 5 obras atualizadas (nome, município, status, % execução)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OBRAS -->
+  <div class="wf">
+    <div class="wf-header">
+      <div class="wf-dots"><div class="wf-dot"></div><div class="wf-dot"></div><div class="wf-dot"></div></div>
+      <span class="wf-name">Página de Obras — Listagem</span>
+    </div>
+    <div class="wf-body">
+      <span class="wf-label">Tela 3 de 5 — /obras</span>
+      <div style="border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden; background:var(--bg); padding:20px; display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <span style="font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; color:var(--azul);">Obras do Estado</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div class="wf-block" style="height:36px; width:200px; border-radius:var(--r-sm);">Busca por nome/contrato</div>
+            <div class="wf-block" style="height:36px; width:120px; border-radius:var(--r-sm);">Status</div>
+            <div class="wf-block" style="height:36px; width:120px; border-radius:var(--r-sm);">Município</div>
+            <div class="btn btn-primary btn-sm">+ Nova Obra</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Contrato</th><th>Obra</th><th>Município</th><th>Valor</th><th>% Exec.</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>
+              <tr><td style="font-family:ui-monospace,monospace; font-size:12px;">CON-2026-0047</td><td>Pavimentação BR-304</td><td>Mossoró</td><td style="font-family:ui-monospace,monospace; font-size:12px;">R$ 4,75 M</td><td>68%</td><td><span class="badge badge-em-andamento">Em andamento</span></td><td><span style="font-size:12px; color:var(--azul); font-weight:600; cursor:pointer;">Ver · Editar</span></td></tr>
+              <tr><td style="font-family:ui-monospace,monospace; font-size:12px;">CON-2025-0198</td><td>Ponte Rio Seridó</td><td>Caicó</td><td style="font-family:ui-monospace,monospace; font-size:12px;">R$ 12,3 M</td><td>100%</td><td><span class="badge badge-concluida">Concluída</span></td><td><span style="font-size:12px; color:var(--azul); font-weight:600; cursor:pointer;">Ver · Relatório</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:12px; color:var(--muted); text-align:right;">Exibindo 1–20 de 247 obras · <span style="color:var(--azul); font-weight:600;">Próxima página →</span></div>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.8;"><strong>Detalhe de Obra:</strong> Clique em "Ver" abre drawer lateral com: dados gerais, cronograma, medições, documentos, histórico de atualizações e mapa de localização.</div>
+    </div>
+  </div>
+
+  <!-- RELATÓRIOS -->
+  <div class="wf">
+    <div class="wf-header">
+      <div class="wf-dots"><div class="wf-dot"></div><div class="wf-dot"></div><div class="wf-dot"></div></div>
+      <span class="wf-name">Relatórios — Geração e Exportação</span>
+    </div>
+    <div class="wf-body">
+      <span class="wf-label">Tela 4 de 5 — /relatorios</span>
+      <div style="display:grid; grid-template-columns:240px 1fr; gap:0; border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden; min-height:280px;">
+        <div style="background:var(--surface); border-right:1px solid var(--border); padding:20px; display:flex; flex-direction:column; gap:6px;">
+          <p style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;">Tipo de Relatório</p>
+          <div style="padding:8px 10px; background:var(--azul-claro); border-radius:6px; font-size:13px; font-weight:600; color:var(--azul);">Execução Física</div>
+          <div style="padding:8px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Execução Financeira</div>
+          <div style="padding:8px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Obras por Município</div>
+          <div style="padding:8px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Paralisações</div>
+          <div style="padding:8px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Fiscalização</div>
+          <div style="padding:8px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Personalizado</div>
+        </div>
+        <div style="background:var(--bg); padding:20px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <p style="font-size:16px; font-weight:700; color:var(--fg);">Relatório de Execução Física</p>
+              <p style="font-size:12px; color:var(--muted);">Progresso físico de todas as obras por período</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm">Pré-visualizar</button>
+              <button class="btn btn-primary btn-sm">Gerar PDF</button>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div class="input-group"><label class="input-label">Período de</label><div class="wf-block" style="height:36px; border-radius:var(--r-sm);">Data inicial</div></div>
+            <div class="input-group"><label class="input-label">Período até</label><div class="wf-block" style="height:36px; border-radius:var(--r-sm);">Data final</div></div>
+            <div class="input-group"><label class="input-label">Município</label><div class="wf-block" style="height:36px; border-radius:var(--r-sm);">Todos</div></div>
+          </div>
+          <div class="wf-block" style="height:120px; border-radius:var(--r-md);">Preview do relatório — gráfico de barras por obra</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURAÇÕES -->
+  <div class="wf">
+    <div class="wf-header">
+      <div class="wf-dots"><div class="wf-dot"></div><div class="wf-dot"></div><div class="wf-dot"></div></div>
+      <span class="wf-name">Configurações — Perfil e Sistema</span>
+    </div>
+    <div class="wf-body">
+      <span class="wf-label">Tela 5 de 5 — /configuracoes</span>
+      <div style="display:grid; grid-template-columns:200px 1fr; gap:0; border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden; min-height:240px;">
+        <div style="background:var(--surface); border-right:1px solid var(--border); padding:20px; display:flex; flex-direction:column; gap:4px;">
+          <p style="font-size:10px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;">Configurações</p>
+          <div style="padding:7px 10px; background:var(--azul-claro); border-radius:6px; font-size:13px; font-weight:600; color:var(--azul);">Perfil</div>
+          <div style="padding:7px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Notificações</div>
+          <div style="padding:7px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Usuários</div>
+          <div style="padding:7px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Integrações</div>
+          <div style="padding:7px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Segurança</div>
+          <div style="padding:7px 10px; border-radius:6px; font-size:13px; color:var(--muted);">Sistema</div>
+        </div>
+        <div style="background:var(--bg); padding:20px; display:flex; flex-direction:column; gap:14px;">
+          <p style="font-size:16px; font-weight:700; color:var(--fg);">Perfil do Usuário</p>
+          <div style="display:flex; gap:16px; align-items:center;">
+            <div style="width:56px; height:56px; border-radius:50%; background:var(--azul); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#fff; flex-shrink:0;">JS</div>
+            <div>
+              <p style="font-size:15px; font-weight:700; color:var(--fg);">João Silva</p>
+              <p style="font-size:12px; color:var(--muted);">Fiscal de Obras · Matrícula 4872-3</p>
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="input-group"><label class="input-label">Nome completo</label><input class="input-field" value="João Henrique Silva" /></div>
+            <div class="input-group"><label class="input-label">E-mail institucional</label><input class="input-field" value="joao.silva@sin.rn.gov.br" /></div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm">Salvar alterações</button>
+            <button class="btn btn-ghost btn-sm">Alterar senha</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 6. ELEMENTOS GRÁFICOS ══════════════════════════════════════════ -->
+<section class="wrap tight" id="elementos" data-od-id="elementos">
+  <p class="section-tag">06 — Elementos Gráficos</p>
+  <h2>Grid, espaçamento<br>e profundidade</h2>
+
+  <!-- GRID -->
+  <h3 style="margin-bottom:12px;">Sistema de Grid</h3>
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:24px; margin-bottom:32px;">
+    <div style="display:grid; grid-template-columns:repeat(12,1fr); gap:8px; margin-bottom:16px;">
+      <div style="grid-column:span 12; background:rgba(27,60,115,0.06); border:1px dashed rgba(27,60,115,0.2); border-radius:4px; height:32px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--azul);">12 colunas — Container max 1060px</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(12,1fr); gap:8px; margin-bottom:8px;">
+      <div style="grid-column:span 4; background:rgba(27,60,115,0.08); border:1px dashed rgba(27,60,115,0.25); border-radius:4px; height:60px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--azul);">4 col (33%)</div>
+      <div style="grid-column:span 4; background:rgba(27,60,115,0.08); border:1px dashed rgba(27,60,115,0.25); border-radius:4px; height:60px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--azul);">4 col (33%)</div>
+      <div style="grid-column:span 4; background:rgba(27,60,115,0.08); border:1px dashed rgba(27,60,115,0.25); border-radius:4px; height:60px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--azul);">4 col (33%)</div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(12,1fr); gap:8px;">
+      <div style="grid-column:span 8; background:rgba(200,73,24,0.06); border:1px dashed rgba(200,73,24,0.25); border-radius:4px; height:50px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--laranja);">8 col (conteúdo)</div>
+      <div style="grid-column:span 4; background:rgba(200,73,24,0.06); border:1px dashed rgba(200,73,24,0.25); border-radius:4px; height:50px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--laranja);">4 col (sidebar)</div>
+    </div>
+    <p style="font-size:12px; color:var(--muted); margin-top:14px;">Gap padrão: 16px (desktop) · 12px (tablet) · 8px (mobile) · Gutter lateral: 40px (desktop) · 20px (mobile)</p>
+  </div>
+
+  <!-- ESPAÇAMENTO -->
+  <h3 style="margin-bottom:16px;">Escala de Espaçamento</h3>
+  <div style="display:flex; align-items:flex-end; gap:16px; margin-bottom:8px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:4px; height:4px; background:var(--azul); border-radius:1px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">4px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:8px; height:8px; background:var(--azul); border-radius:1px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">8px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:12px; height:12px; background:var(--azul); border-radius:1px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">12px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:16px; height:16px; background:var(--azul); border-radius:2px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">16px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:24px; height:24px; background:var(--azul); border-radius:2px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">24px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:32px; height:32px; background:var(--azul); border-radius:3px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">32px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:40px; height:40px; background:var(--azul); border-radius:3px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">40px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:56px; height:56px; background:var(--azul); border-radius:4px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">56px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:64px; height:64px; background:var(--azul); border-radius:4px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">64px</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+      <div style="width:80px; height:80px; background:var(--azul); border-radius:6px;"></div>
+      <span style="font-family:ui-monospace,monospace; font-size:10px; font-weight:700; color:var(--azul);">80px</span>
+    </div>
+  </div>
+  <p style="font-size:12px; color:var(--muted); margin-bottom:32px;">Base 4px · Sequência: 4 · 8 · 12 · 16 · 24 · 32 · 40 · 56 · 64 · 80 · 96</p>
+
+  <!-- BORDAS E RAIOS -->
+  <h3 style="margin-bottom:16px;">Bordas e Arredondamentos</h3>
+  <div style="display:flex; gap:20px; margin-bottom:32px; flex-wrap:wrap;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:0; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">0px — Tags</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:4px; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">4px — Chips</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">8px — Inputs/Botões</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:12px; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">12px — Cards</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:16px; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">16px — Modais</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div style="width:80px; height:60px; border:1.5px solid var(--border); border-radius:999px; background:var(--surface);"></div>
+      <span style="font-size:11px; font-weight:600; color:var(--muted);">Full — Pills</span>
+    </div>
+  </div>
+
+  <!-- SOMBRAS -->
+  <h3 style="margin-bottom:16px;">Sombras e Profundidade</h3>
+  <div class="shadow-row" style="flex-wrap:wrap; margin-bottom:12px;">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div class="shadow-card" style="box-shadow:none; border:1px solid var(--border);">Sem sombra<br>Base</div>
+      <span style="font-size:10px; font-weight:600; color:var(--muted); font-family:ui-monospace,monospace;">shadow-none</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div class="shadow-card" style="box-shadow:0 1px 3px rgba(26,30,42,0.08), 0 1px 2px rgba(26,30,42,0.04);">Cards<br>padrão</div>
+      <span style="font-size:10px; font-weight:600; color:var(--muted); font-family:ui-monospace,monospace;">shadow-sm</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div class="shadow-card" style="box-shadow:0 4px 12px rgba(26,30,42,0.10), 0 2px 4px rgba(26,30,42,0.06);">Dropdowns<br>e Popovers</div>
+      <span style="font-size:10px; font-weight:600; color:var(--muted); font-family:ui-monospace,monospace;">shadow-md</span>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <div class="shadow-card" style="box-shadow:0 8px 28px rgba(26,30,42,0.12), 0 4px 10px rgba(26,30,42,0.08);">Modais<br>e Drawers</div>
+      <span style="font-size:10px; font-weight:600; color:var(--muted); font-family:ui-monospace,monospace;">shadow-lg</span>
+    </div>
+  </div>
+  <p style="font-size:12px; color:var(--muted); margin-bottom:32px;">Usar sombra apenas para criar hierarquia (modal acima do overlay). Nunca usar como decoração. Cor base: rgba(26,30,42,…) — nunca preto puro.</p>
+
+  <!-- RESPONSIVIDADE -->
+  <h3 style="margin-bottom:12px;">Breakpoints de Responsividade</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Breakpoint</th><th>Largura</th><th>Colunas</th><th>Gutter</th><th>Comportamento</th></tr></thead>
+      <tbody>
+        <tr><td>Mobile S</td><td style="font-family:ui-monospace,monospace;">360px</td><td>4</td><td>16px</td><td>Navegação em bottom bar, cards em coluna única</td></tr>
+        <tr><td>Mobile L</td><td style="font-family:ui-monospace,monospace;">430px</td><td>4</td><td>20px</td><td>Tabelas em scroll horizontal, formulários em 1 coluna</td></tr>
+        <tr><td>Tablet</td><td style="font-family:ui-monospace,monospace;">768px</td><td>8</td><td>24px</td><td>Sidebar recolhida, grid de 2 colunas em cards</td></tr>
+        <tr><td>Desktop S</td><td style="font-family:ui-monospace,monospace;">1024px</td><td>12</td><td>32px</td><td>Sidebar expandida, layout de 3 colunas</td></tr>
+        <tr><td>Desktop L</td><td style="font-family:ui-monospace,monospace;">1440px</td><td>12</td><td>40px</td><td>Container limitado a 1060px, margens automáticas</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 7. TOM DE VOZ ══════════════════════════════════════════════════ -->
+<section class="wrap tight" id="voz" data-od-id="tom-de-voz">
+  <p class="section-tag">07 — Tom de Voz</p>
+  <h2>Como a SIN se<br>comunica com o cidadão</h2>
+
+  <div class="voice-grid">
+    <div class="voice-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--azul)" stroke-width="1.8" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Institucional e Acessível
+      </h4>
+      <p>A linguagem é formal — afinal, representamos o Estado — mas nunca distante ou burocrática. Usamos a norma culta sem rebuscamentos. Frases curtas e diretas. Evitamos jargão técnico quando há sinônimo mais claro.</p>
+    </div>
+    <div class="voice-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--azul)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Objetivo e Direto
+      </h4>
+      <p>O usuário do SIN-Obras tem um objetivo — registrar, consultar ou fiscalizar. A interface apoia essa tarefa sem prender atenção desnecessária. Botões dizem o que fazem: "Salvar obra", não "OK" ou "Continuar".</p>
+    </div>
+    <div class="voice-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--azul)" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Respeitoso com o Servidor
+      </h4>
+      <p>Servidores que usam o sistema têm expertise. Não explicamos o óbvio. Mensagens de erro identificam o problema e indicam como resolver — sem culpar o usuário, sem ser vagos.</p>
+    </div>
+    <div class="voice-card">
+      <h4>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--azul)" stroke-width="1.8" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Transparente e Preciso
+      </h4>
+      <p>Valores monetários sempre com formatação brasileira (R$ 4.750.000,00). Percentuais com uma casa decimal quando necessário. Datas no formato dia/mês/ano. Status de obras em vocabulário consistente e definido.</p>
+    </div>
+  </div>
+
+  <!-- EXEMPLOS CERTO/ERRADO -->
+  <h3 style="margin-bottom:20px;">Exemplos de linguagem</h3>
+  <div class="voice-ex">
+    <div class="voice-ex-row">
+      <div>
+        <p class="voice-ex-label wrong">Evitar</p>
+        <div class="voice-ex-box wrong">Ocorreu um erro inesperado no sistema. Por favor, tente novamente mais tarde ou entre em contato com o suporte técnico.</div>
+      </div>
+      <div>
+        <p class="voice-ex-label correct">Usar</p>
+        <div class="voice-ex-box correct">Falha ao salvar. Verifique sua conexão e tente novamente. Se o problema persistir, acesse a Ouvidoria.</div>
+      </div>
+    </div>
+    <div class="voice-ex-row">
+      <div>
+        <p class="voice-ex-label wrong">Evitar</p>
+        <div class="voice-ex-box wrong">Confirma a exclusão permanente e irreversível do registro desta obra do banco de dados do sistema?</div>
+      </div>
+      <div>
+        <p class="voice-ex-label correct">Usar</p>
+        <div class="voice-ex-box correct">Excluir obra "Pavimentação BR-304"? Esta ação não pode ser desfeita.</div>
+      </div>
+    </div>
+    <div class="voice-ex-row">
+      <div>
+        <p class="voice-ex-label wrong">Evitar</p>
+        <div class="voice-ex-box wrong">Clique no botão azul para acessar o dashboard principal do sistema.</div>
+      </div>
+      <div>
+        <p class="voice-ex-label correct">Usar</p>
+        <div class="voice-ex-box correct">Dashboard mostra o resumo das obras sob sua responsabilidade.</div>
+      </div>
+    </div>
+    <div class="voice-ex-row">
+      <div>
+        <p class="voice-ex-label wrong">Evitar</p>
+        <div class="voice-ex-box wrong">Obra cadastrada com sucesso! 🎉 Parabéns pela atualização!</div>
+      </div>
+      <div>
+        <p class="voice-ex-label correct">Usar</p>
+        <div class="voice-ex-box correct">Obra salva. Protocolo CON-2026-0113 gerado automaticamente.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VOCABULÁRIO PADRONIZADO -->
+  <h3 style="margin-bottom:12px; margin-top:32px;">Vocabulário padronizado</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Termo correto</th><th>Evitar</th><th>Contexto de uso</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600;">Obra</td><td style="color:var(--laranja); text-decoration:line-through;">Projeto / Empreendimento</td><td>Registro no sistema, listagens, relatórios</td></tr>
+        <tr><td style="font-weight:600;">Em andamento</td><td style="color:var(--laranja); text-decoration:line-through;">Ativo / Em execução / Aberto</td><td>Status de obra com medições em curso</td></tr>
+        <tr><td style="font-weight:600;">Paralisada</td><td style="color:var(--laranja); text-decoration:line-through;">Parada / Suspensa / Bloqueada</td><td>Obra com impedimento formal registrado</td></tr>
+        <tr><td style="font-weight:600;">Concluída</td><td style="color:var(--laranja); text-decoration:line-through;">Finalizada / Entregue / Done</td><td>Obra com termo de recebimento emitido</td></tr>
+        <tr><td style="font-weight:600;">Fiscal de Obras</td><td style="color:var(--laranja); text-decoration:line-through;">Usuário / Responsável / Gestor</td><td>Papel do servidor no sistema</td></tr>
+        <tr><td style="font-weight:600;">Volume Investido</td><td style="color:var(--laranja); text-decoration:line-through;">Gasto / Verba / Budget</td><td>Contexto de relatórios e dashboards</td></tr>
+        <tr><td style="font-weight:600;">Protocolo</td><td style="color:var(--laranja); text-decoration:line-through;">ID / Número / Código</td><td>Identificador único de contrato ou registro</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══ 8. APLICAÇÕES ══════════════════════════════════════════════════ -->
+<div class="dark-section" id="aplicacoes" data-od-id="aplicacoes">
+  <section class="wrap">
+    <p class="section-tag">08 — Aplicações Práticas</p>
+    <h2>A identidade<br>em uso real</h2>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:32px;">
+      <!-- Assinatura de email -->
+      <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:var(--r-md); padding:20px;">
+        <h3>Assinatura de E-mail</h3>
+        <div style="margin-top:14px; background:var(--surface); border-radius:8px; padding:16px; border-left:4px solid var(--laranja);">
+          <p style="font-size:14px; font-weight:700; color:var(--fg);">João Henrique Silva</p>
+          <p style="font-size:12px; color:var(--muted); margin-top:2px;">Fiscal de Obras</p>
+          <div style="margin:10px 0 8px; height:1px; background:var(--border);"></div>
+          <p style="font-size:12px; color:var(--fg); font-weight:600;">SIN — Secretaria de Estado da Infraestrutura</p>
+          <p style="font-size:11px; color:var(--muted);">Governo do Rio Grande do Norte</p>
+          <p style="font-size:11px; color:var(--azul); margin-top:4px; font-family:ui-monospace,monospace;">(84) 9 9999-0000</p>
+        </div>
+        <p style="font-size:11px; color:rgba(255,255,255,0.45); margin-top:10px; line-height:1.5;">Borda esquerda em Laranja Potiguar. Nome em Barlow 700. Cargo em muted. Sem foto, sem emoji, sem banner gráfico.</p>
+      </div>
+
+      <!-- Redes sociais -->
+      <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:var(--r-md); padding:20px;">
+        <h3>Redes Sociais</h3>
+        <div style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
+          <div style="background:var(--azul); border-radius:8px; overflow:hidden;">
+            <div class="stripe" style="height:4px;"></div>
+            <div style="padding:12px; display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:6px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div>
+                <p style="font-size:12px; font-weight:700; color:#fff; line-height:1.2;">Pavimentação da RN-304 concluída em Mossoró</p>
+                <p style="font-size:10px; color:rgba(255,255,255,0.5);">SIN-RN · Instagram</p>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:11px; color:rgba(255,255,255,0.45); line-height:1.5;">Post sempre: fundo azul + listra cromática no topo. Barlow Condensed 800 para título. Foto real da obra quando disponível.</p>
+        </div>
+      </div>
+
+      <!-- Apresentações -->
+      <div style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.1); border-radius:var(--r-md); padding:20px;">
+        <h3>Apresentações</h3>
+        <div style="margin-top:14px; background:var(--azul-vivo); border-radius:8px; overflow:hidden; aspect-ratio:16/9; position:relative; display:flex; flex-direction:column; justify-content:flex-end; padding:14px;">
+          <div class="stripe" style="position:absolute; top:0; left:0; right:0; height:4px;"></div>
+          <p style="font-size:10px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.5);">SIN/RN · 2026</p>
+          <p style="font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:#fff; line-height:1.0; letter-spacing:-0.01em;">Obras e Investimentos<br>no RN</p>
+        </div>
+        <p style="font-size:11px; color:rgba(255,255,255,0.45); margin-top:10px; line-height:1.5;">Slides: 1920×1080, listra no topo, título em Barlow Condensed 800, fundo azul ou branco. Nunca fundos gradiente.</p>
+      </div>
+    </div>
+
+    <!-- Materiais impressos -->
+    <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:var(--r-md); padding:24px;">
+      <h3 style="margin-bottom:14px;">Materiais Institucionais Impressos</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px;">Papel Timbrado</p>
+          <p style="font-size:13px; color:rgba(255,255,255,0.65); line-height:1.6;">Listra de 10mm no topo com as 4 cores. Logo SIN à esquerda + brasão RN à direita. Rodapé com endereço em 8pt Barlow. Margens: 2,5cm. Papel A4 couchê fosco 90g.</p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px;">Crachá Funcional</p>
+          <p style="font-size:13px; color:rgba(255,255,255,0.65); line-height:1.6;">Fundo branco com faixa azul no topo (25mm). Foto à esquerda. Nome em Barlow 700 14pt. Cargo em 10pt. Matrícula em monoespacial 9pt. Verso: informações de emergência.</p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px;">Banner de Obra</p>
+          <p style="font-size:13px; color:rgba(255,255,255,0.65); line-height:1.6;">Fundo azul institucional. Listra cromática horizontal centralizada. Logo SIN + Governo RN. Especificações da obra: nome, valor, prazo, contratada. Mínimo: 1,2m × 0,8m.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- RODAPÉ FINAL -->
+<div class="stripe lg"></div>
+<footer style="background:var(--fg); padding:32px 40px; text-align:center;">
+  <p style="font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; color:#fff; letter-spacing:0.04em; margin-bottom:6px;">SIN / RN</p>
+  <p style="font-size:12px; color:rgba(255,255,255,0.4); letter-spacing:0.08em; text-transform:uppercase;">Guia de Identidade Visual — v3.0 · Junho 2026</p>
+  <p style="font-size:11px; color:rgba(255,255,255,0.25); margin-top:8px;">Secretaria de Estado da Infraestrutura do Rio Grande do Norte</p>
+</footer>
+
+<script>
+(function() {
+  var dots = Array.from(document.querySelectorAll('.dot-nav a'));
+  var ids = dots.map(function(a){ return a.getAttribute('href').slice(1); });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      var idx = ids.indexOf(e.target.id);
+      if (idx >= 0) dots[idx].classList.toggle('active', e.isIntersecting);
+    });
+  }, { threshold: 0.3 });
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
+</script>
+</body>
+</html>
