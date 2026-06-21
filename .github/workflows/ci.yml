@@ -1,10 +1,12 @@
 name: CI
 
+# CI automático desativado para não usar o GitHub Actions pago (conta sem plano).
+# A validação é feita LOCALMENTE: `make validate` (ou o hook .githooks/pre-push).
+# Mantemos o workflow apenas como manual (workflow_dispatch). Para reativar o CI
+# automático, restaure os gatilhos push/pull_request e siga Docs/ci-local.md +
+# Docs/branch-protection.md (tornar os checks obrigatórios de novo).
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+  workflow_dispatch:
 
 jobs:
   frontend-lint-build:

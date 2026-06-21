@@ -15,11 +15,12 @@
 | `enforce_admins` | ❌ desligado (admin pode mergear/override) |
 | Reviews obrigatórios | nenhum |
 
-**Por que os checks estão não-obrigatórios:** o GitHub Actions da conta está
-**bloqueado por uma pendência de cobrança** (*"The job was not started because your
-account is locked due to a billing issue"*). Com os checks obrigatórios, nenhum PR
-mergearia (os jobs nunca passam). O CI continua rodando e reportando nos PRs — só
-não bloqueia o merge.
+**Por que os checks estão não-obrigatórios:** o GitHub Actions da conta estava
+**bloqueado por cobrança** e optou-se por **não usar o plano pago**. O workflow de
+CI foi **desativado** (gatilhos automáticos removidos em `.github/workflows/ci.yml`)
+e a validação passou a ser **local** — ver [ci-local.md](./ci-local.md)
+(`make validate` / hook de pre-push). Com os checks obrigatórios, nenhum PR
+mergearia; por isso eles ficam não-obrigatórios.
 
 ## Quando o billing for resolvido — reativar os checks obrigatórios
 

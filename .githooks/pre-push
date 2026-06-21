@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# =============================================================================
+# SIN-Obras — hook de pre-push (validação local, substitui o CI pago)
+# =============================================================================
+# Roda `make validate` (lint + testes + typecheck + build) antes de cada push.
+# Aborta o push se algo falhar.
+#
+# Ative uma vez com:  make hooks   (ou: git config core.hooksPath .githooks)
+# Pule pontualmente:  git push --no-verify
+# =============================================================================
+set -euo pipefail
+
+echo "🔎 pre-push: rodando 'make validate' (use 'git push --no-verify' para pular)..."
+
+if ! docker compose ps --status running --quiet backend >/dev/null 2>&1 \
+   || [ -z "$(docker compose ps --status running --quiet backend 2>/dev/null)" ]; then
+  echo "⚠️  Os containers não estão de pé. Rode 'make up' antes do push"
+  echo "    (ou 'git push --no-verify' para pular a validação)."
+  exit 1
+fi
+
+if ! make validate; then
+  echo "❌ Validação falhou — push abortado. Corrija ou use 'git push --no-verify'."
+  exit 1
+fi
+
+echo "✅ pre-push: validação OK."
