@@ -3,7 +3,7 @@ SIN-Obras — Serviço de Alertas
 
 Gera alertas automáticos com base em regras de negócio e consulta o banco.
 """
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status

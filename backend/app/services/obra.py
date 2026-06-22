@@ -12,7 +12,6 @@ from app.core.rbac import Role
 from app.models.obra import Contrato, Obra, SaudeObra, SituacaoObra, StatusObra
 from app.schemas.obra import ObraCreate, ObraUpdate
 
-
 # Perfis com visão completa do portfólio (não recebem recorte por usuário).
 _ROLES_PORTFOLIO_COMPLETO = {
     Role.APOIO_N2,

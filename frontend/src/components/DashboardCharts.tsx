@@ -172,7 +172,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
                 <YAxis type="category" dataKey="orgao" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1f5f9" }}
                   formatter={(v: unknown) => [`${v} obras`, ""]}
-                  labelFormatter={(_: unknown, p: any) => p?.[0]?.payload?.orgaoFull ?? ""} />
+                  labelFormatter={(_: unknown, p?: ReadonlyArray<{ payload?: { orgaoFull?: string } }>) => p?.[0]?.payload?.orgaoFull ?? ""} />
                 <Bar dataKey="obras" fill={BRAND} radius={[0, 6, 6, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
@@ -185,7 +185,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
                 <YAxis type="category" dataKey="orgao" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1f5f9" }}
                   formatter={(v: unknown) => [fmtCurrency(v), ""]}
-                  labelFormatter={(_: unknown, p: any) => p?.[0]?.payload?.orgaoFull ?? ""} />
+                  labelFormatter={(_: unknown, p?: ReadonlyArray<{ payload?: { orgaoFull?: string } }>) => p?.[0]?.payload?.orgaoFull ?? ""} />
                 <Bar dataKey="valor" fill={AMBER} radius={[0, 6, 6, 0]} barSize={18} />
                 <Legend wrapperStyle={{ display: "none" }} />
               </BarChart>

@@ -3,13 +3,13 @@ SIN-Obras — Serviço de Exportação de Relatórios
 
 Gera arquivos XLSX e PDF com dados do relatório-resumo.
 """
-from io import BytesIO
 from datetime import date
+from io import BytesIO
 
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
 from fpdf import FPDF
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,7 +40,7 @@ async def _fetch_data(db: AsyncSession) -> dict:
 
     status_rows = await db.execute(
         select(Obra.status, func.count(Obra.id))
-        .where(Obra.ativo == True, Obra.status != None)
+        .where(Obra.ativo == True, Obra.status.is_not(None))
         .group_by(Obra.status)
     )
     por_status = [

@@ -4,7 +4,7 @@ SIN-Obras — Serviço de Curva S Preditiva (EVM)
 Calcula a Curva S com três séries: Planejado, Realizado e Preditivo.
 Usa earned value management para projetar tendência de conclusão.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -101,7 +101,6 @@ async def compute_curva_s(db: AsyncSession, obra_id: UUID) -> dict:
             slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x) if (n * sum_x2 - sum_x * sum_x) != 0 else 0
             intercept = (sum_y - slope * sum_x) / n
 
-            last_real = pts[-1][1]
             target = float(valor_total_planejado)
             target_idx = int((target - intercept) / slope) if slope > 0 else len(datas)
 
@@ -113,7 +112,6 @@ async def compute_curva_s(db: AsyncSession, obra_id: UUID) -> dict:
             if target_idx > len(datas) - 1:
                 steps_to_add = target_idx - len(datas) + 1
                 for j in range(1, steps_to_add + 1):
-                    next_date = datas[-1][:7] + f"-{int(datas[-1][8:10]) + j * 30:02d}" if len(datas[-1]) > 10 else ""
                     data_futura = (data_fim + timedelta(days=j * 30)).isoformat()
                     datas.append(data_futura)
                     planejado.append(planejado[-1])  # platô no planejado

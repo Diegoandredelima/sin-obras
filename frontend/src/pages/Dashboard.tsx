@@ -143,20 +143,19 @@ const SITUACAO_LABEL: Record<string, string> = {
 
 // Placeholder enquanto o bundle dos gráficos (recharts) carrega — reserva a
 // altura para evitar salto de layout.
-const ChartsSkeleton = ({ dupla }: { dupla: boolean }) => {
-  const Bloco = () => (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-      <div className="h-4 w-40 bg-slate-100 animate-pulse rounded mb-4" />
-      <div className="h-44 bg-slate-50 animate-pulse rounded-xl" />
-    </div>
-  );
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Bloco /><Bloco /></div>
-      {dupla && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><Bloco /><Bloco /></div>}
-    </div>
-  );
-};
+const SkeletonBloco = () => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+    <div className="h-4 w-40 bg-slate-100 animate-pulse rounded mb-4" />
+    <div className="h-44 bg-slate-50 animate-pulse rounded-xl" />
+  </div>
+);
+
+const ChartsSkeleton = ({ dupla }: { dupla: boolean }) => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><SkeletonBloco /><SkeletonBloco /></div>
+    {dupla && <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"><SkeletonBloco /><SkeletonBloco /></div>}
+  </div>
+);
 
 const Dashboard = () => {
   const { user } = useAuthStore();
