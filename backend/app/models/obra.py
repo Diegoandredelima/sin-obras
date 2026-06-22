@@ -101,8 +101,14 @@ class Contrato(Base):
         UUID(as_uuid=True), ForeignKey("orgaos.id"), nullable=True
     )
     # Obra à qual este contrato pertence (link canônico Contrato N—1 Obra).
+    # use_alter: obras↔contratos formam um ciclo de FK (obras.contrato_id também
+    # referencia contratos). O ALTER pós-criação evita CircularDependencyError no
+    # create_all (usado nos testes); na migration o FK é criado separadamente.
     obra_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id"), nullable=True, index=True
+        UUID(as_uuid=True),
+        ForeignKey("obras.id", use_alter=True, name="fk_contratos_obra_id"),
+        nullable=True,
+        index=True,
     )
     fiscal_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
