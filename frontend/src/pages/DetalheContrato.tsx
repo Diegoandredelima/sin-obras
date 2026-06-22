@@ -5,7 +5,7 @@ import {
   ArrowLeft, Briefcase, Building2, User, MapPin,
   TrendingUp, Calendar, FileText, Hash, AlertTriangle,
   Activity, CheckCircle2, Pause, Clock, BookOpen, ChartBar,
-  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Printer,
+  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Printer, Plus,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
@@ -138,6 +138,7 @@ const DetalheContrato = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const isApoioN1 = user?.tipo === "APOIO_N1";
+  const podeCadastrarContrato = ["APOIO_N2", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"].includes(user?.tipo || "");
   const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") || "detalhes";
   const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s">(initialTab);
 
@@ -217,6 +218,14 @@ const DetalheContrato = () => {
             >
               <Printer className="h-3.5 w-3.5" /> Imprimir obra
             </button>
+          )}
+          {obra && podeCadastrarContrato && (
+            <Link
+              to={`/obras/${obra.id}/contratos/novo`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-700 rounded-lg shadow-sm shadow-brand-700/20 hover:bg-brand-500 transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" /> Cadastrar contrato
+            </Link>
           )}
         </div>
       </div>
