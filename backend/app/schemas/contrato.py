@@ -19,6 +19,10 @@ class ContratoCreate(BaseModel):
     data_assinatura: date | None = None
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
+    empresa_ref_id: UUID | None = None
+    obra_id: UUID | None = None
+    orgao_id: UUID | None = None
+    orgao: str | None = Field(None, max_length=100)
     objeto: str | None = None
 
 class ContratoUpdate(BaseModel):
@@ -28,6 +32,10 @@ class ContratoUpdate(BaseModel):
     data_assinatura: date | None = None
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
+    empresa_ref_id: UUID | None = None
+    obra_id: UUID | None = None
+    orgao_id: UUID | None = None
+    orgao: str | None = Field(None, max_length=100)
     objeto: str | None = None
 
 # ---------------------------------------------------------------------------
@@ -59,6 +67,7 @@ class ContratoResponse(BaseModel):
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
     empresa_ref_id: UUID | None = None
+    obra_id: UUID | None = None
     orgao_id: UUID | None = None
     orgao: str | None = None
     fiscal_nome: str | None = None

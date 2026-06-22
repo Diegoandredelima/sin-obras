@@ -74,7 +74,8 @@ class ObraBase(BaseModel):
     descricao: str | None = None
     endereco: str | None = Field(None, max_length=500)
     municipio: str | None = Field(None, max_length=100)
-    valor_contrato: Decimal
+    valor_contrato: Decimal | None = None
+    orgao: str | None = Field(None, max_length=100)
     data_inicio: date | None = None
     data_fim_prevista: date | None = None
     status: StatusObra = StatusObra.PLANEJADA

@@ -1,6 +1,15 @@
 """
 SIN-Obras — Modelos: Obra, Contrato, Meta, Submeta e Evento
-Hierarquia: Contrato → Obra → Meta → Submeta → Evento
+Hierarquia: Obra → Meta → Submeta → Evento
+
+Relacionamento Obra↔Contrato (modelo de domínio):
+  • Uma OBRA (ex.: construção de uma escola) pode ter VÁRIOS contratos —
+    cada um referente a um objeto distinto (prédio, ar-condicionado, rede...).
+  • Um CONTRATO pertence a UMA única obra (`contratos.obra_id`, link canônico).
+  • Uma EMPRESA pode estar em vários contratos/obras (`contratos.empresa_ref_id`).
+
+O campo legado `obras.contrato_id` (e a relação `Contrato.obras`) é mantido por
+compatibilidade com a view de relatório e os imports históricos.
 """
 
 import enum
@@ -91,6 +100,10 @@ class Contrato(Base):
     orgao_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("orgaos.id"), nullable=True
     )
+    # Obra à qual este contrato pertence (link canônico Contrato N—1 Obra).
+    obra_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("obras.id"), nullable=True, index=True
+    )
     fiscal_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
@@ -126,7 +139,14 @@ class Contrato(Base):
     orgao_ref = relationship("Orgao", foreign_keys=[orgao_id], lazy="selectin")
     fiscal = relationship("Usuario", foreign_keys=[fiscal_id], lazy="selectin")
     gestor = relationship("Usuario", foreign_keys=[gestor_id], lazy="selectin")
-    obras = relationship("Obra", back_populates="contrato", lazy="selectin")
+    # Link canônico: o contrato pertence a uma obra (contratos.obra_id)
+    obra = relationship(
+        "Obra", back_populates="contratos", lazy="selectin", foreign_keys=[obra_id]
+    )
+    # Legado: obras que apontam para este contrato via obras.contrato_id
+    obras = relationship(
+        "Obra", back_populates="contrato", lazy="selectin", foreign_keys="Obra.contrato_id"
+    )
 
     def __repr__(self) -> str:
         return f"<Contrato {self.numero_contrato}>"
@@ -149,7 +169,8 @@ class Obra(Base):
     )
     endereco: Mapped[str | None] = mapped_column(String(500), nullable=True)
     municipio: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    valor_contrato: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    # Opcional: o valor financeiro canônico vive nos contratos da obra.
+    valor_contrato: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     data_inicio: Mapped[date | None] = mapped_column(Date, nullable=True)
     data_fim_prevista: Mapped[date | None] = mapped_column(Date, nullable=True)
     data_ordem_servico: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -220,7 +241,15 @@ class Obra(Base):
     )
 
     # Relationships
-    contrato = relationship("Contrato", back_populates="obras", lazy="selectin")
+    # Contratos que pertencem a esta obra (link canônico Obra 1—N Contrato)
+    contratos = relationship(
+        "Contrato", back_populates="obra", lazy="selectin",
+        foreign_keys="Contrato.obra_id",
+    )
+    # Legado: contrato único apontado por obras.contrato_id
+    contrato = relationship(
+        "Contrato", back_populates="obras", lazy="selectin", foreign_keys=[contrato_id]
+    )
     responsavel = relationship("Usuario", foreign_keys=[responsavel_id], lazy="selectin")
     gestor = relationship("Usuario", foreign_keys=[gestor_id], lazy="selectin")
     metas = relationship("Meta", back_populates="obra", lazy="selectin", cascade="all, delete-orphan")

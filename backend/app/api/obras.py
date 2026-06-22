@@ -12,6 +12,7 @@ from app.core.rbac import Role, require_minimum_role
 from app.models.obra import SaudeObra, SituacaoObra, StatusObra
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
+from app.schemas.contrato import ContratoResponse
 from app.schemas.obra import ObraCreate, ObraDetalheResponse, ObraResponse, ObraUpdate
 from app.services import obra as obra_service
 from app.services.auditoria import registrar_auditoria
@@ -75,6 +76,17 @@ async def get_obra(
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
     return await obra_service.get_obra_by_id(db, id)
+
+
+@router.get("/{id}/contratos", response_model=list[ContratoResponse])
+async def list_contratos_obra(
+    id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
+):
+    """Lista os contratos vinculados a uma obra (Obra 1—N Contrato)."""
+    obra = await obra_service.get_obra_by_id(db, id)
+    return obra.contratos
 
 
 @router.put("/{id}", response_model=ObraResponse)
