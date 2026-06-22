@@ -3,6 +3,7 @@ import { Calculator } from "lucide-react";
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import NotificacoesBell from "@/components/NotificacoesBell";
+import AlertasBell from "@/components/AlertasBell";
 import { CalculadoraDrawer } from "@/components/CalculadoraDrawer";
 import { useAuthStore } from "@/store/auth";
 
@@ -15,12 +16,15 @@ const TITLES: Record<string, string> = {
   "/relatorio": "Relatórios",
   "/gestao": "Gestão de Obras e Equipe",
   "/alertas": "Central de Alertas",
+  "/empresas": "Empresas Executoras",
+  "/empresas/nova": "Cadastrar Empresa",
 };
 
 function getPageTitle(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname];
   if (pathname.startsWith("/obras/") && pathname !== "/obras/nova") return "Detalhe da Obra";
   if (pathname.startsWith("/contratos/")) return "Detalhe do Contrato";
+  if (pathname.endsWith("/editar") && pathname.startsWith("/empresas/")) return "Editar Empresa";
   if (pathname.startsWith("/empresas/")) return "Detalhe da Empresa";
   if (pathname.includes("/diario")) return "Diário de Obras";
   if (pathname.includes("/medicoes")) return "Medições";
@@ -53,6 +57,7 @@ const Layout = () => {
             >
               <Calculator className="h-5 w-5" />
             </button>
+            <AlertasBell />
             <NotificacoesBell />
           </div>
         </header>

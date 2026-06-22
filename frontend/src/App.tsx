@@ -12,6 +12,8 @@ import RedirectObra from "@/pages/RedirectObra";
 import DetalheContrato from "@/pages/DetalheContrato";
 import Relatorio from "@/pages/Relatorio";
 import DetalheEmpresa from "@/pages/DetalheEmpresa";
+import Empresas from "@/pages/Empresas";
+import EmpresaForm from "@/pages/EmpresaForm";
 import Gestao from "@/pages/Gestao";
 import Alertas from "@/pages/Alertas";
 import Privacidade from "@/pages/Privacidade";
@@ -42,7 +44,10 @@ function App() {
           <Route path="/relatorio" element={<Relatorio />} />
           <Route path="/gestao" element={<Gestao />} />
           <Route path="/alertas" element={<Alertas />} />
+          <Route path="/empresas" element={<Empresas />} />
+          <Route path="/empresas/nova" element={<EmpresaForm />} />
           <Route path="/empresas/:id" element={<DetalheEmpresa />} />
+          <Route path="/empresas/:id/editar" element={<EmpresaForm />} />
         </Route>
 
         {/* Rotas de impressão — standalone, sem o Layout (sidebar) */}

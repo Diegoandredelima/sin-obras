@@ -1,6 +1,6 @@
 """
 SIN-Obras — Router de Empresas
-Endpoints: Detalhe da empresa e seus contratos vinculados.
+Endpoints: listagem, cadastro, edição, detalhe da empresa e contratos vinculados.
 """
 
 from uuid import UUID
@@ -14,9 +14,153 @@ from app.core.rbac import Role, require_minimum_role
 from app.models.cadastro import Empresa
 from app.models.obra import Contrato, Obra
 from app.models.usuario import Usuario
-from app.schemas.empresa import ContratoResumo, EmpresaDetalhe
+from app.schemas.empresa import (
+    ContratoResumo,
+    EmpresaCreate,
+    EmpresaDetalhe,
+    EmpresaListItem,
+    EmpresaUpdate,
+)
 
 router = APIRouter(prefix="/empresas", tags=["Empresas"])
+
+
+async def _contadores(db: AsyncSession, empresa_id: UUID) -> tuple[int, int]:
+    total_contratos = await db.scalar(
+        select(func.count()).select_from(Contrato).where(Contrato.empresa_ref_id == empresa_id)
+    )
+    # Obras ligam-se à empresa via contrato (Obra.contrato_id -> Contrato.empresa_ref_id)
+    total_obras = await db.scalar(
+        select(func.count())
+        .select_from(Obra)
+        .join(Contrato, Obra.contrato_id == Contrato.id)
+        .where(Contrato.empresa_ref_id == empresa_id)
+    )
+    return total_contratos or 0, total_obras or 0
+
+
+@router.get("", response_model=list[EmpresaListItem])
+async def list_empresas(
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
+):
+    """Lista todas as empresas cadastradas com contadores de contratos e obras."""
+    contratos_sub = (
+        select(Contrato.empresa_ref_id, func.count().label("n"))
+        .group_by(Contrato.empresa_ref_id)
+        .subquery()
+    )
+    obras_sub = (
+        select(Contrato.empresa_ref_id.label("empresa_ref_id"), func.count(Obra.id).label("n"))
+        .join(Obra, Obra.contrato_id == Contrato.id)
+        .group_by(Contrato.empresa_ref_id)
+        .subquery()
+    )
+
+    result = await db.execute(
+        select(
+            Empresa,
+            func.coalesce(contratos_sub.c.n, 0),
+            func.coalesce(obras_sub.c.n, 0),
+        )
+        .outerjoin(contratos_sub, contratos_sub.c.empresa_ref_id == Empresa.id)
+        .outerjoin(obras_sub, obras_sub.c.empresa_ref_id == Empresa.id)
+        .order_by(Empresa.razao_social)
+    )
+
+    return [
+        EmpresaListItem(
+            **{c.name: getattr(e, c.name) for c in Empresa.__table__.columns},
+            total_contratos=n_contratos,
+            total_obras=n_obras,
+        )
+        for e, n_contratos, n_obras in result.all()
+    ]
+
+
+@router.post("", response_model=EmpresaDetalhe, status_code=status.HTTP_201_CREATED)
+async def create_empresa(
+    payload: EmpresaCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2)),
+):
+    """Cadastra uma nova empresa executora."""
+    existente = await db.scalar(
+        select(Empresa.id).where(Empresa.razao_social == payload.razao_social)
+    )
+    if existente:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Já existe uma empresa com essa razão social.",
+        )
+    if payload.cnpj:
+        cnpj_existente = await db.scalar(select(Empresa.id).where(Empresa.cnpj == payload.cnpj))
+        if cnpj_existente:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Já existe uma empresa com esse CNPJ.",
+            )
+
+    empresa = Empresa(**payload.model_dump())
+    db.add(empresa)
+    await db.commit()
+    await db.refresh(empresa)
+
+    return EmpresaDetalhe(
+        **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
+        total_contratos=0,
+        total_obras=0,
+    )
+
+
+@router.patch("/{id}", response_model=EmpresaDetalhe)
+async def update_empresa(
+    id: UUID,
+    payload: EmpresaUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2)),
+):
+    """Edita os dados cadastrais de uma empresa."""
+    empresa = await db.scalar(select(Empresa).where(Empresa.id == id))
+    if not empresa:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empresa não encontrada.")
+
+    dados = payload.model_dump(exclude_unset=True)
+
+    nova_razao = dados.get("razao_social")
+    if nova_razao and nova_razao != empresa.razao_social:
+        conflito = await db.scalar(
+            select(Empresa.id).where(Empresa.razao_social == nova_razao, Empresa.id != id)
+        )
+        if conflito:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Já existe uma empresa com essa razão social.",
+            )
+
+    novo_cnpj = dados.get("cnpj")
+    if novo_cnpj and novo_cnpj != empresa.cnpj:
+        conflito = await db.scalar(
+            select(Empresa.id).where(Empresa.cnpj == novo_cnpj, Empresa.id != id)
+        )
+        if conflito:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Já existe uma empresa com esse CNPJ.",
+            )
+
+    for campo, valor in dados.items():
+        setattr(empresa, campo, valor)
+
+    await db.commit()
+    await db.refresh(empresa)
+
+    total_contratos, total_obras = await _contadores(db, empresa.id)
+    return EmpresaDetalhe(
+        **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
+        total_contratos=total_contratos,
+        total_obras=total_obras,
+    )
 
 
 @router.get("/{id}", response_model=EmpresaDetalhe)
@@ -31,20 +175,12 @@ async def get_empresa(
     if not empresa:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empresa não encontrada.")
 
-    total_contratos = await db.scalar(
-        select(func.count()).select_from(Contrato).where(Contrato.empresa_ref_id == id)
-    )
-    total_obras = await db.scalar(
-        select(func.count()).select_from(Obra).where(Obra.empresa_ref_id == id)
-    )
+    total_contratos, total_obras = await _contadores(db, empresa.id)
 
     return EmpresaDetalhe(
-        id=empresa.id,
-        razao_social=empresa.razao_social,
-        cnpj=empresa.cnpj,
-        criado_em=empresa.criado_em,
-        total_contratos=total_contratos or 0,
-        total_obras=total_obras or 0,
+        **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
+        total_contratos=total_contratos,
+        total_obras=total_obras,
     )
 
 

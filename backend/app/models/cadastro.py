@@ -13,7 +13,7 @@ referencial.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,15 @@ class Empresa(Base):
         String(300), unique=True, nullable=False, index=True
     )
     cnpj: Mapped[str | None] = mapped_column(String(18), unique=True, nullable=True)
+    # Dados cadastrais detalhados (todos opcionais)
+    nome_fantasia: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    telefone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    endereco: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    municipio: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    uf: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    representante_legal: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Conta de login no portal, quando a empresa tiver acesso (opcional)
     usuario_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True

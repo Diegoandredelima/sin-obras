@@ -2,20 +2,17 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Briefcase,
+  Building2,
   BookOpen,
   KanbanSquare,
   ChartBar,
   FileText,
   Users,
-  Bell,
-  Moon,
-  Sun,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/store/auth";
-import { useDarkMode } from "@/hooks/useDarkMode";
 import PerfilModal from "@/components/layout/PerfilModal";
 
 import type { Role } from "@/types";
@@ -31,7 +28,6 @@ const Sidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const [perfilOpen, setPerfilOpen] = useState(false);
-  const { theme, toggle: toggleTheme } = useDarkMode();
 
   const obraMatch = location.pathname.match(/\/obras\/([^/]+)/);
   const contratoMatch = location.pathname.match(/\/contratos\/([^/]+)/);
@@ -41,15 +37,15 @@ const Sidebar = () => {
   const allNav: NavItem[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     {
-      name: "Alertas",
-      href: "/alertas",
-      icon: Bell,
-      roles: ["APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
-    },
-    {
       name: "Contratos",
       href: "/contratos",
       icon: Briefcase,
+      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
+    {
+      name: "Empresas",
+      href: "/empresas",
+      icon: Building2,
       roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
     { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/obras/${ctxId}/diario`, icon: BookOpen, roles: ["EMPRESA", "FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
@@ -84,7 +80,14 @@ const Sidebar = () => {
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center px-6 bg-brand-800/60 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="h-1 w-6 sin-stripe rounded-full opacity-90" />
+          <div className="flex flex-col items-center gap-1">
+            <img
+              src="/brasao_RN.png"
+              alt="Brasão do Estado do Rio Grande do Norte"
+              className="h-8 w-auto object-contain drop-shadow"
+            />
+            <div className="h-1 w-7 sin-stripe rounded-full opacity-90" />
+          </div>
           <span
             className="text-xl font-black tracking-wider text-white uppercase"
             style={{ fontFamily: "var(--font-condensed)" }}
@@ -135,17 +138,6 @@ const Sidebar = () => {
             <span className="truncate text-sm font-semibold text-white">{user?.nome || "Usuário"}</span>
             <span className="truncate text-xs text-white/50">{user?.tipo || "Perfil"}</span>
           </div>
-        </button>
-
-        <button
-          onClick={toggleTheme}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/50 transition-colors hover:bg-white/8 hover:text-white/80 mb-1"
-        >
-          {theme === "dark" ? (
-            <><Sun className="h-4 w-4" /> Modo claro</>
-          ) : (
-            <><Moon className="h-4 w-4" /> Modo escuro</>
-          )}
         </button>
 
         <button

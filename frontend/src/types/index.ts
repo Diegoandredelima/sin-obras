@@ -11,6 +11,41 @@ export interface Usuario {
   orgao_id?: string;
 }
 
+export interface Empresa {
+  id: string;
+  razao_social: string;
+  cnpj?: string | null;
+  nome_fantasia?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  endereco?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
+  representante_legal?: string | null;
+  observacoes?: string | null;
+}
+
+export interface EmpresaListItem extends Empresa {
+  criado_em: string;
+  total_contratos: number;
+  total_obras: number;
+}
+
+export type EmpresaDetalhe = EmpresaListItem;
+
+export interface EmpresaFormData {
+  razao_social: string;
+  cnpj?: string | null;
+  nome_fantasia?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  endereco?: string | null;
+  municipio?: string | null;
+  uf?: string | null;
+  representante_legal?: string | null;
+  observacoes?: string | null;
+}
+
 export type SaudeObra = "VERDE" | "AMARELO" | "VERMELHO";
 
 export type StatusObra = "PLANEJADA" | "EM_EXECUCAO" | "PARALISADA" | "CONCLUIDA";
