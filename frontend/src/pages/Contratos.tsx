@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, Briefcase, ArrowRight, Calendar, DollarSign, User, Building, AlertTriangle, ExternalLink } from "lucide-react";
+import { HardHat, Search, Briefcase, ArrowRight, Calendar, DollarSign, User, Building, AlertTriangle, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/services/api";
 import type { PaginatedResponse } from "@/types";
@@ -125,10 +125,13 @@ const Contratos = () => {
             {!isLoading ? `${total} contratos` : "..."}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-700/20 hover:bg-brand-500 transition-all">
-          <Plus className="h-4 w-4" />
-          Novo Contrato
-        </button>
+        <Link
+          to="/obras/nova"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-700/20 hover:bg-brand-500 transition-all"
+        >
+          <HardHat className="h-4 w-4" />
+          Cadastrar Obra
+        </Link>
       </div>
 
       <div className="relative">

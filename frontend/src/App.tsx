@@ -3,7 +3,7 @@ import Layout from "@/components/layout/Layout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Obras from "@/pages/Obras";
-import NovaObra from "@/pages/NovaObra";
+import CadastrarObra from "@/pages/CadastrarObra";
 import Contratos from "@/pages/Contratos";
 import Quadro from "@/pages/Quadro";
 import DiarioObras from "@/pages/DiarioObras";
@@ -35,7 +35,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/obras" element={<Obras />} />
           <Route path="/obras/:id" element={<RedirectObra />} />
-          <Route path="/obras/nova" element={<NovaObra />} />
+          <Route path="/obras/nova" element={<CadastrarObra />} />
           <Route path="/contratos" element={<Contratos />} />
           <Route path="/contratos/:id" element={<DetalheContrato />} />
           <Route path="/quadro" element={<Quadro />} />
