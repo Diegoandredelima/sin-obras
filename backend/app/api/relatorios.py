@@ -55,7 +55,7 @@ async def resumo_relatorio(
     status_rows = await db.execute(
         scope_obras_por_usuario(
             select(Obra.status, func.count(Obra.id)).where(
-                Obra.ativo == True, Obra.status != None
+                Obra.ativo == True, Obra.status.is_not(None)
             ),
             current_user,
         ).group_by(Obra.status)

@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Artefatos de build do tsc (vite.config.ts é a fonte; .js/.d.ts são gerados)
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -4,27 +4,32 @@ O CI automático do GitHub Actions (`.github/workflows/ci.yml`) está **desativa
 para não usar o plano pago. A validação passou a ser **local**, com o mesmo
 conjunto de checagens (lint + testes + typecheck + build).
 
+A validação roda em `scripts/validate.sh` (fonte única, **não precisa de `make`**):
+o **backend** (ruff + pytest) roda no container, e o **frontend** (eslint + tsc +
+build) roda no **host** — o `node_modules` do container usa volume anônimo e pode
+ficar desatualizado.
+
 ## Validar manualmente
 
-Com os containers de pé (`make up`):
+Com os containers de pé (`docker compose up -d`) e as deps do frontend instaladas
+(`cd frontend && npm ci` na primeira vez):
 
 ```bash
-make validate     # lint (ruff + eslint) + testes (pytest) + typecheck (tsc) + build
-make test         # só os testes do backend
-make lint         # só os linters
+bash scripts/validate.sh    # tudo: ruff + pytest + eslint + tsc + build
+# (se você tiver `make`: `make validate` chama o mesmo script)
 ```
 
 ## Validar automaticamente antes de cada push (recomendado)
 
-Há um hook versionado em `.githooks/pre-push` que roda `make validate` e **aborta o
-push** se algo falhar. Ative uma vez por clone:
+Há um hook versionado em `.githooks/pre-push` que roda `scripts/validate.sh` e
+**aborta o push** se algo falhar. Ative uma vez por clone:
 
 ```bash
-make hooks        # = git config core.hooksPath .githooks
+git config core.hooksPath .githooks    # (ou `make hooks`)
 ```
 
 - Pular a validação num push específico: `git push --no-verify`
-- O hook exige os containers de pé (`make up`); senão ele avisa e aborta.
+- O hook exige os containers de pé; senão ele avisa e aborta.
 
 > O hook fica em `.githooks/` (versionado), e não em `.git/hooks/` (não versionado).
 > Por isso é necessário `make hooks` uma vez em cada máquina/clone — o

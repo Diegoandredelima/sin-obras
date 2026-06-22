@@ -111,39 +111,17 @@ test:
 		-e DATABASE_URL="postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras_test" \
 		backend pytest tests/ -v --cov=app --cov-report=term-missing
 
-# Roda linters no backend e frontend
+# Roda linters no backend (container) e frontend (host)
 lint:
 	@echo "🔍 Ruff (backend)..."
 	docker compose exec -e PYTHONPATH=/app backend ruff check .
 	@echo "🔍 ESLint (frontend)..."
-	docker compose exec frontend npm run lint
+	cd frontend && npx eslint .
 
-# Validação completa da stack (lint + typecheck + testes + build)
+# Validação completa (lint + testes + typecheck + build) — fonte única em
+# scripts/validate.sh. Backend roda no container; frontend no host.
 validate:
-	@echo "============================================"
-	@echo "  SIN-Obras — Validação Completa"
-	@echo "============================================"
-	@echo ""
-	@echo "🔍 Ruff (backend)..."
-	docker compose exec -e PYTHONPATH=/app backend ruff check .
-	@echo ""
-	@echo "🧪 Testes (backend)..."
-	docker compose exec -e PYTHONPATH=/app \
-		-e DATABASE_URL="postgresql+asyncpg://sinobras:sinobras_dev_2026@postgres:5432/sinobras_test" \
-		backend pytest tests/ -v
-	@echo ""
-	@echo "🔍 ESLint (frontend)..."
-	docker compose exec frontend npm run lint
-	@echo ""
-	@echo "📋 TypeScript (frontend)..."
-	docker compose exec frontend npx tsc --noEmit
-	@echo ""
-	@echo "🏗️  Build (frontend)..."
-	docker compose exec frontend npm run build
-	@echo ""
-	@echo "============================================"
-	@echo "  ✅ Validação completa!"
-	@echo "============================================"
+	bash scripts/validate.sh
 
 # Ativa o hook de pre-push versionado em .githooks/ (validação local antes do push).
 # Substitui o CI do GitHub Actions (desativado para não usar o plano pago).
@@ -151,5 +129,5 @@ hooks:
 	git config core.hooksPath .githooks
 	chmod +x .githooks/pre-push 2>/dev/null || true
 	@echo "✅ Hooks ativados (core.hooksPath = .githooks)."
-	@echo "   O 'make validate' roda automaticamente antes de cada 'git push'."
+	@echo "   scripts/validate.sh roda automaticamente antes de cada 'git push'."
 	@echo "   Para pular pontualmente: git push --no-verify"
