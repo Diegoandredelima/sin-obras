@@ -14,9 +14,18 @@ from .alerta import Alerta
 from .art_rrt import ArtRrt
 from .auditoria import AuditLog
 from .cadastro import Empresa, Orgao
+from .catalogo import CatalogoClasse, CatalogoItem
 from .delegacao import DelegacaoObra
-from .obra import Contrato, Evento, Meta, Obra, Submeta
-from .portal import DiarioObra, Medicao, Notificacao
+from .objeto import Contrato, Evento, Item, Meta, Objeto, Submeta
+from .portal import (
+    CondicaoTempo,
+    DiarioObra,
+    FotoMedicao,
+    Medicao,
+    MedicaoItem,
+    MedicaoItemMemoria,
+    Notificacao,
+)
 from .tarefa import Tarefa
 from .usuario import Usuario
 from .vistoria import ChecklistItem, FotoVistoria, Vistoria
@@ -25,7 +34,10 @@ __all__ = [
     "Usuario",
     "Empresa",
     "Orgao",
-    "Obra",
+    "CatalogoClasse",
+    "CatalogoItem",
+    "Objeto",
+    "Item",
     "Contrato",
     "Meta",
     "Submeta",
@@ -34,7 +46,11 @@ __all__ = [
     "Tarefa",
     "ArtRrt",
     "DiarioObra",
+    "CondicaoTempo",
     "Medicao",
+    "MedicaoItem",
+    "MedicaoItemMemoria",
+    "FotoMedicao",
     "Notificacao",
     "Vistoria",
     "ChecklistItem",
