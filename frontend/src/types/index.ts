@@ -28,7 +28,7 @@ export interface Empresa {
 export interface EmpresaListItem extends Empresa {
   criado_em: string;
   total_contratos: number;
-  total_obras: number;
+  total_objetos: number;
 }
 
 export type EmpresaDetalhe = EmpresaListItem;
@@ -46,27 +46,33 @@ export interface EmpresaFormData {
   observacoes?: string | null;
 }
 
-export type SaudeObra = "VERDE" | "AMARELO" | "VERMELHO";
+export type SaudeObjeto = "VERDE" | "AMARELO" | "VERMELHO";
 
-export type StatusObra = "PLANEJADA" | "EM_EXECUCAO" | "PARALISADA" | "CONCLUIDA";
+export type StatusObjeto = "PLANEJADA" | "EM_EXECUCAO" | "PARALISADA" | "CONCLUIDA";
 
-export type SituacaoObra =
+export type SituacaoObjeto =
   | "EM_ANDAMENTO" | "CONCLUIDA" | "PARALISADA" | "A_INICIAR"
   | "INACABADA" | "RESCINDIDA" | "ARQUIVADA" | "EXTINTA" | "CEDIDA";
 
-export interface Obra {
+export interface Objeto {
   id: string;
   titulo: string;
   descricao?: string;
   endereco?: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  conjunto?: string;
+  uf?: string;
   municipio?: string;
   valor_contrato?: number;
   data_inicio?: string;
   data_fim_prevista?: string;
   data_ordem_servico?: string;
-  status?: StatusObra;
-  saude?: SaudeObra;
-  situacao?: SituacaoObra;
+  status?: StatusObjeto;
+  saude?: SaudeObjeto;
+  situacao?: SituacaoObjeto;
   percentual_executado?: number;
   raio_geofencing_metros?: number;
   contrato_id?: string;
@@ -76,9 +82,79 @@ export interface Obra {
   vigencia_fim?: string;
   execucao_fim?: string;
   ano_referencia?: string;
+  itens?: Item[];
 }
 
-export interface ObraStats {
+/** Parte constitutiva de um objeto (Objeto 1—N Item). */
+export interface Item {
+  id: string;
+  objeto_id: string;
+  descricao: string;
+  unidade?: string;
+  quantidade?: number;
+  valor_unitario?: number;
+  ordem?: number;
+  valor_total?: number;
+}
+
+export interface ItemCreatePayload {
+  descricao: string;
+  unidade?: string;
+  quantidade?: number;
+  valor_unitario?: number;
+  ordem?: number;
+}
+
+export interface Contrato {
+  id: string;
+  numero_processo: string;
+  link_processo?: string | null;
+  numero_contrato: string;
+  valor_global: number;
+  valor_aditivo?: number;
+  valor_reajustado?: number;
+  valor_final?: number;
+  recurso_federal?: number;
+  recurso_estadual?: number;
+  percentual_retencao?: number;
+  data_assinatura?: string;
+  data_vigencia?: string;
+  empresa_id?: string;
+  empresa_ref_id?: string;
+  orgao_id?: string;
+  orgao?: string;
+  fiscal_nome?: string;
+  gestor_nome?: string;
+  fiscal_id?: string;
+  gestor_id?: string;
+  tipo_licitacao?: string;
+  numero_licitacao?: string;
+  matricula_cei?: string;
+  objeto?: string;
+  empresa_ref?: { id: string; razao_social: string; cnpj?: string };
+  orgao_ref?: { id: string; sigla: string; nome?: string };
+  /** Objetos vinculados a este contrato (Contrato 1—N Objeto). */
+  objetos?: Objeto[];
+}
+
+export interface CatalogoClasse {
+  id: string;
+  codigo: number;
+  nome: string;
+}
+
+export interface CatalogoItem {
+  id: string;
+  codigo_sistema: string;
+  item: string;
+  descricao?: string;
+  unidade?: string;
+  classe_id: string;
+  classe_codigo: number;
+  classe_nome: string;
+}
+
+export interface ObjetoStats {
   total: number;
   por_situacao: Record<string, number>;
   por_status?: Record<string, number>;
@@ -102,7 +178,7 @@ export interface Tarefa {
   status: TarefaStatus;
   prioridade: TarefaPrioridade;
   prazo: string | null;
-  obra_id: string | null;
+  objeto_id: string | null;
   responsavel_id: string | null;
   criado_em: string;
 }
@@ -112,7 +188,7 @@ export interface TarefaCreate {
   descricao?: string | null;
   prioridade?: TarefaPrioridade;
   prazo?: string | null;
-  obra_id?: string | null;
+  objeto_id?: string | null;
 }
 
 export interface TarefaMove {
@@ -123,7 +199,7 @@ export interface ArtRrt {
   id: string;
   numero: string;
   tipo: string;
-  obra_id: string;
+  objeto_id: string;
   data_emissao: string | null;
   data_validade: string | null;
   arquivo_url: string | null;
@@ -135,7 +211,7 @@ export interface ArtRrt {
 export interface ArtRrtCreate {
   numero: string;
   tipo: string;
-  obra_id: string;
+  objeto_id: string;
   data_emissao?: string | null;
   data_validade?: string | null;
   arquivo_url?: string | null;
@@ -147,7 +223,7 @@ export interface EventoBase {
 }
 
 export interface OrdemServico extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   numero: string;
   data_emissao: string;
   data_inicio: string | null;
@@ -156,7 +232,7 @@ export interface OrdemServico extends EventoBase {
 }
 
 export interface AditivoPrazo extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   numero: number;
   dias_adicionados: number;
   nova_data_vigencia: string;
@@ -168,7 +244,7 @@ export interface AditivoPrazo extends EventoBase {
 }
 
 export interface Paralisacao extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   tipo: string;
   data_evento: string;
   data_publicacao: string | null;
@@ -179,7 +255,7 @@ export interface Paralisacao extends EventoBase {
 }
 
 export interface Readequacao extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   numero: number;
   tipo: string;
   percentual: number | null;
@@ -209,7 +285,7 @@ export interface Reajuste extends EventoBase {
 }
 
 export interface TermoRecebimento extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   tipo: string;
   numero: string;
   data_emissao: string;
@@ -219,7 +295,7 @@ export interface TermoRecebimento extends EventoBase {
 }
 
 export interface NotificacaoExtrajudicial extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   empresa_id: string;
   numero: string;
   data_emissao: string;
@@ -230,7 +306,7 @@ export interface NotificacaoExtrajudicial extends EventoBase {
 }
 
 export interface PortariaEvento extends EventoBase {
-  obra_id: string;
+  objeto_id: string;
   usuario_id: string;
   tipo: string;
   numero: string;
@@ -273,7 +349,7 @@ export interface Submeta {
 
 export interface Meta {
   id: string;
-  obra_id: string;
+  objeto_id: string;
   descricao: string;
   valor: number;
   ordem: number;
@@ -298,22 +374,22 @@ export interface ResumoPorStatus {
 
 export interface ResumoPorOrgao {
   orgao: string;
-  total_obras: number;
+  total_objetos: number;
   valor_total: number;
 }
 
 export interface RelatorioResumo {
-  total_obras: number;
+  total_objetos: number;
   total_contratos: number;
   total_empresas: number;
-  obras_por_status: ResumoPorStatus[];
-  obras_por_orgao: ResumoPorOrgao[];
+  objetos_por_status: ResumoPorStatus[];
+  objetos_por_orgao: ResumoPorOrgao[];
   valor_total_contratos: number;
 }
 
-/** Linha denormalizada da view `vw_relatorio_obras` (GET /relatorios/obras). */
-export interface RelatorioObraRow {
-  obra_id: string;
+/** Linha denormalizada da view `vw_relatorio_objetos` (GET /relatorios/objetos). */
+export interface RelatorioObjetoRow {
+  objeto_id: string;
   titulo: string;
   municipio?: string | null;
   status?: string | null;

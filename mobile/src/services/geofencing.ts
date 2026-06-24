@@ -1,5 +1,5 @@
 /**
- * SIN-Obras Mobile — Serviço de Geolocalização
+ * SIN-Objetos Mobile — Serviço de Geolocalização
  * RF05 — Check-in georreferenciado com validação de raio
  */
 
@@ -50,16 +50,16 @@ export function calcularDistancia(
 }
 
 /**
- * Verifica se o usuário está dentro do raio da obra
+ * Verifica se o usuário está dentro do raio do objeto
  */
 export function estaNoRaio(
   posicaoUsuario: Coordenadas,
-  posicaoObra: Coordenadas,
+  posicaoObjeto: Coordenadas,
   raioMetros: number,
 ): { dentro: boolean; distancia: number } {
   const distancia = calcularDistancia(
     posicaoUsuario.latitude, posicaoUsuario.longitude,
-    posicaoObra.latitude, posicaoObra.longitude,
+    posicaoObjeto.latitude, posicaoObjeto.longitude,
   );
   return { dentro: distancia <= raioMetros, distancia };
 }

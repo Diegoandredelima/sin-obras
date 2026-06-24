@@ -111,6 +111,11 @@
   animation: slide-in-right 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes sidebar-indicator {
+  from { transform: translateY(-50%) scaleY(0); opacity: 0; }
+  to   { transform: translateY(-50%) scaleY(1); opacity: 1; }
+}
+
 /* ──────────────────────────────────────────────────────────── */
 /* IMPRESSÃO — relatórios e documentos (window.print)           */
 /* ──────────────────────────────────────────────────────────── */

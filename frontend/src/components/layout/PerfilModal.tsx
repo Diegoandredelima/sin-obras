@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useAuthStore } from "@/store/auth";
 import { Camera, Pencil, X, Shield, Mail, User, Briefcase, Hash, Phone } from "lucide-react";
 
-const FOTO_KEY = "sinobras-user-photo";
+const FOTO_KEY = "@@@@sinobjeto@@s@@-user-photo";
 
 function getStoredPhoto(): string | null {
   try {

@@ -5,11 +5,12 @@ import {
   ArrowLeft, Briefcase, Building2, User, MapPin,
   TrendingUp, Calendar, FileText, Hash, AlertTriangle,
   Activity, CheckCircle2, Pause, Clock, BookOpen, ChartBar,
-  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Printer, Plus,
+  ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Pencil,
+  Boxes, Printer,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
-import type { SaudeObra } from "@/types";
+import type { SaudeObjeto } from "@/types";
 import { useAuthStore } from "@/store/auth";
 import { fmtCurrency, fmtDate, fmtPercent } from "@/utils/format";
 import { DiarioContent } from "@/pages/DiarioObras";
@@ -42,7 +43,7 @@ const SITUACAO_LABEL: Record<string, LabelConfig> = {
 };
 
 interface SaudeConfig { dot: string; bar: string; label: string }
-const SAUDE_CONFIG: Record<SaudeObra, SaudeConfig> = {
+const SAUDE_CONFIG: Record<SaudeObjeto, SaudeConfig> = {
   VERDE: { dot: "bg-emerald-400", bar: "bg-emerald-400", label: "Em dia" },
   AMARELO: { dot: "bg-amber-400", bar: "bg-amber-400", label: "Atenção" },
   VERMELHO: { dot: "bg-rose-400", bar: "bg-rose-400", label: "Crítico" },
@@ -56,11 +57,17 @@ const Section = ({ title, icon: Icon, children, className = "" }: SectionProps) 
   </div>
 );
 
-interface RowProps { label: string; value: string | null | undefined; mono?: boolean; highlight?: boolean }
-const Row = ({ label, value, mono = false, highlight = false }: RowProps) => (
+interface RowProps { label: string; value: string | null | undefined; mono?: boolean; highlight?: boolean; href?: string | null }
+const Row = ({ label, value, mono = false, highlight = false, href }: RowProps) => (
   <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-3 py-2.5 border-b border-slate-50 last:border-0">
     <span className="text-xs font-medium text-slate-400 sm:w-44 shrink-0">{label}</span>
-    <span className={`text-sm break-words ${mono ? "font-mono" : ""} ${highlight ? "font-semibold text-slate-900" : "text-slate-800"}`}>{value || "—"}</span>
+    {href ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1.5 text-sm break-words text-brand-700 hover:text-brand-500 hover:underline ${mono ? "font-mono" : ""}`}>
+        {value || "—"}<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+    ) : (
+      <span className={`text-sm break-words ${mono ? "font-mono" : ""} ${highlight ? "font-semibold text-slate-900" : "text-slate-800"}`}>{value || "—"}</span>
+    )}
   </div>
 );
 
@@ -107,16 +114,16 @@ const Skeleton = () => (
 );
 
 interface ContratoDetail {
-  id: string; numero_contrato: string; numero_processo?: string; objeto?: string;
-  orgao?: string; valor_global?: number; valor_final?: number; valor_aditivo?: number;
+  id: string; numero_contrato: string; numero_processo?: string; link_processo?: string; objeto?: string;
+  orgao?: string; valor_global?: number; valor_final?: number;
   valor_reajustado?: number; recurso_federal?: number; recurso_estadual?: number;
-  data_assinatura?: string; data_vigencia?: string; matricula_cei?: string;
-  numero_licitacao?: string; tipo_licitacao?: string; fiscal_nome?: string; gestor_nome?: string;
+  data_assinatura?: string; data_vigencia?: string;
+  numero_licitacao?: string; fiscal_nome?: string; gestor_nome?: string;
   empresa_ref?: { id: string; razao_social: string; cnpj?: string };
   orgao_ref?: { sigla: string; nome?: string };
 }
 
-interface ObraDetail {
+interface ObjetoDetail {
   id: string; titulo: string; descricao?: string; endereco?: string;
   municipio?: string; valor_contrato?: number;
   data_inicio?: string; data_fim_prevista?: string; data_ordem_servico?: string;
@@ -131,6 +138,7 @@ interface ObraDetail {
   historico?: string; observacoes?: string; importante?: string;
   situacao_origem?: string;
   metas?: { id: string; descricao: string; valor: number }[];
+  itens?: { id: string; descricao: string; unidade?: string; quantidade?: number; valor_unitario?: number; valor_total?: number }[];
 }
 
 const DetalheContrato = () => {
@@ -138,7 +146,7 @@ const DetalheContrato = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const isApoioN1 = user?.tipo === "APOIO_N1";
-  const podeCadastrarContrato = ["APOIO_N2", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"].includes(user?.tipo || "");
+  const podeEditarContrato = ["APOIO_N1", "APOIO_N2", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"].includes(user?.tipo || "");
   const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") || "detalhes";
   const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s">(initialTab);
 
@@ -152,6 +160,8 @@ const DetalheContrato = () => {
     setSearchParams(searchParams, { replace: true });
   };
 
+  const [selectedObjetoId, setSelectedObjetoId] = useState<string | null>(searchParams.get("objeto"));
+
   const { data: contrato, isLoading: contratoLoading, error: contratoError } = useQuery<ContratoDetail>({
     queryKey: ["contrato", id],
     queryFn: async () => {
@@ -161,13 +171,26 @@ const DetalheContrato = () => {
     enabled: !!id,
   });
 
-  const { data: obra } = useQuery<ObraDetail>({
-    queryKey: ["obra-vinculada", id],
+  // Contrato 1—N Objeto: lista dos objetos vinculados (para o seletor).
+  const { data: objetos = [] } = useQuery<ObjetoDetail[]>({
+    queryKey: ["contrato-objetos", id],
     queryFn: async () => {
-      const { data } = await api.get("/obras", { params: { contrato_id: id, limit: 1 } });
-      return data.items?.[0] || null;
+      const { data } = await api.get(`/contratos/${id}/objetos`);
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!id && !!contrato,
+  });
+
+  // Objeto em foco: o selecionado no seletor (ou o primeiro). Busca-se o detalhe
+  // completo (metas, prazos, históricos, itens) só do objeto em foco.
+  const activeObjetoId = selectedObjetoId ?? objetos[0]?.id ?? null;
+  const { data: objeto } = useQuery<ObjetoDetail>({
+    queryKey: ["objeto", activeObjetoId],
+    queryFn: async () => {
+      const { data } = await api.get(`/objetos/${activeObjetoId}`);
+      return data;
+    },
+    enabled: !!activeObjetoId,
   });
 
   if (contratoLoading) return <Skeleton />;
@@ -180,14 +203,14 @@ const DetalheContrato = () => {
   const variacao = c.valor_final && c.valor_global ? Number(c.valor_final) - Number(c.valor_global) : null;
   const variacaoPct = variacao && c.valor_global ? ((variacao / Number(c.valor_global)) * 100) : null;
 
-  const obraSaude = SAUDE_CONFIG[(obra?.saude as SaudeObra) || "VERDE"];
-  const obraStatusCfg = STATUS_CONFIG[obra?.status || ""] || STATUS_CONFIG.PLANEJADA;
-  const ObraStatusIcon = obraStatusCfg.icon;
-  const obraSitCfg = obra?.situacao ? (SITUACAO_LABEL[obra.situacao] || null) : null;
-  const obraPct = Number(obra?.percentual_executado || 0);
-  const obraPrazoLabel = obra?.vigencia_fim ? (() => {
+  const objetoSaude = SAUDE_CONFIG[(objeto?.saude as SaudeObjeto) || "VERDE"];
+  const objetoStatusCfg = STATUS_CONFIG[objeto?.status || ""] || STATUS_CONFIG.PLANEJADA;
+  const ObjetoStatusIcon = objetoStatusCfg.icon;
+  const objetoSitCfg = objeto?.situacao ? (SITUACAO_LABEL[objeto.situacao] || null) : null;
+  const objetoPct = Number(objeto?.percentual_executado || 0);
+  const objetoPrazoLabel = objeto?.vigencia_fim ? (() => {
     const today = new Date();
-    const fim = new Date(obra.vigencia_fim + "T00:00:00");
+    const fim = new Date(objeto.vigencia_fim + "T00:00:00");
     const diff = Math.ceil((fim.getTime() - today.getTime()) / 86400000);
     if (diff < 0) return { text: `${Math.abs(diff)}d vencido`, cls: "text-rose-600" };
     if (diff <= 30) return { text: `${diff}d restantes`, cls: "text-amber-600" };
@@ -206,25 +229,18 @@ const DetalheContrato = () => {
         <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-600 transition-colors"><ArrowLeft className="h-4 w-4" />Contratos</Link>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => window.open(`/contratos/${c.id}/relatorio`, "_blank", "noopener")}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-700 transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-all"
           >
-            <Printer className="h-3.5 w-3.5" /> Imprimir contrato
+            <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>
-          {obra && (
-            <button
-              onClick={() => window.open(`/obras/${obra.id}/relatorio`, "_blank", "noopener")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-700 transition-all"
-            >
-              <Printer className="h-3.5 w-3.5" /> Imprimir obra
-            </button>
-          )}
-          {obra && podeCadastrarContrato && (
+          {objeto && podeEditarContrato && (
             <Link
-              to={`/obras/${obra.id}/contratos/novo`}
+              to={`/contratos/${c.id}/editar`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-brand-700 rounded-lg shadow-sm shadow-brand-700/20 hover:bg-brand-500 transition-all"
             >
-              <Plus className="h-3.5 w-3.5" /> Cadastrar contrato
+              <Pencil className="h-3.5 w-3.5" /> Editar contrato
             </Link>
           )}
         </div>
@@ -233,19 +249,22 @@ const DetalheContrato = () => {
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
           {c.orgao && <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full"><Building2 className="h-3.5 w-3.5" />{c.orgao}</span>}
-          {c.tipo_licitacao && <span className="text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-full truncate max-w-xs">{c.tipo_licitacao}</span>}
-          {obra && <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${obraStatusCfg.cls}`}><ObraStatusIcon className="h-3.5 w-3.5" />{obraStatusCfg.label}</span>}
-          {obra?.situacao && <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${obraSitCfg?.cls || "bg-slate-100 text-slate-600 border-slate-200"}`}>{obraSitCfg?.label || obra.situacao}{obra.ano_referencia ? ` / ${obra.ano_referencia}` : ""}</span>}
-          {obra && <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className={`h-2 w-2 rounded-full ${obraSaude.dot}`} />{obraSaude.label}</span>}
+          {objeto && <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${objetoStatusCfg.cls}`}><ObjetoStatusIcon className="h-3.5 w-3.5" />{objetoStatusCfg.label}</span>}
+          {objeto?.situacao && <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${objetoSitCfg?.cls || "bg-slate-100 text-slate-600 border-slate-200"}`}>{objetoSitCfg?.label || objeto.situacao}{objeto.ano_referencia ? ` / ${objeto.ano_referencia}` : ""}</span>}
+          {objeto && <span className="flex items-center gap-1.5 text-xs text-slate-400"><span className={`h-2 w-2 rounded-full ${objetoSaude.dot}`} />{objetoSaude.label}</span>}
         </div>
         <h1 className="text-xl font-bold text-slate-900">
           Contrato Nº {c.numero_contrato}
-          {obra?.titulo && <span className="text-slate-500 font-normal"> — {obra.titulo}</span>}
+          {objeto?.titulo && <span className="text-slate-500 font-normal"> — {objeto.titulo}</span>}
         </h1>
         <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-          <span className="flex items-center gap-1.5"><Hash className="h-4 w-4 text-slate-400" />Processo: {c.numero_processo || "—"}</span>
+          {c.link_processo ? (
+            <a href={c.link_processo} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-brand-700 hover:text-brand-500 hover:underline"><Hash className="h-4 w-4" />Processo SEI: {c.numero_processo || "—"}<ExternalLink className="h-3.5 w-3.5" /></a>
+          ) : (
+            <span className="flex items-center gap-1.5"><Hash className="h-4 w-4 text-slate-400" />Processo SEI: {c.numero_processo || "—"}</span>
+          )}
           {c.empresa_ref?.razao_social && <span className="flex items-center gap-1.5"><Briefcase className="h-4 w-4 text-slate-400" />{c.empresa_ref.razao_social}</span>}
-          {obra?.municipio && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-slate-400" />{obra.municipio}</span>}
+          {objeto?.municipio && <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-slate-400" />{objeto.municipio}</span>}
         </div>
         {c.objeto && <p className="text-sm text-slate-600 leading-relaxed mt-1 line-clamp-2">{c.objeto}</p>}
       </div>
@@ -253,19 +272,19 @@ const DetalheContrato = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPI label="Valor Inicial" value={fmtCurrency(c.valor_global)} color="slate" />
         <KPI label="Valor Final" value={fmtCurrency(c.valor_final ?? c.valor_global)} color={variacao && variacao > 0 ? "amber" : "slate"} note={variacaoPct != null && variacao != null && variacao !== 0 ? `${variacao > 0 ? "+" : ""}${variacaoPct.toFixed(1)}% vs. inicial` : null} />
-        <KPI label="Valor Medido" value={fmtCurrency(obra?.valor_medido, "Não informado")} color="emerald" />
-        <KPI label="Saldo a Medir" value={fmtCurrency(obra?.saldo_a_medir, "Não informado")} color="sky" />
+        <KPI label="Valor Medido" value={fmtCurrency(objeto?.valor_medido, "Não informado")} color="emerald" />
+        <KPI label="Saldo a Medir" value={fmtCurrency(objeto?.saldo_a_medir, "Não informado")} color="sky" />
       </div>
 
-      {obra && (
+      {objeto && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4">
-          <div className="flex items-center justify-between mb-2"><span className="text-sm font-medium text-slate-700">Progresso de execução</span><span className="text-lg font-bold text-slate-900">{fmtPercent(obra.percentual_executado)}</span></div>
-          <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden"><div className={`h-3 rounded-full transition-all duration-700 ${obraSaude.bar}`} style={{ width: `${Math.min(obraPct, 100)}%` }} /></div>
-          {obraPrazoLabel && <p className={`text-xs mt-2 font-medium ${obraPrazoLabel.cls}`}>{obraPrazoLabel.text}</p>}
+          <div className="flex items-center justify-between mb-2"><span className="text-sm font-medium text-slate-700">Progresso de execução</span><span className="text-lg font-bold text-slate-900">{fmtPercent(objeto.percentual_executado)}</span></div>
+          <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden"><div className={`h-3 rounded-full transition-all duration-700 ${objetoSaude.bar}`} style={{ width: `${Math.min(objetoPct, 100)}%` }} /></div>
+          {objetoPrazoLabel && <p className={`text-xs mt-2 font-medium ${objetoPrazoLabel.cls}`}>{objetoPrazoLabel.text}</p>}
         </div>
       )}
 
-      {obra && (
+      {objeto && (
         <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
           {visibleTabs.map((tab) => {
             const TabIcon = tabIcons[tab];
@@ -287,7 +306,7 @@ const DetalheContrato = () => {
       {activeTab === "detalhes" && (
       <><div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Section title="Dados do Contrato" icon={FileText}><Row label="Nº do Contrato" value={c.numero_contrato} mono highlight /><Row label="Nº do Processo" value={c.numero_processo} mono />{c.matricula_cei && <Row label="Matrícula CEI" value={c.matricula_cei} mono />}{c.numero_licitacao && <Row label="Nº da Licitação" value={c.numero_licitacao} mono />}<Row label="Data de Assinatura" value={fmtDate(c.data_assinatura ?? null)} /><Row label="Vigência Contratual" value={fmtDate(c.data_vigencia ?? null)} /></Section>
+          <Section title="Dados do Contrato" icon={FileText}><Row label="Nº do Contrato" value={c.numero_contrato} mono highlight /><Row label="Nº do Processo" value={c.numero_processo} mono href={c.link_processo} />{c.numero_licitacao && <Row label="Nº da Licitação" value={c.numero_licitacao} mono />}<Row label="Data de Assinatura" value={fmtDate(c.data_assinatura ?? null)} /><Row label="Vigência Contratual" value={fmtDate(c.data_vigencia ?? null)} /></Section>
 
           <Section title="Empresa Executora" icon={Briefcase}>
             {c.empresa_ref ? <>
@@ -304,20 +323,20 @@ const DetalheContrato = () => {
 
           <Section title="Responsáveis" icon={User}><Row label="Fiscal" value={c.fiscal_nome} /><Row label="Gestor" value={c.gestor_nome} />{c.orgao_ref && <Row label="Órgão demandante" value={`${c.orgao_ref.sigla}${c.orgao_ref.nome ? ` — ${c.orgao_ref.nome}` : ""}`} />}</Section>
 
-          <Section title="Financeiro" icon={TrendingUp}><Row label="Valor Inicial (global)" value={fmtCurrency(c.valor_global)} />{c.valor_aditivo && <Row label="Aditivo de valor" value={fmtCurrency(c.valor_aditivo)} />}{c.valor_reajustado && <Row label="Valor reajustado" value={fmtCurrency(c.valor_reajustado)} />}<Row label="Valor Final" value={fmtCurrency(c.valor_final ?? c.valor_global)} highlight />{c.recurso_federal && <Row label="Recurso Federal" value={fmtCurrency(c.recurso_federal)} />}{c.recurso_estadual && <Row label="Recurso Estadual" value={fmtCurrency(c.recurso_estadual)} />}<div className="mt-4 pt-4 border-t border-slate-100"><div className="flex justify-between text-xs text-slate-500 mb-1.5"><span>Valor inicial</span><span className={((c.valor_final || 0) > (c.valor_global || 1)) ? "font-semibold text-amber-600" : "font-semibold text-slate-700"}>{c.valor_global ? (((c.valor_final || 0) / c.valor_global) * 100).toFixed(1) : "—"}% do inicial</span></div><div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden"><div className={`h-2 rounded-full ${((c.valor_final || 0) > (c.valor_global || 1)) ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(((c.valor_final || 0) / (c.valor_global || 1)) * 100, 100)}%` }} /></div></div></Section>
+          <Section title="Financeiro" icon={TrendingUp}><Row label="Valor Inicial (global)" value={fmtCurrency(c.valor_global)} />{c.valor_reajustado && <Row label="Valor reajustado" value={fmtCurrency(c.valor_reajustado)} />}<Row label="Valor Final" value={fmtCurrency(c.valor_final ?? c.valor_global)} highlight />{c.recurso_federal && <Row label="Recurso Federal" value={fmtCurrency(c.recurso_federal)} />}{c.recurso_estadual && <Row label="Recurso Estadual" value={fmtCurrency(c.recurso_estadual)} />}<div className="mt-4 pt-4 border-t border-slate-100"><div className="flex justify-between text-xs text-slate-500 mb-1.5"><span>Valor inicial</span><span className={((c.valor_final || 0) > (c.valor_global || 1)) ? "font-semibold text-amber-600" : "font-semibold text-slate-700"}>{c.valor_global ? (((c.valor_final || 0) / c.valor_global) * 100).toFixed(1) : "—"}% do inicial</span></div><div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden"><div className={`h-2 rounded-full ${((c.valor_final || 0) > (c.valor_global || 1)) ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(((c.valor_final || 0) / (c.valor_global || 1)) * 100, 100)}%` }} /></div></div></Section>
 
           {c.objeto && <Section title="Objeto do Contrato" icon={FileText}><p className="text-sm text-slate-700 leading-relaxed">{c.objeto}</p></Section>}
 
-          {obra && (
+          {objeto && (
             <>
-              <Section title="Prazos da Obra" icon={Calendar}>
-                {obra.prazo_inicial_dias && <div className="py-2.5 border-b border-slate-50"><Row label="Prazo inicial" value={`${obra.prazo_inicial_dias} dias`} /></div>}
-                <PrazoRow label="Vigência" inicio={obra.vigencia_inicio} dias={obra.vigencia_dias} fim={obra.vigencia_fim || undefined} />
-                <PrazoRow label="Execução" inicio={obra.execucao_inicio} dias={obra.execucao_dias} fim={obra.execucao_fim || undefined} />
+              <Section title="Prazos do Objeto" icon={Calendar}>
+                {objeto.prazo_inicial_dias && <div className="py-2.5 border-b border-slate-50"><Row label="Prazo inicial" value={`${objeto.prazo_inicial_dias} dias`} /></div>}
+                <PrazoRow label="Vigência" inicio={objeto.vigencia_inicio} dias={objeto.vigencia_dias} fim={objeto.vigencia_fim || undefined} />
+                <PrazoRow label="Execução" inicio={objeto.execucao_inicio} dias={objeto.execucao_dias} fim={objeto.execucao_fim || undefined} />
               </Section>
 
-              {obra.historico && <Section title="Histórico da Obra" icon={FileText}><p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{obra.historico}</p></Section>}
-              {obra.observacoes && <Section title="Informações complementares" icon={FileText}><ObservacoesBlock text={obra.observacoes} /></Section>}
+              {objeto.historico && <Section title="Histórico do Objeto" icon={FileText}><p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{objeto.historico}</p></Section>}
+              {objeto.observacoes && <Section title="Informações complementares" icon={FileText}><ObservacoesBlock text={objeto.observacoes} /></Section>}
             </>
           )}
         </div>
@@ -330,33 +349,47 @@ const DetalheContrato = () => {
             </div>
           </Section>
 
-          {obra && (
-            <Section title="Situação da Obra">
+          {objeto && (
+            <Section title="Situação do Objeto">
               <div className="space-y-3">
-                <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Status operacional</p><span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border ${obraStatusCfg.cls}`}><ObraStatusIcon className="h-3.5 w-3.5" />{obraStatusCfg.label}</span></div>
-                {obra.situacao && <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Situação (planilha oficial)</p><span className={`inline-flex text-xs font-semibold px-2.5 py-1.5 rounded-xl border ${obraSitCfg?.cls || "bg-slate-100 text-slate-600 border-slate-200"}`}>{obraSitCfg?.label || obra.situacao}{obra.ano_referencia ? ` / ${obra.ano_referencia}` : ""}</span>{obra.situacao_origem && <p className="text-xs text-slate-400 mt-1.5 italic">&quot;{obra.situacao_origem}&quot;</p>}</div>}
-                <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Saúde</p><span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600"><span className={`h-2.5 w-2.5 rounded-full ${obraSaude.dot}`} />{obraSaude.label}</span></div>
+                <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Status operacional</p><span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-xl border ${objetoStatusCfg.cls}`}><ObjetoStatusIcon className="h-3.5 w-3.5" />{objetoStatusCfg.label}</span></div>
+                {objeto.situacao && <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Situação (planilha oficial)</p><span className={`inline-flex text-xs font-semibold px-2.5 py-1.5 rounded-xl border ${objetoSitCfg?.cls || "bg-slate-100 text-slate-600 border-slate-200"}`}>{objetoSitCfg?.label || objeto.situacao}{objeto.ano_referencia ? ` / ${objeto.ano_referencia}` : ""}</span>{objeto.situacao_origem && <p className="text-xs text-slate-400 mt-1.5 italic">&quot;{objeto.situacao_origem}&quot;</p>}</div>}
+                <div><p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Saúde</p><span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600"><span className={`h-2.5 w-2.5 rounded-full ${objetoSaude.dot}`} />{objetoSaude.label}</span></div>
               </div>
             </Section>
           )}
 
-          {obra?.importante && <Section title="Importante" icon={AlertTriangle}><p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3 leading-relaxed">{obra.importante}</p></Section>}
+          {objeto?.importante && <Section title="Importante" icon={AlertTriangle}><p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3 leading-relaxed">{objeto.importante}</p></Section>}
 
-          {obra?.metas && obra.metas.length > 0 && (
-            <Section title={`Metas (${obra.metas.length})`} icon={CheckCircle2}>
-              <div className="space-y-2">{obra.metas.map((meta) => <div key={meta.id} className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-700 mb-1">{meta.descricao}</p><p className="text-xs text-slate-500">{fmtCurrency(meta.valor)}</p></div>)}</div>
+          {objeto?.metas && objeto.metas.length > 0 && (
+            <Section title={`Metas (${objeto.metas.length})`} icon={CheckCircle2}>
+              <div className="space-y-2">{objeto.metas.map((meta) => <div key={meta.id} className="rounded-xl bg-slate-50 p-3"><p className="text-xs font-semibold text-slate-700 mb-1">{meta.descricao}</p><p className="text-xs text-slate-500">{fmtCurrency(meta.valor)}</p></div>)}</div>
+            </Section>
+          )}
+
+          {objeto?.itens && objeto.itens.length > 0 && (
+            <Section title={`Itens do objeto (${objeto.itens.length})`} icon={Boxes}>
+              <div className="space-y-2">{objeto.itens.map((item) => (
+                <div key={item.id} className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-700 mb-1">{item.descricao}</p>
+                  <p className="text-xs text-slate-500">
+                    {(item.quantidade ?? 0)} {item.unidade || "un"} × {fmtCurrency(item.valor_unitario)}
+                    <span className="font-semibold text-slate-700"> = {fmtCurrency(item.valor_total)}</span>
+                  </p>
+                </div>
+              ))}</div>
             </Section>
           )}
         </div>
       </div>
       </>)}
 
-      {activeTab === "cronograma" && obra && <CronogramaContent obraId={obra.id} />}
-      {activeTab === "diario" && obra && <DiarioContent obraId={obra.id} />}
-      {activeTab === "medicoes" && obra && <MedicoesContent obraId={obra.id} />}
-      {activeTab === "art-rrt" && obra && <ArtRrtContent obraId={obra.id} />}
-      {activeTab === "eventos" && obra && <EventosContratuaisContent obraId={obra.id} />}
-      {activeTab === "curva-s" && obra && <CurvaSContent obraId={obra.id} />}
+      {activeTab === "cronograma" && objeto && <CronogramaContent objetoId={objeto.id} />}
+      {activeTab === "diario" && objeto && <DiarioContent objetoId={objeto.id} />}
+      {activeTab === "medicoes" && objeto && <MedicoesContent objetoId={objeto.id} />}
+      {activeTab === "art-rrt" && objeto && <ArtRrtContent objetoId={objeto.id} />}
+      {activeTab === "eventos" && objeto && <EventosContratuaisContent objetoId={objeto.id} />}
+      {activeTab === "curva-s" && objeto && <CurvaSContent objetoId={objeto.id} />}
     </div>
   );
 };

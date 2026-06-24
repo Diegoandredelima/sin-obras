@@ -2,11 +2,11 @@
  * CheckinScreen.tsx — Tela de Check-in Georreferenciado
  *
  * Responsável por obter a localização GPS em tempo real do fiscal e comparar com as
- * coordenadas cadastradas da obra (Geofencing — RF05), determinando se ele está
+ * coordenadas cadastradas do objeto (Geofencing — RF05), determinando se ele está
  * no raio de abrangência configurado.
  *
  * Funcionalidades:
- *   - Exibe o mapa (React Native Maps) com a localização da obra e círculo de geofencing.
+ *   - Exibe o mapa (React Native Maps) com a localização do objeto e círculo de geofencing.
  *   - Obtém a geolocalização do dispositivo de forma assíncrona.
  *   - Verifica a conectividade do dispositivo (NetInfo):
  *     - Se online, submete para o endpoint POST `/api/vistorias/checkin`.
@@ -25,7 +25,7 @@ import { salvarCheckinOffline } from '../../db/offline';
 import NetInfo from '@react-native-community/netinfo';
 
 // Mock — em produção viria de navigation params ou contexto
-const OBRA_MOCK = {
+const OBJETO_MOCK = {
   id: '1',
   titulo: 'CRAS Cidade Nova',
   latitude: -5.7945,
@@ -48,9 +48,9 @@ export default function CheckinScreen({ navigation }: any) {
       const pos = await obterLocalizacao();
       const distancia = calcularDistancia(
         pos.latitude, pos.longitude,
-        OBRA_MOCK.latitude, OBRA_MOCK.longitude,
+        OBJETO_MOCK.latitude, OBJETO_MOCK.longitude,
       );
-      const dentro = distancia <= OBRA_MOCK.raio_geofencing_metros;
+      const dentro = distancia <= OBJETO_MOCK.raio_geofencing_metros;
 
       // Verificar conectividade
       const netState = await NetInfo.fetch();
@@ -60,7 +60,7 @@ export default function CheckinScreen({ navigation }: any) {
 
       if (online) {
         const { data } = await vistoriaAPI.checkin({
-          obra_id: OBRA_MOCK.id,
+          objeto_id: OBJETO_MOCK.id,
           latitude: pos.latitude,
           longitude: pos.longitude,
         });
@@ -70,7 +70,7 @@ export default function CheckinScreen({ navigation }: any) {
         const id = `offline-${Date.now()}`;
         await salvarCheckinOffline({
           id,
-          obra_id: OBRA_MOCK.id,
+          objeto_id: OBJETO_MOCK.id,
           latitude: pos.latitude,
           longitude: pos.longitude,
         });
@@ -98,20 +98,20 @@ export default function CheckinScreen({ navigation }: any) {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: OBRA_MOCK.latitude,
-          longitude: OBRA_MOCK.longitude,
+          latitude: OBJETO_MOCK.latitude,
+          longitude: OBJETO_MOCK.longitude,
           latitudeDelta: 0.005,
           longitudeDelta: 0.005,
         }}
       >
         <Marker
-          coordinate={{ latitude: OBRA_MOCK.latitude, longitude: OBRA_MOCK.longitude }}
-          title={OBRA_MOCK.titulo}
+          coordinate={{ latitude: OBJETO_MOCK.latitude, longitude: OBJETO_MOCK.longitude }}
+          title={OBJETO_MOCK.titulo}
           pinColor="#15803d"
         />
         <Circle
-          center={{ latitude: OBRA_MOCK.latitude, longitude: OBRA_MOCK.longitude }}
-          radius={OBRA_MOCK.raio_geofencing_metros}
+          center={{ latitude: OBJETO_MOCK.latitude, longitude: OBJETO_MOCK.longitude }}
+          radius={OBJETO_MOCK.raio_geofencing_metros}
           strokeColor="#15803d"
           fillColor="rgba(21,128,61,0.12)"
           strokeWidth={2}
@@ -120,13 +120,13 @@ export default function CheckinScreen({ navigation }: any) {
 
       {/* Bottom Sheet */}
       <View style={styles.bottomSheet}>
-        <Text style={styles.obraTitle}>{OBRA_MOCK.titulo}</Text>
-        <Text style={styles.obraSub}>Raio permitido: {OBRA_MOCK.raio_geofencing_metros}m</Text>
+        <Text style={styles.objetoTitle}>{OBJETO_MOCK.titulo}</Text>
+        <Text style={styles.objetoSub}>Raio permitido: {OBJETO_MOCK.raio_geofencing_metros}m</Text>
 
         {resultado ? (
           <View style={[styles.resultBox, resultado.dentro ? styles.resultOk : styles.resultWarn]}>
             <Text style={[styles.resultText, { color: resultado.dentro ? '#15803d' : '#b45309' }]}>
-              {resultado.dentro ? '✓ Dentro do raio da obra' : '⚠ Fora do raio da obra'}
+              {resultado.dentro ? '✓ Dentro do raio do objeto' : '⚠ Fora do raio do objeto'}
             </Text>
             <Text style={styles.distText}>
               Distância: {resultado.distancia.toFixed(0)}m
@@ -171,8 +171,8 @@ const styles = StyleSheet.create({
     elevation: 12,
     gap: 12,
   },
-  obraTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  obraSub: { fontSize: 13, color: '#64748b' },
+  objetoTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  objetoSub: { fontSize: 13, color: '#64748b' },
   resultBox: { borderRadius: 12, padding: 14, gap: 4 },
   resultOk: { backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0' },
   resultWarn: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a' },

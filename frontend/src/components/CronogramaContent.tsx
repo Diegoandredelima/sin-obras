@@ -50,10 +50,10 @@ const EventoRow = ({ evento }: { evento: Evento }) => (
 
 const SubmetaSection = ({
   submeta,
-  obraId,
+  objetoId,
 }: {
   submeta: Submeta;
-  obraId: string;
+  objetoId: string;
 }) => {
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -73,7 +73,7 @@ const SubmetaSection = ({
       await api.post(`/cronograma/submetas/${submeta.id}/eventos`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["cronograma", objetoId] });
       reset();
       setShowAdd(false);
     },
@@ -141,10 +141,10 @@ const SubmetaSection = ({
 
 const MetaSection = ({
   meta,
-  obraId,
+  objetoId,
 }: {
   meta: Meta;
-  obraId: string;
+  objetoId: string;
 }) => {
   const [open, setOpen] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -164,7 +164,7 @@ const MetaSection = ({
       await api.post(`/cronograma/metas/${meta.id}/submetas`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["cronograma", objetoId] });
       reset();
       setShowAdd(false);
     },
@@ -193,7 +193,7 @@ const MetaSection = ({
       {open && (
         <div className="px-5 pb-4 space-y-1">
           {meta.submetas.map((sub) => (
-            <SubmetaSection key={sub.id} submeta={sub} obraId={obraId} />
+            <SubmetaSection key={sub.id} submeta={sub} objetoId={objetoId} />
           ))}
 
           {!showAdd ? (
@@ -243,17 +243,17 @@ const MetaSection = ({
   );
 };
 
-export const CronogramaContent = ({ obraId }: { obraId: string }) => {
+export const CronogramaContent = ({ objetoId }: { objetoId: string }) => {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
 
   const { data: metas = [], isLoading, error } = useQuery<Meta[]>({
-    queryKey: ["cronograma", obraId],
+    queryKey: ["cronograma", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/cronograma/obras/${obraId}/metas`);
+      const { data } = await api.get(`/cronograma/objetos/${objetoId}/metas`);
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   const {
@@ -268,10 +268,10 @@ export const CronogramaContent = ({ obraId }: { obraId: string }) => {
 
   const createMetaMutation = useMutation({
     mutationFn: async (data: MetaFormData) => {
-      await api.post(`/cronograma/obras/${obraId}/metas`, data);
+      await api.post(`/cronograma/objetos/${objetoId}/metas`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cronograma", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["cronograma", objetoId] });
       reset();
       setShowAdd(false);
     },
@@ -314,14 +314,14 @@ export const CronogramaContent = ({ obraId }: { obraId: string }) => {
         <div className="flex flex-col items-center justify-center py-16 text-slate-300">
           <Target className="h-12 w-12 mb-3" />
           <p className="text-sm font-medium">Nenhuma meta cadastrada</p>
-          <p className="text-xs mt-1">Estruture metas, submetas e eventos para esta obra.</p>
+          <p className="text-xs mt-1">Estruture metas, submetas e eventos para este objeto.</p>
         </div>
       )}
 
       {!isLoading && !error && metas.length > 0 && (
         <div className="space-y-3">
           {metas.map((meta) => (
-            <MetaSection key={meta.id} meta={meta} obraId={obraId} />
+            <MetaSection key={meta.id} meta={meta} objetoId={objetoId} />
           ))}
         </div>
       )}

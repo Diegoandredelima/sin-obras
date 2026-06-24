@@ -72,7 +72,7 @@ export default function ResultadoVistoriaScreen({ route, navigation }: Resultado
           <Text style={[styles.resultLabel, resultado === 'CONFORME' && { color: '#15803d' }]}>
             Conforme
           </Text>
-          <Text style={styles.resultDesc}>A obra está de acordo com o declarado na medição.</Text>
+          <Text style={styles.resultDesc}>A objeto está de acordo com o declarado na medição.</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

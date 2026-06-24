@@ -12,6 +12,7 @@ from app.core.rbac import Role, require_minimum_role
 from app.models.usuario import Usuario
 from app.schemas.common import PaginatedResponse
 from app.schemas.contrato import ContratoCreate, ContratoResponse, ContratoUpdate
+from app.schemas.objeto import ObjetoResponse
 from app.services import contrato as contrato_service
 from app.services.auditoria import registrar_auditoria
 
@@ -54,12 +55,23 @@ async def get_contrato(
     return await contrato_service.get_contrato_by_id(db, id)
 
 
+@router.get("/{id}/objetos", response_model=list[ObjetoResponse])
+async def list_objetos_contrato(
+    id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
+):
+    """Lista os objetos vinculados a um contrato (Contrato 1—N Objeto)."""
+    contrato = await contrato_service.get_contrato_by_id(db, id)
+    return contrato.objetos
+
+
 @router.put("/{id}", response_model=ContratoResponse)
 async def update_contrato(
     id: UUID,
     payload: ContratoUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N1)),
 ):
     contrato = await contrato_service.update_contrato(db, id, payload)
     await registrar_auditoria(

@@ -9,7 +9,7 @@ import type { Role } from "@/types";
 
 interface Alerta {
   id: string;
-  obra_id: string | null;
+  objeto_id: string | null;
   tipo: string;
   prioridade: string;
   titulo: string;
@@ -111,13 +111,13 @@ const AlertasBell = () => {
                           )}
                           <div className="flex items-center gap-3 mt-1.5">
                             <p className="text-[10px] text-slate-400">{fmtDate(a.criado_em)}</p>
-                            {a.obra_id && (
+                            {a.objeto_id && (
                               <Link
-                                to={`/obras/${a.obra_id}`}
+                                to={`/objetos/${a.objeto_id}`}
                                 onClick={() => setOpen(false)}
                                 className="text-[10px] font-medium text-brand-700 hover:text-brand-500"
                               >
-                                Ver obra →
+                                Ver objeto →
                               </Link>
                             )}
                             <button

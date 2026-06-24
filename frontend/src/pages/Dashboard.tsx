@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import api from "@/services/api";
-import type { Obra, ObraStats, PaginatedResponse, RelatorioResumo, Role } from "@/types";
+import type { Objeto, ObjetoStats, PaginatedResponse, RelatorioResumo, Role } from "@/types";
 import { lazy, Suspense, useState } from "react";
 
 // recharts é pesado (~700 KB); carregamos os gráficos sob demanda.
@@ -27,13 +27,13 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const SAUDACAO: Record<string, string> = {
-  EMPRESA:    "Acompanhe o andamento das obras dos seus contratos.",
-  FISCAL:     "Acompanhe a saúde e a execução das obras sob sua fiscalização.",
-  APOIO_N1:   "Resumo das obras que você cadastrou e acompanha.",
-  APOIO_N2:   "Visão técnica do portfólio de obras.",
-  ENGENHEIRO: "Visão técnica do portfólio de obras.",
-  COORDENADOR:"Visão consolidada do portfólio de obras do estado.",
-  SECRETARIO: "Panorama executivo das obras e contratos da Secretaria.",
+  EMPRESA:    "Acompanhe o andamento das objetos dos seus contratos.",
+  FISCAL:     "Acompanhe a saúde e a execução das objetos sob sua fiscalização.",
+  APOIO_N1:   "Resumo das objetos que você cadastrou e acompanha.",
+  APOIO_N2:   "Visão técnica do portfólio de objetos.",
+  ENGENHEIRO: "Visão técnica do portfólio de objetos.",
+  COORDENADOR:"Visão consolidada do portfólio de objetos do estado.",
+  SECRETARIO: "Panorama executivo das objetos e contratos da Secretaria.",
 };
 
 interface Metricas {
@@ -50,14 +50,14 @@ function kpisDoPapel(role: string, m: Metricas): KPIDef[] {
   switch (role) {
     case "EMPRESA":
       return [
-        { icon: Briefcase,     label: "Minhas Obras",  value: m.total,       sub: "total",   color: "sky" },
+        { icon: Briefcase,     label: "Minhas Objetos",  value: m.total,       sub: "total",   color: "sky" },
         { icon: Activity,      label: "Em Execução",   value: m.emExecucao,  sub: "ativas",  color: "brand" },
         { icon: HeartPulse,    label: "Saúde Crítica", value: m.critico,     sub: "alertas", color: "rose" },
         { icon: CheckCircle2,  label: "Concluídas",    value: m.concluidas,  sub: "total",   color: "success" },
       ];
     case "FISCAL":
       return [
-        { icon: Building2,     label: "Sob Fiscalização", value: m.total,      sub: "obras",   color: "sky" },
+        { icon: Building2,     label: "Sob Fiscalização", value: m.total,      sub: "objetos",   color: "sky" },
         { icon: Activity,      label: "Em Execução",      value: m.emExecucao, sub: "ativas",  color: "brand" },
         { icon: AlertTriangle, label: "Atenção",          value: m.atencao,    sub: "amarelo", color: "amber" },
         { icon: HeartPulse,    label: "Crítico",          value: m.critico,    sub: "vermelho",color: "rose" },
@@ -71,7 +71,7 @@ function kpisDoPapel(role: string, m: Metricas): KPIDef[] {
       ];
     default: // APOIO_N2, ENGENHEIRO, COORDENADOR, SECRETARIO
       return [
-        { icon: Briefcase,     label: "Total de Obras", value: m.total,       sub: "portfólio", color: "sky" },
+        { icon: Briefcase,     label: "Total de Objetos", value: m.total,       sub: "portfólio", color: "sky" },
         { icon: Activity,      label: "Em Execução",    value: m.emExecucao,  sub: "ativas",    color: "brand" },
         { icon: AlertTriangle, label: "Paralisadas",    value: m.paralisadas, sub: "alertas",   color: "amber" },
         { icon: CheckCircle2,  label: "Concluídas",     value: m.concluidas,  sub: "total",     color: "success" },
@@ -82,22 +82,22 @@ function kpisDoPapel(role: string, m: Metricas): KPIDef[] {
 interface AcaoDef { to: string; icon: LucideIcon; title: string; desc: string; color: string; }
 
 function acoesDoPapel(role: string, total: number): AcaoDef[] {
-  const obras: AcaoDef    = { to: "/obras",      icon: Building2,    title: "Obras",            desc: `${total} no seu painel`,        color: "text-sky-600 bg-sky-50" };
+  const objetos: AcaoDef    = { to: "/objetos",      icon: Building2,    title: "Objetos",            desc: `${total} no seu painel`,        color: "text-sky-600 bg-sky-50" };
   const quadro: AcaoDef   = { to: "/quadro",     icon: KanbanSquare, title: "Quadro de Tarefas",desc: "Acompanhe as tarefas Kanban",   color: "text-violet-600 bg-violet-50" };
   const alertas: AcaoDef  = { to: "/alertas",    icon: Bell,         title: "Alertas",          desc: "Pendências e notificações",     color: "text-rose-600 bg-rose-50" };
-  const contratos: AcaoDef= { to: "/contratos",  icon: Briefcase,    title: "Contratos",        desc: "Gerir contratos de obra",       color: "text-brand-700 bg-brand-50" };
-  const novaObra: AcaoDef = { to: "/obras/nova", icon: PlusCircle,   title: "Nova Obra",        desc: "Cadastrar contrato de obra",    color: "text-brand-700 bg-brand-50" };
+  const contratos: AcaoDef= { to: "/contratos",  icon: Briefcase,    title: "Contratos",        desc: "Gerir contratos (documento-mãe)", color: "text-brand-700 bg-brand-50" };
+  const novoContrato: AcaoDef = { to: "/contratos/novo", icon: PlusCircle, title: "Novo Contrato",    desc: "Cadastrar contrato e seus objetos", color: "text-brand-700 bg-brand-50" };
   const relatorio: AcaoDef= { to: "/relatorio",  icon: FileBarChart, title: "Relatórios",       desc: "Gerar e exportar relatórios",   color: "text-emerald-600 bg-emerald-50" };
   const gestao: AcaoDef   = { to: "/gestao",     icon: Settings2,    title: "Gestão",           desc: "Usuários, órgãos e delegações",  color: "text-slate-600 bg-slate-100" };
   const tarefas: AcaoDef  = { to: "/quadro",     icon: ListChecks,   title: "Minhas Tarefas",   desc: "Pendências atribuídas a você",  color: "text-violet-600 bg-violet-50" };
 
   switch (role) {
-    case "EMPRESA":   return [obras, tarefas, alertas];
-    case "FISCAL":    return [obras, alertas, relatorio];
-    case "APOIO_N1":  return [obras, contratos, quadro];
+    case "EMPRESA":   return [objetos, tarefas, alertas];
+    case "FISCAL":    return [objetos, alertas, relatorio];
+    case "APOIO_N1":  return [objetos, contratos, quadro];
     case "COORDENADOR":
-    case "SECRETARIO":return [novaObra, relatorio, gestao];
-    default:          return [novaObra, contratos, quadro];
+    case "SECRETARIO":return [novoContrato, relatorio, gestao];
+    default:          return [novoContrato, contratos, quadro];
   }
 }
 
@@ -165,9 +165,9 @@ const Dashboard = () => {
   const role = (user?.tipo as Role) ?? "EMPRESA";
   const podeVerOrgaos = (RANK[role] ?? 0) >= RANK.FISCAL;
 
-  const { data: stats, isLoading: statsLoading } = useQuery<ObraStats>({
-    queryKey: ["obras", "stats"],
-    queryFn: async () => (await api.get("/obras/stats")).data,
+  const { data: stats, isLoading: statsLoading } = useQuery<ObjetoStats>({
+    queryKey: ["objetos", "stats"],
+    queryFn: async () => (await api.get("/objetos/stats")).data,
   });
 
   const { data: resumo } = useQuery<RelatorioResumo>({
@@ -176,18 +176,18 @@ const Dashboard = () => {
     enabled: podeVerOrgaos, // EMPRESA não tem acesso (evita 403)
   });
 
-  const { data: obrasData, isLoading: obrasLoading } = useQuery<PaginatedResponse<Obra>>({
-    queryKey: ["obras", "dashboard", filtroSituacao, filtroSaude],
+  const { data: objetosData, isLoading: objetosLoading } = useQuery<PaginatedResponse<Objeto>>({
+    queryKey: ["objetos", "dashboard", filtroSituacao, filtroSaude],
     queryFn: async () => {
       const params: Record<string, unknown> = { limit: 20, sort: "criado_em", order: "desc" };
       if (filtroSituacao) params.situacao = filtroSituacao;
       if (filtroSaude) params.saude = filtroSaude;
-      return (await api.get("/obras", { params })).data;
+      return (await api.get("/objetos", { params })).data;
     },
   });
 
-  const obras = obrasData?.items ?? [];
-  const loading = statsLoading || obrasLoading;
+  const objetos = objetosData?.items ?? [];
+  const loading = statsLoading || objetosLoading;
 
   const ps = stats?.por_status ?? {};
   const psit = stats?.por_situacao ?? {};
@@ -212,11 +212,11 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="rounded-2xl bg-gradient-to-r from-brand-700 to-brand-500 p-8 text-white shadow-xl shadow-brand-700/20 relative overflow-hidden">
+      <div className="rounded-2xl bg-slate-800 p-8 text-white shadow-xl shadow-slate-900/30 relative overflow-hidden">
         <div className="absolute right-0 top-0 h-full w-64 opacity-10">
           <Building2 className="h-full w-full" />
         </div>
-        <div className="absolute top-0 left-0 right-0 h-1 sin-stripe opacity-70" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 sin-stripe" />
         <div className="relative">
           <div className="flex items-center gap-2 mb-1">
             <p className="text-sm font-medium text-white/70">Bem-vindo ao painel,</p>
@@ -225,7 +225,7 @@ const Dashboard = () => {
             </span>
           </div>
           <h2 className="text-3xl font-bold mb-2">{user?.nome || "Usuário"}</h2>
-          <p className="text-white/65 text-sm">{SAUDACAO[role] ?? "Confira o resumo das obras sob sua responsabilidade."}</p>
+          <p className="text-white/65 text-sm">{SAUDACAO[role] ?? "Confira o resumo das objetos sob sua responsabilidade."}</p>
         </div>
       </div>
 
@@ -271,9 +271,9 @@ const Dashboard = () => {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm">
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Obras Recentes</h3>
+            <h3 className="text-base font-semibold text-slate-900">Objetos Recentes</h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              {temFiltro ? "Filtro ativo" : "Últimas obras do seu painel"}
+              {temFiltro ? "Filtro ativo" : "Últimas objetos do seu painel"}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ const Dashboard = () => {
                 Limpar filtros
               </button>
             )}
-            <Link to="/obras" className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors">
+            <Link to="/objetos" className="flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-500 transition-colors">
               Ver todas
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -302,31 +302,31 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))
-            : obras.length === 0 ? (
+            : objetos.length === 0 ? (
                 <div className="px-6 py-12 text-center text-slate-400">
                   <Search className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">Nenhuma obra encontrada com os filtros atuais.</p>
+                  <p className="text-sm">Nenhum objeto encontrada com os filtros atuais.</p>
                 </div>
               )
-            : obras.map((obra) => {
-                const cfg = SAUDE_CONFIG[(obra.saude || "VERDE") as keyof typeof SAUDE_CONFIG];
+            : objetos.map((objeto) => {
+                const cfg = SAUDE_CONFIG[(objeto.saude || "VERDE") as keyof typeof SAUDE_CONFIG];
                 return (
                   <Link
-                    key={obra.id}
-                    to={`/obras/${obra.id}`}
+                    key={objeto.id}
+                    to={`/objetos/${objeto.id}`}
                     className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/80 transition-colors group"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate group-hover:text-brand-700">{obra.titulo}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{obra.municipio}</p>
+                      <p className="text-sm font-medium text-slate-900 truncate group-hover:text-brand-700">{objeto.titulo}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{objeto.municipio}</p>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <div className="hidden sm:block w-28">
                         <div className="flex justify-between mb-1">
-                          <span className="text-xs text-slate-500">{Number(obra.percentual_executado || 0).toFixed(0)}%</span>
+                          <span className="text-xs text-slate-500">{Number(objeto.percentual_executado || 0).toFixed(0)}%</span>
                         </div>
                         <div className="h-1.5 w-full rounded-full bg-slate-100">
-                          <div className="h-1.5 rounded-full bg-brand-500 transition-all" style={{ width: `${obra.percentual_executado || 0}%` }} />
+                          <div className="h-1.5 rounded-full bg-brand-500 transition-all" style={{ width: `${objeto.percentual_executado || 0}%` }} />
                         </div>
                       </div>
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border ${cfg.bg} ${cfg.text} ${cfg.border}`}>

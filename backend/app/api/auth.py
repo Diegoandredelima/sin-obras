@@ -3,6 +3,8 @@ SIN-Obras — Router de Autenticação
 Endpoints: login, refresh, me, logout
 """
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -26,6 +28,7 @@ from app.schemas.auth import (
     MeResponse,
     RefreshRequest,
     TokenResponse,
+    UsuarioAdminUpdateRequest,
     UsuarioCreateRequest,
     UsuarioResponse,
     UsuarioUpdateRequest,
@@ -116,6 +119,30 @@ async def refresh_token(
     )
 
 
+@router.get("/usuarios", response_model=list[UsuarioResponse])
+async def listar_usuarios(
+    db: AsyncSession = Depends(get_db),
+    tipo: Role | None = None,
+    apenas_ativos: bool = True,
+    _: object = Depends(require_minimum_role(Role.COORDENADOR)),
+):
+    """
+    Lista os usuários cadastrados. Requer perfil COORDENADOR ou superior.
+
+    Usado pela tela de Gestão para delegação de objetos e cadastro de equipe.
+    Filtros opcionais: `tipo` (uma role específica) e `apenas_ativos`.
+    """
+    query = select(Usuario)
+    if tipo is not None:
+        query = query.where(Usuario.tipo == tipo)
+    if apenas_ativos:
+        query = query.where(Usuario.ativo == True)  # noqa: E712
+    query = query.order_by(Usuario.nome)
+
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
 @router.get("/me", response_model=MeResponse)
 async def me(current_user: Usuario = Depends(get_current_user)):
     """Retorna os dados do usuário autenticado."""
@@ -180,7 +207,7 @@ async def logout(
 async def registrar_usuario(
     payload: UsuarioCreateRequest,
     db: AsyncSession = Depends(get_db),
-    _: object = Depends(require_minimum_role(Role.COORDENADOR)),
+    current_user: Usuario = Depends(require_minimum_role(Role.COORDENADOR)),
 ):
     """Cria um novo usuário no sistema. Requer perfil COORDENADOR ou superior."""
     # Verificar duplicidade
@@ -208,5 +235,78 @@ async def registrar_usuario(
     db.add(user)
     await db.flush()
     await db.refresh(user)
+
+    await registrar_auditoria(
+        db=db,
+        usuario_id=current_user.id,
+        entidade="Usuario",
+        entidade_id=str(user.id),
+        acao="CRIAR",
+        descricao=f"Usuário {user.nome} ({user.tipo}) criado por {current_user.nome}",
+    )
+
+    return UsuarioResponse.model_validate(user)
+
+
+@router.patch("/usuarios/{usuario_id}", response_model=UsuarioResponse)
+async def atualizar_usuario(
+    usuario_id: UUID,
+    payload: UsuarioAdminUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.COORDENADOR)),
+):
+    """
+    Atualiza um usuário (perfil, cargo, role ou status ativo). Requer COORDENADOR+.
+
+    Usado pela tela de Gestão para administrar a equipe de apoio e fiscais.
+    """
+    result = await db.execute(select(Usuario).where(Usuario.id == usuario_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado.",
+        )
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nenhum campo para atualizar.",
+        )
+
+    # Evitar que o usuário desative a própria conta acidentalmente.
+    if update_data.get("ativo") is False and user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode desativar a própria conta.",
+        )
+
+    if "email" in update_data and update_data["email"] != user.email:
+        existing = await db.execute(
+            select(Usuario).where(Usuario.email == update_data["email"])
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="E-mail já cadastrado.",
+            )
+
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+
+    await registrar_auditoria(
+        db=db,
+        usuario_id=current_user.id,
+        entidade="Usuario",
+        entidade_id=str(user.id),
+        acao="ATUALIZAR",
+        descricao=f"Usuário {user.nome} atualizado por {current_user.nome}: "
+        f"{', '.join(update_data.keys())}",
+    )
 
     return UsuarioResponse.model_validate(user)

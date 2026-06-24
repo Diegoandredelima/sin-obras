@@ -14,29 +14,53 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 class ContratoCreate(BaseModel):
     numero_processo: str = Field(..., max_length=50)
+    link_processo: str | None = Field(None, max_length=500)
     numero_contrato: str = Field(..., max_length=50)
     valor_global: Decimal
     data_assinatura: date | None = None
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
     empresa_ref_id: UUID | None = None
-    obra_id: UUID | None = None
     orgao_id: UUID | None = None
     orgao: str | None = Field(None, max_length=100)
     objeto: str | None = None
+    # Responsáveis e financeiro — espelham o formulário de edição, permitindo
+    # informar tudo já na criação (o serviço repassa via Contrato(**model_dump())).
+    fiscal_id: UUID | None = None
+    gestor_id: UUID | None = None
+    valor_aditivo: Decimal | None = None
+    valor_reajustado: Decimal | None = None
+    valor_final: Decimal | None = None
+    recurso_federal: Decimal | None = None
+    recurso_estadual: Decimal | None = None
+    percentual_retencao: Decimal | None = None
+    tipo_licitacao: str | None = Field(None, max_length=100)
+    numero_licitacao: str | None = Field(None, max_length=100)
+    matricula_cei: str | None = Field(None, max_length=50)
 
 class ContratoUpdate(BaseModel):
     numero_processo: str | None = Field(None, max_length=50)
+    link_processo: str | None = Field(None, max_length=500)
     numero_contrato: str | None = Field(None, max_length=50)
     valor_global: Decimal | None = None
     data_assinatura: date | None = None
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
     empresa_ref_id: UUID | None = None
-    obra_id: UUID | None = None
     orgao_id: UUID | None = None
     orgao: str | None = Field(None, max_length=100)
     objeto: str | None = None
+    fiscal_id: UUID | None = None
+    gestor_id: UUID | None = None
+    valor_aditivo: Decimal | None = None
+    valor_reajustado: Decimal | None = None
+    valor_final: Decimal | None = None
+    recurso_federal: Decimal | None = None
+    recurso_estadual: Decimal | None = None
+    percentual_retencao: Decimal | None = None
+    tipo_licitacao: str | None = Field(None, max_length=100)
+    numero_licitacao: str | None = Field(None, max_length=100)
+    matricula_cei: str | None = Field(None, max_length=50)
 
 # ---------------------------------------------------------------------------
 # Response Schemas
@@ -56,6 +80,7 @@ class OrgaoResumo(BaseModel):
 class ContratoResponse(BaseModel):
     id: UUID
     numero_processo: str
+    link_processo: str | None = None
     numero_contrato: str
     valor_global: Decimal
     valor_aditivo: Decimal | None = None
@@ -63,11 +88,11 @@ class ContratoResponse(BaseModel):
     valor_final: Decimal | None = None
     recurso_federal: Decimal | None = None
     recurso_estadual: Decimal | None = None
+    percentual_retencao: Decimal | None = None
     data_assinatura: date | None = None
     data_vigencia: date | None = None
     empresa_id: UUID | None = None
     empresa_ref_id: UUID | None = None
-    obra_id: UUID | None = None
     orgao_id: UUID | None = None
     orgao: str | None = None
     fiscal_nome: str | None = None

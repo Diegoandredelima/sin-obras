@@ -7,6 +7,7 @@ import {
   KanbanSquare,
   ChartBar,
   FileText,
+  FolderDown,
   Users,
   LogOut,
   type LucideIcon,
@@ -29,10 +30,10 @@ const Sidebar = () => {
   const { user, logout } = useAuthStore();
   const [perfilOpen, setPerfilOpen] = useState(false);
 
-  const obraMatch = location.pathname.match(/\/obras\/([^/]+)/);
+  const objetoMatch = location.pathname.match(/\/objetos\/([^/]+)/);
   const contratoMatch = location.pathname.match(/\/contratos\/([^/]+)/);
-  const ctxId = obraMatch ? obraMatch[1] : contratoMatch ? contratoMatch[1] : "1";
-  const isContratoCtx = !!contratoMatch && !obraMatch;
+  const ctxId = objetoMatch ? objetoMatch[1] : contratoMatch ? contratoMatch[1] : "1";
+  const isContratoCtx = !!contratoMatch && !objetoMatch;
 
   const allNav: NavItem[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -40,28 +41,34 @@ const Sidebar = () => {
       name: "Contratos",
       href: "/contratos",
       icon: Briefcase,
-      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+      roles: ["FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
     {
       name: "Empresas",
       href: "/empresas",
       icon: Building2,
-      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+      roles: ["FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
-    { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/obras/${ctxId}/diario`, icon: BookOpen, roles: ["EMPRESA", "FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
+    { name: "Diário de Obras", href: isContratoCtx ? `/contratos/${ctxId}?tab=diario` : `/empresa/objetos/${ctxId}/diario`, icon: BookOpen, roles: ["EMPRESA", "FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
     {
       name: "Quadro de Tarefas",
       href: "/quadro",
       icon: KanbanSquare,
-      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+      roles: ["FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
     {
       name: "Relatório",
       href: "/relatorio",
       icon: ChartBar,
-      roles: ["FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+      roles: ["FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
     },
-    { name: "Medições", href: isContratoCtx ? `/contratos/${ctxId}?tab=medicoes` : `/empresa/obras/${ctxId}/medicoes`, icon: FileText, roles: ["EMPRESA", "FISCAL", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
+    {
+      name: "Documentos",
+      href: "/documentos",
+      icon: FolderDown,
+      roles: ["FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"],
+    },
+    { name: "Medições", href: isContratoCtx ? `/contratos/${ctxId}?tab=medicoes` : `/empresa/objetos/${ctxId}/medicoes`, icon: FileText, roles: ["EMPRESA", "FISCAL", "APOIO_N1", "APOIO_N2", "COORDENADOR", "SECRETARIO", "ENGENHEIRO"] },
     {
       name: "Gestão",
       href: "/gestao",
@@ -101,23 +108,59 @@ const Sidebar = () => {
       <nav className="flex flex-1 flex-col px-3 py-5 overflow-y-auto">
         <ul className="flex flex-col gap-1">
           {navigation.map((item) => {
-            const isActive = location.pathname.startsWith(item.href);
+            const isActive = (() => {
+              // Itens com ?tab= — só ativo quando exatamente aquele tab está na URL
+              if (item.href.includes("?tab=")) {
+                return location.pathname + location.search === item.href;
+              }
+              // Contratos — ativo na listagem OU no detalhe sem tab (ou tab=detalhes)
+              if (item.href === "/contratos") {
+                const tab = new URLSearchParams(location.search).get("tab");
+                return (
+                  location.pathname === "/contratos" ||
+                  (location.pathname.startsWith("/contratos/") &&
+                    (!tab || tab === "detalhes"))
+                );
+              }
+              // Demais itens — match simples por prefixo
+              return location.pathname.startsWith(item.href);
+            })();
             return (
-              <li key={item.name}>
+              <li key={item.name} className="relative">
                 <Link
                   to={item.href}
-                  className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                  className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 overflow-hidden ${
                     isActive
-                      ? "bg-white/10 text-white shadow-[inset_3px_0_0_0_#C84918]"
-                      : "hover:bg-white/8 hover:text-white"
+                      ? "bg-gradient-to-r from-white/[0.13] to-white/[0.04] text-white"
+                      : "text-white/60 hover:bg-white/[0.07] hover:text-white/90"
                   }`}
                 >
+                  {/* Barra indicadora lateral animada */}
+                  {isActive && (
+                    <span
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-accent-500"
+                      style={{
+                        height: "60%",
+                        animation: "sidebar-indicator 0.2s ease-out",
+                      }}
+                    />
+                  )}
+
                   <item.icon
-                    className={`h-5 w-5 shrink-0 transition-colors ${
-                      isActive ? "text-white" : "text-white/50 group-hover:text-white/80"
+                    className={`h-5 w-5 shrink-0 transition-all duration-200 ${
+                      isActive
+                        ? "text-accent-400 drop-shadow-[0_0_6px_rgba(200,73,24,0.7)]"
+                        : "text-white/40 group-hover:text-white/70"
                     }`}
                   />
-                  {item.name}
+                  <span className={`transition-all duration-200 ${isActive ? "font-semibold" : ""}`}>
+                    {item.name}
+                  </span>
+
+                  {/* Brilho sutil no hover */}
+                  {!isActive && (
+                    <span className="pointer-events-none absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-r from-white/[0.04] to-transparent" />
+                  )}
                 </Link>
               </li>
             );

@@ -43,7 +43,7 @@ export default function SyncScreen() {
   const carregarPendentes = async () => {
     const { checkins, fotos, checklists, finalizacoes } = await getPendentes();
     const items: PendingItem[] = [
-      ...checkins.map((c: any) => ({ id: c.id, tipo: 'checkin' as const, descricao: `Check-in na obra ${c.obra_id.slice(0, 8)}`, raw: c })),
+      ...checkins.map((c: any) => ({ id: c.id, tipo: 'checkin' as const, descricao: `Check-in no objeto ${c.objeto_id.slice(0, 8)}`, raw: c })),
       ...fotos.map((f: any) => ({ id: f.id, tipo: 'foto' as const, descricao: `Foto para vistoria ${f.vistoria_id.slice(0, 8)}`, raw: f })),
       ...checklists.map((c: any) => ({ id: c.id, tipo: 'checklist' as const, descricao: `Checklist item ${c.item_id.slice(0, 8)}`, raw: c })),
       ...finalizacoes.map((f: any) => ({ id: f.id, tipo: 'finalizacao' as const, descricao: `Finalização vistoria ${f.vistoria_id.slice(0, 8)}`, raw: f })),
@@ -63,7 +63,7 @@ export default function SyncScreen() {
       try {
         if (item.tipo === 'checkin') {
           await vistoriaAPI.checkin({
-            obra_id: item.raw.obra_id,
+            objeto_id: item.raw.objeto_id,
             medicao_id: item.raw.medicao_id,
             latitude: item.raw.latitude,
             longitude: item.raw.longitude,

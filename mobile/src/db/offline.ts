@@ -1,5 +1,5 @@
 /**
- * SIN-Obras Mobile — Banco de dados local (SQLite) para modo offline
+ * SIN-Objetos Mobile — Banco de dados local (SQLite) para modo offline
  * Armazena vistorias, fotos e checklists para sincronização posterior
  */
 
@@ -9,7 +9,7 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export async function getDB(): Promise<SQLite.SQLiteDatabase> {
   if (!db) {
-    db = await SQLite.openDatabaseAsync('sinobras_offline.db');
+    db = await SQLite.openDatabaseAsync('sinobjetos_offline.db');
     await initDB(db);
   }
   return db;
@@ -21,7 +21,7 @@ async function initDB(database: SQLite.SQLiteDatabase): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS pending_checkins (
       id TEXT PRIMARY KEY,
-      obra_id TEXT NOT NULL,
+      objeto_id TEXT NOT NULL,
       medicao_id TEXT,
       latitude REAL NOT NULL,
       longitude REAL NOT NULL,
@@ -67,15 +67,15 @@ async function initDB(database: SQLite.SQLiteDatabase): Promise<void> {
 // ---------------------------------------------------------------------------
 export async function salvarCheckinOffline(payload: {
   id: string;
-  obra_id: string;
+  objeto_id: string;
   medicao_id?: string;
   latitude: number;
   longitude: number;
 }): Promise<void> {
   const database = await getDB();
   await database.runAsync(
-    'INSERT INTO pending_checkins (id, obra_id, medicao_id, latitude, longitude, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
-    [payload.id, payload.obra_id, payload.medicao_id ?? null, payload.latitude, payload.longitude, new Date().toISOString()]
+    'INSERT INTO pending_checkins (id, objeto_id, medicao_id, latitude, longitude, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
+    [payload.id, payload.objeto_id, payload.medicao_id ?? null, payload.latitude, payload.longitude, new Date().toISOString()]
   );
 }
 

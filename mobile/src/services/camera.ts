@@ -6,7 +6,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
-import { vistoriaAPI } from './api';
+import { medicaoAPI, vistoriaAPI } from './api';
 import { obterLocalizacao } from './geofencing';
 
 export interface FotoCapturada {
@@ -116,5 +116,30 @@ export async function uploadFotoVistoria(
   if (foto.longitude != null) formData.append('longitude', String(foto.longitude));
 
   const { data } = await vistoriaAPI.uploadFoto(vistoriaId, formData);
+  return data;
+}
+
+/**
+ * Faz upload da foto de validação de um item de medição (boletim).
+ */
+export async function uploadFotoMedicao(
+  medicaoId: string,
+  foto: FotoCapturada,
+  medicaoItemId: string,
+): Promise<any> {
+  const formData = new FormData();
+
+  const uri = foto.uri;
+  const filename = uri.split('/').pop() || 'foto.jpg';
+  const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+  const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  const mimeType = mimeMap[ext] || 'image/jpeg';
+
+  formData.append('file', { uri, name: filename, type: mimeType } as any);
+  formData.append('medicao_item_id', medicaoItemId);
+  if (foto.latitude != null) formData.append('latitude', String(foto.latitude));
+  if (foto.longitude != null) formData.append('longitude', String(foto.longitude));
+
+  const { data } = await medicaoAPI.uploadFoto(medicaoId, formData);
   return data;
 }

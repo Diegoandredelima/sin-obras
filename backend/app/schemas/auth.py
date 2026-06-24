@@ -76,3 +76,13 @@ class UsuarioUpdateRequest(BaseModel):
     email: str | None = Field(None, max_length=255)
     telefone: str | None = Field(None, max_length=20)
     cargo: str | None = Field(None, max_length=100)
+
+
+class UsuarioAdminUpdateRequest(BaseModel):
+    """Campos que um COORDENADOR+ pode alterar em qualquer usuário (gestão de equipe)."""
+    nome: str | None = Field(None, min_length=2, max_length=255)
+    email: str | None = Field(None, max_length=255)
+    telefone: str | None = Field(None, max_length=20)
+    cargo: str | None = Field(None, max_length=100)
+    tipo: Role | None = None
+    ativo: bool | None = None

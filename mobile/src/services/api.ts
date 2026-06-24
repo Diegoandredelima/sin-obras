@@ -1,13 +1,13 @@
 /**
  * api.ts — Cliente HTTP Centralizado Mobile (Axios + Interceptors)
  *
- * Configura o cliente Axios com a URL base da API SIN-Obras.
+ * Configura o cliente Axios com a URL base da API SIN-Objetos.
  * Inclui:
  *   - Interceptor de Requisição: recupera assincronamente o token JWT encriptado do
  *     SecureStore e injeta no header `Authorization` de todas as requisições de saída.
  *   - Interceptor de Resposta: remove o token local em caso de erro 401 (Não Autorizado)
  *     para forçar o fluxo de login.
- *   - Módulos de API tipados para Obras, Vistorias, Empresa e Autenticação.
+ *   - Módulos de API tipados para Objetos, Vistorias, Empresa e Autenticação.
  */
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
@@ -109,16 +109,29 @@ export const vistoriaAPI = {
 
 // Endpoints da Empresa
 export const empresaAPI = {
-  getDiario: (obraId: string) => api.get(`/empresa/obras/${obraId}/diario`),
-  createDiario: (obraId: string, payload: any) => api.post(`/empresa/obras/${obraId}/diario`, payload),
-  getMedicoes: (obraId: string) => api.get(`/empresa/obras/${obraId}/medicoes`),
+  getDiario: (objetoId: string) => api.get(`/empresa/objetos/${objetoId}/diario`),
+  createDiario: (objetoId: string, payload: any) => api.post(`/empresa/objetos/${objetoId}/diario`, payload),
+  getMedicoes: (objetoId: string) => api.get(`/empresa/objetos/${objetoId}/medicoes`),
   assinarMedicao: (medicaoId: string) => api.post(`/empresa/medicoes/${medicaoId}/assinar`, { confirmado: true }),
 };
 
-// Endpoints de Obras
-export const obrasAPI = {
-  list: () => api.get('/obras'),
-  getById: (id: string) => api.get(`/obras/${id}`),
+// Endpoints de Medição (Boletim) — fluxo do fiscal medindo em campo
+export const medicaoAPI = {
+  getEventos: (objetoId: string) => api.get(`/cronograma/objetos/${objetoId}/metas`),
+  criarFiscal: (objetoId: string, payload: any) => api.post(`/empresa/objetos/${objetoId}/medicoes/fiscal`, payload),
+  getBoletim: (medicaoId: string) => api.get(`/empresa/medicoes/${medicaoId}/boletim`),
+  uploadFoto: (medicaoId: string, formData: any) =>
+    api.post(`/empresa/medicoes/${medicaoId}/fotos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    }),
+  concluir: (medicaoId: string, payload: any) => api.post(`/empresa/medicoes/${medicaoId}/concluir`, payload),
+};
+
+// Endpoints de Objetos
+export const objetosAPI = {
+  list: () => api.get('/objetos'),
+  getById: (id: string) => api.get(`/objetos/${id}`),
 };
 
 // Auth

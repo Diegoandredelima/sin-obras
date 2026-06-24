@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: "sinobras-auth",
+      name: "@@@@sinobjeto@@s@@-auth",
     }
   )
 );

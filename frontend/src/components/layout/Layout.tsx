@@ -9,12 +9,13 @@ import { useAuthStore } from "@/store/auth";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Painel de Controle",
-  "/obras": "Obras",
-  "/obras/nova": "Cadastrar Obra",
+  "/objetos": "Objetos",
+  "/objetos/nova": "Cadastrar Objeto",
   "/contratos": "Contratos",
+  "/contratos/novo": "Cadastrar Contrato",
   "/quadro": "Quadro de Tarefas",
   "/relatorio": "Relatórios",
-  "/gestao": "Gestão de Obras e Equipe",
+  "/gestao": "Gestão de Objetos e Equipe",
   "/alertas": "Central de Alertas",
   "/empresas": "Empresas Executoras",
   "/empresas/nova": "Cadastrar Empresa",
@@ -22,7 +23,7 @@ const TITLES: Record<string, string> = {
 
 function getPageTitle(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname];
-  if (pathname.startsWith("/obras/") && pathname !== "/obras/nova") return "Detalhe da Obra";
+  if (pathname.startsWith("/objetos/") && pathname !== "/objetos/nova") return "Detalhe do Objeto";
   if (pathname.startsWith("/contratos/")) return "Detalhe do Contrato";
   if (pathname.endsWith("/editar") && pathname.startsWith("/empresas/")) return "Editar Empresa";
   if (pathname.startsWith("/empresas/")) return "Detalhe da Empresa";

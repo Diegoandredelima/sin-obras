@@ -126,11 +126,11 @@ const Contratos = () => {
           </p>
         </div>
         <Link
-          to="/obras/nova"
+          to="/contratos/novo"
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-brand-700/20 hover:bg-brand-500 transition-all"
         >
           <HardHat className="h-4 w-4" />
-          Cadastrar Obra
+          Cadastrar Contrato
         </Link>
       </div>
 

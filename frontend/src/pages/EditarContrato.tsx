@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Briefcase, ChevronDown, ChevronRight, MapPin, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Briefcase, ChevronDown, ChevronRight, Plus, MapPin } from "lucide-react";
 import { AxiosError } from "axios";
 import api from "@/services/api";
-import type { EmpresaListItem, Objeto } from "@/types";
+import type { EmpresaListItem, Objeto, Contrato } from "@/types";
+
 import CatalogoItensManager from "@/components/CatalogoItensManager";
 
 interface OrgaoOption {
@@ -67,15 +68,33 @@ const Section = ({ title, children, defaultOpen = true }: any) => {
   );
 };
 
-const CadastrarContrato = () => {
+const EditarContrato = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id } = useParams<{ id: string }>();
   const [apiError, setApiError] = useState("");
 
-  // Cadastro contínuo: após criar o contrato + objeto principal, a tela
-  // permanece e libera itens e objetos adicionais (sem trocar de página).
-  const [createdId, setCreatedId] = useState<string | null>(null);
-  const [createdObjetoId, setCreatedObjetoId] = useState<string | null>(null);
+  const { data: contrato, isLoading: isContratoLoading } = useQuery<Contrato>({
+    queryKey: ["contrato", id],
+    queryFn: async () => {
+      const { data } = await api.get(`/contratos/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Contrato 1—N Objeto: edita-se o objeto principal (primeiro) do contrato.
+  const { data: objetos = [], isLoading: isObjetoLoading } = useQuery<Objeto[]>({
+    queryKey: ["contrato-objetos", id],
+    queryFn: async () => {
+      const { data } = await api.get(`/contratos/${id}/objetos`);
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!id,
+  });
+
+  const objeto = objetos[0];
+  const objetoId = objeto?.id;
 
   const { data: empresas = [] } = useQuery<EmpresaListItem[]>({
     queryKey: ["empresas"],
@@ -109,53 +128,20 @@ const CadastrarContrato = () => {
     },
   });
 
-  // Objetos do contrato recém-criado (Contrato 1—N Objeto). Só busca após criar.
-  const { data: objetos = [] } = useQuery<Objeto[]>({
-    queryKey: ["contrato-objetos", createdId],
-    queryFn: async () => {
-      const { data } = await api.get(`/contratos/${createdId}/objetos`);
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!createdId,
-  });
-
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<any>({
-    defaultValues: { objeto_status: "PLANEJADA" },
-  });
+  const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm();
 
   // Autocompletar endereço pelo CEP (ViaCEP). CEP = 8 dígitos.
   const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "error">("idle");
-  // Ao preencher pelo CEP, os campos ficam travados; apague o CEP para editar.
+  // Regra: ao preencher pelo CEP, os campos de endereço ficam travados
+  // (read-only). Para editá-los, o usuário precisa apagar o CEP.
   const [enderecoTravado, setEnderecoTravado] = useState(false);
-  // Espelha a edição: endereço também aparece na Section 3 (opcional, via checkbox).
   const [incluirEndereco, setIncluirEndereco] = useState(false);
 
-  // Cadastro inline de objetos adicionais (libera-se após criar o contrato).
+  // Cadastro inline de objetos adicionais do contrato (Contrato 1—N Objeto).
   const NOVO_OBJETO_VAZIO = { titulo: "", descricao: "", municipio: "", status: "PLANEJADA", data_inicio: "", data_fim_prevista: "" };
   const [addingObjeto, setAddingObjeto] = useState(false);
   const [savingObjeto, setSavingObjeto] = useState(false);
   const [novoObjeto, setNovoObjeto] = useState(NOVO_OBJETO_VAZIO);
-  // Quando o usuário clica em "Adicionar objeto" antes de o contrato existir,
-  // criamos o contrato e abrimos o formulário assim que o ID estiver disponível.
-  const [pendingAddObjeto, setPendingAddObjeto] = useState(false);
-
-  useEffect(() => {
-    if (createdId && pendingAddObjeto) {
-      setAddingObjeto(true);
-      setPendingAddObjeto(false);
-    }
-  }, [createdId, pendingAddObjeto]);
-
-  // Botão "Adicionar objeto": se o contrato ainda não existe, cria primeiro
-  // (a tela continua aberta) e então abre o formulário do novo objeto.
-  const handleAddObjetoClick = () => {
-    if (createdId) {
-      setAddingObjeto(true);
-    } else {
-      setPendingAddObjeto(true);
-      handleSubmit(onSubmit)();
-    }
-  };
 
   const buscarCep = async (raw: string) => {
     const cep = (raw || "").replace(/\D/g, "");
@@ -182,6 +168,7 @@ const CadastrarContrato = () => {
     }
   };
 
+  // Ao alterar/apagar o CEP, destrava os campos para edição manual.
   const handleCepChange = (value: string) => {
     if ((value || "").replace(/\D/g, "").length < 8) {
       setEnderecoTravado(false);
@@ -189,80 +176,116 @@ const CadastrarContrato = () => {
     }
   };
 
-  const buildObjetoPayload = (data: any) => {
-    // Compõe o `endereco` legado a partir das partes estruturadas.
-    const enderecoComposto = [
-      data.objeto_logradouro,
-      data.objeto_numero && `nº ${data.objeto_numero}`,
-      data.objeto_conjunto,
-      data.objeto_bairro,
-    ].filter(Boolean).join(", ");
-    return {
-      titulo: data.objeto_titulo,
-      descricao: data.objeto_descricao || null,
-      cep: data.objeto_cep || null,
-      logradouro: data.objeto_logradouro || null,
-      numero: data.objeto_numero || null,
-      bairro: data.objeto_bairro || null,
-      conjunto: data.objeto_conjunto || null,
-      uf: (data.objeto_uf || "").toUpperCase() || null,
-      endereco: enderecoComposto || null,
-      municipio: data.objeto_municipio || null,
-      status: data.objeto_status || "PLANEJADA",
-      data_inicio: data.objeto_data_inicio || null,
-      data_fim_prevista: data.objeto_data_fim_prevista || null,
-    };
-  };
-
-  const buildContratoPayload = (data: any) => ({
-    numero_processo: data.numero_processo,
-    link_processo: data.link_processo || null,
-    numero_contrato: data.numero_contrato,
-    valor_global: Number(data.valor_global),
-    data_assinatura: data.data_assinatura || null,
-    data_vigencia: data.data_vigencia || null,
-    empresa_ref_id: data.empresa_ref_id || null,
-    orgao_id: data.orgao_id || null,
-    objeto: data.objeto || null,
-    fiscal_id: data.fiscal_id || null,
-    gestor_id: data.gestor_id || null,
-    valor_reajustado: data.valor_reajustado ? Number(data.valor_reajustado) : null,
-    valor_final: data.valor_final ? Number(data.valor_final) : null,
-    recurso_federal: data.recurso_federal ? Number(data.recurso_federal) : null,
-    recurso_estadual: data.recurso_estadual ? Number(data.recurso_estadual) : null,
-    percentual_retencao: data.percentual_retencao ? Number(data.percentual_retencao) : null,
-    numero_licitacao: data.numero_licitacao || null,
-  });
+  useEffect(() => {
+    if (contrato && objeto) {
+      reset({
+        // Contrato
+        numero_contrato: contrato.numero_contrato,
+        numero_processo: contrato.numero_processo,
+        link_processo: contrato.link_processo || "",
+        objeto: contrato.objeto || "",
+        numero_licitacao: contrato.numero_licitacao || "",
+        data_assinatura: contrato.data_assinatura || "",
+        data_vigencia: contrato.data_vigencia || "",
+        // Empresa/Resps
+        empresa_ref_id: contrato.empresa_ref_id || "",
+        orgao_id: contrato.orgao_id || "",
+        fiscal_id: contrato.fiscal_id || "",
+        gestor_id: contrato.gestor_id || "",
+        // Objeto
+        objeto_titulo: objeto.titulo,
+        objeto_cep: objeto.cep || "",
+        objeto_logradouro: objeto.logradouro || "",
+        objeto_numero: objeto.numero || "",
+        objeto_bairro: objeto.bairro || "",
+        objeto_conjunto: objeto.conjunto || "",
+        objeto_uf: objeto.uf || "",
+        objeto_municipio: objeto.municipio || "",
+        objeto_descricao: objeto.descricao || "",
+        objeto_status: objeto.status || "PLANEJADA",
+        objeto_data_inicio: objeto.data_inicio || "",
+        objeto_data_fim_prevista: objeto.data_fim_prevista || "",
+        // Financeiro
+        valor_global: contrato.valor_global,
+        valor_reajustado: contrato.valor_reajustado || "",
+        valor_final: contrato.valor_final || "",
+        recurso_federal: contrato.recurso_federal || "",
+        recurso_estadual: contrato.recurso_estadual || "",
+        percentual_retencao: contrato.percentual_retencao || "",
+      });
+      const temEndereco = !!(objeto.cep || objeto.logradouro || objeto.endereco);
+      setIncluirEndereco(temEndereco);
+      setEnderecoTravado((objeto.cep || "").replace(/\D/g, "").length === 8);
+    }
+  }, [contrato, objeto, reset]);
 
   const onSubmit = async (data: any) => {
     setApiError("");
     try {
-      if (!createdId) {
-        // Fase 1: cria contrato + objeto principal e CONTINUA na mesma tela.
-        const { data: contrato } = await api.post("/contratos", buildContratoPayload(data));
-        const { data: objeto } = await api.post("/objetos", { ...buildObjetoPayload(data), contrato_id: contrato.id });
-        queryClient.invalidateQueries({ queryKey: ["contratos"] });
-        queryClient.invalidateQueries({ queryKey: ["objetos"] });
-        setCreatedId(contrato.id);
-        setCreatedObjetoId(objeto.id);
-      } else {
-        // Fase 2: salva alterações dos dados básicos (contrato + objeto principal).
-        await Promise.all([
-          api.put(`/contratos/${createdId}`, buildContratoPayload(data)),
-          createdObjetoId ? api.put(`/objetos/${createdObjetoId}`, buildObjetoPayload(data)) : Promise.resolve(),
-        ]);
-        queryClient.invalidateQueries({ queryKey: ["contrato", createdId] });
-        queryClient.invalidateQueries({ queryKey: ["contrato-objetos", createdId] });
-      }
+      // 1. Update Contrato
+      const contratoPayload = {
+        numero_processo: data.numero_processo,
+        link_processo: data.link_processo || null,
+        numero_contrato: data.numero_contrato,
+        valor_global: Number(data.valor_global),
+        data_assinatura: data.data_assinatura || null,
+        data_vigencia: data.data_vigencia || null,
+        empresa_ref_id: data.empresa_ref_id || null,
+        orgao_id: data.orgao_id || null,
+        objeto: data.objeto || null,
+        fiscal_id: data.fiscal_id || null,
+        gestor_id: data.gestor_id || null,
+        valor_reajustado: data.valor_reajustado ? Number(data.valor_reajustado) : null,
+        valor_final: data.valor_final ? Number(data.valor_final) : null,
+        recurso_federal: data.recurso_federal ? Number(data.recurso_federal) : null,
+        recurso_estadual: data.recurso_estadual ? Number(data.recurso_estadual) : null,
+        percentual_retencao: data.percentual_retencao ? Number(data.percentual_retencao) : null,
+        numero_licitacao: data.numero_licitacao || null,
+      };
+
+      // 2. Update Objeto
+      // Compõe o `endereco` legado (exibido em detalhes/impressão) a partir das
+      // partes estruturadas; preserva o texto livre antigo se nada for informado.
+      const enderecoComposto = [
+        data.objeto_logradouro,
+        data.objeto_numero && `nº ${data.objeto_numero}`,
+        data.objeto_conjunto,
+        data.objeto_bairro,
+      ].filter(Boolean).join(", ");
+
+      const objetoPayload = {
+        titulo: data.objeto_titulo,
+        descricao: data.objeto_descricao || null,
+        cep: data.objeto_cep || null,
+        logradouro: data.objeto_logradouro || null,
+        numero: data.objeto_numero || null,
+        bairro: data.objeto_bairro || null,
+        conjunto: data.objeto_conjunto || null,
+        uf: (data.objeto_uf || "").toUpperCase() || null,
+        endereco: enderecoComposto || objeto.endereco || null,
+        municipio: data.objeto_municipio || null,
+        status: data.objeto_status || null,
+        data_inicio: data.objeto_data_inicio || null,
+        data_fim_prevista: data.objeto_data_fim_prevista || null,
+      };
+
+      await Promise.all([
+        api.put(`/contratos/${id}`, contratoPayload),
+        api.put(`/objetos/${objetoId}`, objetoPayload)
+      ]);
+
+      queryClient.invalidateQueries({ queryKey: ["contrato", id] });
+      queryClient.invalidateQueries({ queryKey: ["objeto", objetoId] });
+      navigate(`/contratos/${id}`);
     } catch (err) {
       const ax = err as AxiosError<{ detail?: string }>;
-      setApiError(ax.response?.data?.detail || "Erro ao salvar o contrato. Tente novamente.");
+      setApiError(ax.response?.data?.detail || "Erro ao atualizar o contrato. Tente novamente.");
     }
   };
 
-  // Cria um objeto adicional vinculado ao contrato recém-criado.
+  // Cria um novo objeto vinculado ao contrato e o anexa ao núcleo da Section 3.
   const salvarNovoObjeto = async () => {
-    if (!createdId || !novoObjeto.titulo.trim()) return;
+    if (!novoObjeto.titulo.trim()) return;
     setSavingObjeto(true);
     setApiError("");
     try {
@@ -273,9 +296,9 @@ const CadastrarContrato = () => {
         status: novoObjeto.status,
         data_inicio: novoObjeto.data_inicio || null,
         data_fim_prevista: novoObjeto.data_fim_prevista || null,
-        contrato_id: createdId,
+        contrato_id: id,
       });
-      queryClient.invalidateQueries({ queryKey: ["contrato-objetos", createdId] });
+      queryClient.invalidateQueries({ queryKey: ["contrato-objetos", id] });
       queryClient.invalidateQueries({ queryKey: ["objetos"] });
       setNovoObjeto(NOVO_OBJETO_VAZIO);
       setAddingObjeto(false);
@@ -287,10 +310,18 @@ const CadastrarContrato = () => {
     }
   };
 
+  if (isContratoLoading || isObjetoLoading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
+  }
+
+  if (!contrato || !objeto) {
+    return <div className="p-6 text-center text-rose-600">Erro: Contrato ou Objeto não encontrados.</div>;
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      <Link to="/contratos" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors">
-        <ArrowLeft className="h-4 w-4" />Voltar para Contratos
+      <Link to={`/contratos/${id}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors">
+        <ArrowLeft className="h-4 w-4" />Voltar para o contrato
       </Link>
 
       <div className="flex items-center gap-3 px-2">
@@ -298,20 +329,10 @@ const CadastrarContrato = () => {
           <Briefcase className="h-6 w-6 text-sky-600" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Cadastrar Contrato e Objeto</h1>
-          <p className="text-sm text-slate-500">O documento-mãe que formaliza a execução de um ou mais objetos.</p>
+          <h1 className="text-xl font-bold text-slate-800">Editar Contrato e Objeto</h1>
+          <p className="text-sm text-slate-500">Contrato {contrato.numero_contrato} — {objeto.titulo}</p>
         </div>
       </div>
-
-      {createdId && (
-        <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-          <p className="text-xs text-emerald-700">
-            Contrato criado. Agora adicione os <strong>itens do projeto</strong> a cada objeto e, se precisar, os
-            <strong> demais objetos</strong>. Ao terminar, clique em <strong>Concluir</strong>.
-          </p>
-        </div>
-      )}
 
       {apiError && (
         <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 rounded-xl p-4">
@@ -321,14 +342,14 @@ const CadastrarContrato = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
+        
         <Section title="1. Dados do Contrato">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Número do contrato" id="numero_contrato" required error={errors.numero_contrato?.message as string} registration={register("numero_contrato", { required: "Informe o número do contrato" })} />
+            <Field label="Número do contrato" id="numero_contrato" required registration={register("numero_contrato")} />
             <Field label="Número Licitação" id="numero_licitacao" registration={register("numero_licitacao")} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Número do processo SEI" id="numero_processo" required error={errors.numero_processo?.message as string} registration={register("numero_processo", { required: "Informe o número do processo" })} />
+            <Field label="Número do processo SEI" id="numero_processo" required registration={register("numero_processo")} />
             <Field label="Link do processo (SEI)" id="link_processo" type="url" placeholder="https://sei.exemplo.gov.br/..." registration={register("link_processo")} />
           </div>
           <Field label="Resumo" id="objeto" type="textarea" registration={register("objeto")} />
@@ -341,6 +362,146 @@ const CadastrarContrato = () => {
             <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
               <MapPin className="h-4 w-4 text-slate-400" />Endereço da obra
             </p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label htmlFor="s1-objeto_cep" className="block text-sm font-medium text-slate-700">CEP</label>
+                  <div className="relative">
+                    {(() => {
+                      const cepReg = register("objeto_cep");
+                      return (
+                        <input
+                          id="s1-objeto_cep"
+                          inputMode="numeric"
+                          maxLength={9}
+                          placeholder="00000-000"
+                          {...cepReg}
+                          onChange={(e) => { cepReg.onChange(e); handleCepChange(e.target.value); }}
+                          onBlur={(e) => { cepReg.onBlur(e); buscarCep(e.target.value); }}
+                          className={`block w-full rounded-xl border ${cepStatus === "error" ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
+                        />
+                      );
+                    })()}
+                    {cepStatus === "loading" && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />}
+                  </div>
+                  {cepStatus === "error"
+                    ? <p className="text-xs text-rose-600 mt-0.5">CEP inválido ou não encontrado.</p>
+                    : enderecoTravado
+                      ? <p className="text-xs text-slate-500 mt-0.5">Endereço preenchido pelo CEP. Apague o CEP para editar.</p>
+                      : <p className="text-xs text-slate-400 mt-0.5">8 dígitos — preenche o endereço automaticamente.</p>}
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Logradouro" id="s1-objeto_logradouro" placeholder="Rua, avenida, etc." readOnly={enderecoTravado} registration={register("objeto_logradouro")} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Field label="Número" id="s1-objeto_numero" registration={register("objeto_numero")} />
+                <Field label="Conjunto" id="s1-objeto_conjunto" placeholder="Bloco, quadra, lote..." registration={register("objeto_conjunto")} />
+                <Field label="Bairro" id="s1-objeto_bairro" readOnly={enderecoTravado} registration={register("objeto_bairro")} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label htmlFor="s1-objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
+                  <input
+                    id="s1-objeto_municipio"
+                    list="municipios-list-s1"
+                    readOnly={enderecoTravado}
+                    {...register("objeto_municipio")}
+                    className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
+                  />
+                  <datalist id="municipios-list-s1">
+                    {municipios.map((m) => <option key={m} value={m} />)}
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="s1-objeto_uf" className="block text-sm font-medium text-slate-700">Estado (UF)</label>
+                  <input
+                    id="s1-objeto_uf"
+                    maxLength={2}
+                    placeholder="UF"
+                    readOnly={enderecoTravado}
+                    {...register("objeto_uf")}
+                    className={`block w-full rounded-xl border py-2.5 px-3 text-sm uppercase placeholder:text-slate-400 placeholder:normal-case transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="2. Empresa e Responsáveis">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Empresa executora</label>
+              <select {...register("empresa_ref_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+                <option value="">Selecione...</option>
+                {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Órgão demandante</label>
+              <select {...register("orgao_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+                <option value="">Selecione...</option>
+                {orgaos.map((o) => <option key={o.id} value={o.id}>{o.sigla}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Fiscal</label>
+              <select {...register("fiscal_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+                <option value="">Selecione...</option>
+                {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Gestor</label>
+              <select {...register("gestor_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+                <option value="">Selecione...</option>
+                {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
+              </select>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="3. Dados do Objeto">
+          {/* Núcleo do objeto principal: campos + itens deste objeto */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">1</span>
+              <h3 className="text-sm font-bold text-slate-800">Objeto principal</h3>
+            </div>
+
+          <Field label="Título do objeto" id="objeto_titulo" required registration={register("objeto_titulo")} />
+          <Field label="Descrição do objeto" id="objeto_descricao" type="textarea" registration={register("objeto_descricao")} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-700">Status</label>
+              <select {...register("objeto_status")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+                <option value="PLANEJADA">Planejada</option>
+                <option value="EM_EXECUCAO">Em Execução</option>
+                <option value="PARALISADA">Paralisada</option>
+                <option value="CONCLUIDA">Concluída</option>
+              </select>
+            </div>
+            <Field label="Data Início" id="objeto_data_inicio" type="date" registration={register("objeto_data_inicio")} />
+            <Field label="Previsão Fim" id="objeto_data_fim_prevista" type="date" registration={register("objeto_data_fim_prevista")} />
+          </div>
+
+          <label className="flex items-center gap-2.5 cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={incluirEndereco}
+              onChange={(e) => setIncluirEndereco(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer"
+            />
+            <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              Incluir endereço
+            </span>
+          </label>
+
+          {incluirEndereco && (
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
@@ -407,168 +568,16 @@ const CadastrarContrato = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          <div className="pt-4 border-t border-slate-200">
+            <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
+            <CatalogoItensManager objetoId={objetoId} />
           </div>
-        </Section>
-
-        <Section title="2. Empresa e Responsáveis">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Empresa executora</label>
-              <select {...register("empresa_ref_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                <option value="">Selecione...</option>
-                {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Órgão demandante</label>
-              <select {...register("orgao_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                <option value="">Selecione...</option>
-                {orgaos.map((o) => <option key={o.id} value={o.id}>{o.sigla}{o.nome ? ` — ${o.nome}` : ""}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Fiscal</label>
-              <select {...register("fiscal_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                <option value="">Selecione...</option>
-                {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-slate-700">Gestor</label>
-              <select {...register("gestor_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                <option value="">Selecione...</option>
-                {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-              </select>
-            </div>
-          </div>
-        </Section>
-
-        <Section title="3. Dados do Objeto">
-          {/* Núcleo do objeto principal: campos + (após criar) itens deste objeto */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">1</span>
-              <h3 className="text-sm font-bold text-slate-800">Objeto principal</h3>
-            </div>
-
-            <Field label="Título do objeto" id="objeto_titulo" required error={errors.objeto_titulo?.message as string} registration={register("objeto_titulo", { required: "Informe o título do objeto" })} />
-            <Field label="Descrição do objeto" id="objeto_descricao" type="textarea" registration={register("objeto_descricao")} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Status</label>
-                <select {...register("objeto_status")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                  <option value="PLANEJADA">Planejada</option>
-                  <option value="EM_EXECUCAO">Em Execução</option>
-                  <option value="PARALISADA">Paralisada</option>
-                  <option value="CONCLUIDA">Concluída</option>
-                </select>
-              </div>
-              <Field label="Data Início" id="objeto_data_inicio" type="date" registration={register("objeto_data_inicio")} />
-              <Field label="Previsão Fim" id="objeto_data_fim_prevista" type="date" registration={register("objeto_data_fim_prevista")} />
-            </div>
-
-            <label className="flex items-center gap-2.5 cursor-pointer w-fit">
-              <input
-                type="checkbox"
-                checked={incluirEndereco}
-                onChange={(e) => setIncluirEndereco(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer"
-              />
-              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                <MapPin className="h-4 w-4 text-slate-400" />
-                Incluir endereço
-              </span>
-            </label>
-
-            {incluirEndereco && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="s3-objeto_cep" className="block text-sm font-medium text-slate-700">CEP</label>
-                    <div className="relative">
-                      {(() => {
-                        const cepReg = register("objeto_cep");
-                        return (
-                          <input
-                            id="s3-objeto_cep"
-                            inputMode="numeric"
-                            maxLength={9}
-                            placeholder="00000-000"
-                            {...cepReg}
-                            onChange={(e) => { cepReg.onChange(e); handleCepChange(e.target.value); }}
-                            onBlur={(e) => { cepReg.onBlur(e); buscarCep(e.target.value); }}
-                            className={`block w-full rounded-xl border ${cepStatus === "error" ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
-                          />
-                        );
-                      })()}
-                      {cepStatus === "loading" && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />}
-                    </div>
-                    {cepStatus === "error"
-                      ? <p className="text-xs text-rose-600 mt-0.5">CEP inválido ou não encontrado.</p>
-                      : enderecoTravado
-                        ? <p className="text-xs text-slate-500 mt-0.5">Endereço preenchido pelo CEP. Apague o CEP para editar.</p>
-                        : <p className="text-xs text-slate-400 mt-0.5">8 dígitos — preenche o endereço automaticamente.</p>}
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field label="Logradouro" id="s3-objeto_logradouro" placeholder="Rua, avenida, etc." readOnly={enderecoTravado} registration={register("objeto_logradouro")} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Field label="Número" id="s3-objeto_numero" registration={register("objeto_numero")} />
-                  <Field label="Conjunto" id="s3-objeto_conjunto" placeholder="Bloco, quadra, lote..." registration={register("objeto_conjunto")} />
-                  <Field label="Bairro" id="s3-objeto_bairro" readOnly={enderecoTravado} registration={register("objeto_bairro")} />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label htmlFor="s3-objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
-                    <input
-                      id="s3-objeto_municipio"
-                      list="municipios-list-s3"
-                      readOnly={enderecoTravado}
-                      {...register("objeto_municipio")}
-                      className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                    />
-                    <datalist id="municipios-list-s3">
-                      {municipios.map((m) => <option key={m} value={m} />)}
-                    </datalist>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="s3-objeto_uf" className="block text-sm font-medium text-slate-700">Estado (UF)</label>
-                    <input
-                      id="s3-objeto_uf"
-                      maxLength={2}
-                      placeholder="UF"
-                      readOnly={enderecoTravado}
-                      {...register("objeto_uf")}
-                      className={`block w-full rounded-xl border py-2.5 px-3 text-sm uppercase placeholder:text-slate-400 placeholder:normal-case transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-slate-200">
-              <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
-              {createdObjetoId ? (
-                <CatalogoItensManager objetoId={createdObjetoId} />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleSubmit(onSubmit)()}
-                  className="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 border-dashed rounded-xl transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar item do catálogo
-                </button>
-              )}
-            </div>
           </div>
 
-          {/* Núcleos dos demais objetos (todos menos o principal, por id —
-              a ordem da listagem não é garantida) */}
-          {objetos.filter((o) => o.id !== createdObjetoId).map((obj, idx) => (
+          {/* Núcleos dos demais objetos do contrato (cada um com seus itens) */}
+          {objetos.slice(1).map((obj, idx) => (
             <div key={obj.id} className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -589,7 +598,7 @@ const CadastrarContrato = () => {
             </div>
           ))}
 
-          {/* Cadastro inline de novo objeto (cria o contrato antes, se preciso) */}
+          {/* Cadastro inline de novo objeto */}
           {addingObjeto ? (
             <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-4 space-y-4">
               <div className="flex items-center gap-2">
@@ -623,11 +632,14 @@ const CadastrarContrato = () => {
                   <label htmlFor="novo_objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
                   <input
                     id="novo_objeto_municipio"
-                    list="municipios-list"
+                    list="municipios-list-novo"
                     value={novoObjeto.municipio}
                     onChange={(e) => setNovoObjeto({ ...novoObjeto, municipio: e.target.value })}
                     className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
                   />
+                  <datalist id="municipios-list-novo">
+                    {municipios.map((m) => <option key={m} value={m} />)}
+                  </datalist>
                 </div>
                 <div className="space-y-1.5">
                   <label htmlFor="novo_objeto_status" className="block text-sm font-medium text-slate-700">Status</label>
@@ -692,7 +704,7 @@ const CadastrarContrato = () => {
           ) : (
             <button
               type="button"
-              onClick={handleAddObjetoClick}
+              onClick={() => setAddingObjeto(true)}
               className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand-700 hover:text-brand-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -703,7 +715,7 @@ const CadastrarContrato = () => {
 
         <Section title="4. Financeiro">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Valor global inicial (R$)" id="valor_global" type="number" step="0.01" required error={errors.valor_global?.message as string} registration={register("valor_global", { required: "Informe o valor global" })} />
+            <Field label="Valor global inicial (R$)" id="valor_global" type="number" step="0.01" required registration={register("valor_global")} />
             <Field label="Valor reajustado (R$)" id="valor_reajustado" type="number" step="0.01" registration={register("valor_reajustado")} />
             <Field label="Valor final (R$)" id="valor_final" type="number" step="0.01" registration={register("valor_final")} />
             <Field label="Recurso Federal (R$)" id="recurso_federal" type="number" step="0.01" registration={register("recurso_federal")} />
@@ -713,44 +725,21 @@ const CadastrarContrato = () => {
         </Section>
 
         <div className="flex items-center gap-3 pt-6 border-t border-slate-200 mt-6">
-          {!createdId ? (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate("/contratos")}
-                className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-50"
-              >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Cadastrar
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2.5 inline-flex items-center justify-center gap-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all disabled:opacity-50"
-              >
-                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                Salvar alterações
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/contratos/${createdId}`)}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                Concluir
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            onClick={() => navigate(`/contratos/${id}`)}
+            className="px-5 py-2.5 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-8 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Salvar alterações
+          </button>
         </div>
 
       </form>
@@ -758,4 +747,4 @@ const CadastrarContrato = () => {
   );
 };
 
-export default CadastrarContrato;
+export default EditarContrato;

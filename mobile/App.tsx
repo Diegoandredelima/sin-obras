@@ -19,6 +19,7 @@ import { useAuthStore } from './src/store/auth';
 import CheckinScreen from './src/screens/CheckinScreen';
 import ChecklistScreen from './src/screens/ChecklistScreen';
 import ResultadoVistoriaScreen from './src/screens/ResultadoVistoriaScreen';
+import MedicaoScreen from './src/screens/MedicaoScreen';
 import SyncScreen from './src/screens/SyncScreen';
 
 // Placeholder screens
@@ -27,7 +28,7 @@ import { View, StyleSheet } from 'react-native';
 function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.centered}>
-      <Text style={styles.homeTitle}>SIN-Obras Fiscal</Text>
+      <Text style={styles.homeTitle}>SIN-Objetos Fiscal</Text>
       <Text style={styles.homeSub}>Selecione uma vistoria para iniciar</Text>
       {/* Botão de check-in para demo */}
       <Text
@@ -35,6 +36,12 @@ function HomeScreen({ navigation }: any) {
         onPress={() => navigation.navigate('Checkin')}
       >
         📍 Iniciar Check-in
+      </Text>
+      <Text
+        style={styles.homeBtn}
+        onPress={() => navigation.navigate('Medicao')}
+      >
+        📋 Nova Medição
       </Text>
     </View>
   );
@@ -58,7 +65,7 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Obras',
+          title: 'Objetos',
           tabBarIcon: ({ color }: { color: string }) => <Text style={{ fontSize: 20 }}>🏗</Text>,
         }}
       />
@@ -93,9 +100,10 @@ export default function App() {
             }}
           >
             <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-            <Stack.Screen name="Checkin" component={CheckinScreen} options={{ title: 'Check-in na Obra' }} />
+            <Stack.Screen name="Checkin" component={CheckinScreen} options={{ title: 'Check-in no Objeto' }} />
             <Stack.Screen name="Checklist" component={ChecklistScreen} options={{ title: 'Checklist de Vistoria' }} />
             <Stack.Screen name="ResultadoVistoria" component={ResultadoVistoriaScreen} options={{ title: 'Resultado da Vistoria' }} />
+            <Stack.Screen name="Medicao" component={MedicaoScreen} options={{ title: 'Nova Medição' }} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

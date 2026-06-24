@@ -4,14 +4,14 @@ import api from "@/services/api";
 import { fmtDate, fmtCurrency } from "@/utils/format";
 import type { CurvaSData } from "@/types";
 
-export const CurvaSContent = ({ obraId }: { obraId: string }) => {
+export const CurvaSContent = ({ objetoId }: { objetoId: string }) => {
   const { data, isLoading, error } = useQuery<CurvaSData>({
-    queryKey: ["curva-s", obraId],
+    queryKey: ["curva-s", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/curva-s/obras/${obraId}`);
+      const { data } = await api.get(`/curva-s/objetos/${objetoId}`);
       return data;
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   if (isLoading) {
