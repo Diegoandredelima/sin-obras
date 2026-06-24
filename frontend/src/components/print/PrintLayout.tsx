@@ -7,7 +7,7 @@ interface Props {
   subtitle?: string;
   /** Quando true, dispara automaticamente o diálogo de impressão (uma vez). */
   ready: boolean;
-  /** Orientação da página impressa. Lista de obras usa "landscape". */
+  /** Orientação da página impressa. Lista de objetos usa "landscape". */
   orientation?: "portrait" | "landscape";
   /** Atraso (ms) antes de abrir o diálogo de impressão. Maior em lotes. */
   printDelay?: number;
@@ -18,7 +18,7 @@ interface Props {
  * Layout standalone para documentos imprimíveis (sem sidebar do app).
  * Renderiza cabeçalho institucional com brasão do RN, dispara `window.print()`
  * quando os dados terminam de carregar e registra quem emitiu o documento.
- * Reutilizado nos relatórios de lista, obra e contrato.
+ * Reutilizado nos relatórios de lista, objeto e contrato.
  */
 const PrintLayout = ({ title, subtitle, ready, orientation = "portrait", printDelay = 500, children }: Props) => {
   const user = useAuthStore((s) => s.user);

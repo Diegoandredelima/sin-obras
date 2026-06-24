@@ -11,7 +11,7 @@ import type { Usuario } from "@/types";
 
 interface Alerta {
   id: string;
-  obra_id: string | null;
+  objeto_id: string | null;
   tipo: string;
   prioridade: string;
   titulo: string;
@@ -78,8 +78,8 @@ const AlertaCard = ({
 
       {!alerta.resolvido && (
         <div className="flex items-center gap-2 pt-1">
-          {alerta.obra_id && (
-            <Link to={`/obras/${alerta.obra_id}`} className="text-xs text-brand-700 hover:text-brand-500 font-medium">Ver obra →</Link>
+          {alerta.objeto_id && (
+            <Link to={`/objetos/${alerta.objeto_id}`} className="text-xs text-brand-700 hover:text-brand-500 font-medium">Ver objeto →</Link>
           )}
           <div className="flex-1" />
           <button onClick={() => onDelegar(alerta.id)} className="text-xs text-sky-600 hover:text-sky-500 font-medium flex items-center gap-1">

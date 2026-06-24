@@ -3,11 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileText, Plus, CheckCircle2, Clock, XCircle,
-  AlertCircle, ChevronRight, Shield, Lock, Loader2, Eye,
+  AlertCircle, ChevronRight, Shield, Lock, Loader2, Eye, Table2,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
-import { fmtDate } from "@/utils/format";
+import { fmtCurrency, fmtDate } from "@/utils/format";
 
 type MedicaoStatus = "RASCUNHO" | "ASSINADA" | "EM_FISCALIZACAO" | "APROVADA" | "REPROVADA";
 
@@ -15,10 +15,94 @@ interface Medicao {
   id: string;
   numero_medicao: number;
   status: MedicaoStatus;
+  origem?: "EMPRESA" | "FISCAL";
+  valor_medido?: string;
   criado_em: string;
   hash_assinatura: string | null;
   assinada_em?: string;
 }
+
+interface BoletimItem {
+  id: string;
+  descricao: string | null;
+  unidade: string | null;
+  quantidade_periodo: string;
+  valor_unitario: string;
+  valor_bruto: string;
+  acumulado_anterior: string;
+  acumulado_atual: string;
+  saldo: string;
+}
+
+interface Boletim {
+  numero_medicao: number;
+  itens: BoletimItem[];
+  valor_bruto_total: string;
+  valor_faturamento_direto: string;
+  retencao: string;
+  valor_liquido: string;
+}
+
+const BoletimModal = ({ medicaoId, numero, onClose }: { medicaoId: string; numero: number; onClose: () => void }) => {
+  const { data: boletim, isLoading } = useQuery<Boletim>({
+    queryKey: ["boletim", medicaoId],
+    queryFn: async () => {
+      const { data } = await api.get(`/empresa/medicoes/${medicaoId}/boletim`);
+      return data;
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">Boletim da Medição #{numero}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><XCircle className="h-5 w-5" /></button>
+        </div>
+        {isLoading || !boletim ? (
+          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 text-slate-300 animate-spin" /></div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-[11px] uppercase text-slate-400">
+                  <tr>
+                    <th className="text-left p-3">Item</th>
+                    <th className="text-right p-3">Qtd</th>
+                    <th className="text-right p-3">Vlr unit.</th>
+                    <th className="text-right p-3">Bruto</th>
+                    <th className="text-right p-3">Acum. ant.</th>
+                    <th className="text-right p-3">Acum. atual</th>
+                    <th className="text-right p-3">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {boletim.itens.map((it) => (
+                    <tr key={it.id} className="border-t border-slate-50">
+                      <td className="p-3 text-slate-700">{it.descricao} <span className="text-slate-400">({it.unidade})</span></td>
+                      <td className="p-3 text-right">{Number(it.quantidade_periodo)}</td>
+                      <td className="p-3 text-right">{fmtCurrency(it.valor_unitario)}</td>
+                      <td className="p-3 text-right font-semibold">{fmtCurrency(it.valor_bruto)}</td>
+                      <td className="p-3 text-right text-slate-500">{fmtCurrency(it.acumulado_anterior)}</td>
+                      <td className="p-3 text-right text-slate-500">{fmtCurrency(it.acumulado_atual)}</td>
+                      <td className="p-3 text-right text-slate-500">{fmtCurrency(it.saldo)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm">
+              <span className="text-slate-500">Bruto: <b className="text-slate-700">{fmtCurrency(boletim.valor_bruto_total)}</b></span>
+              <span className="text-slate-500">Faturamento direto: <b className="text-slate-700">- {fmtCurrency(boletim.valor_faturamento_direto)}</b></span>
+              <span className="text-slate-500">Retenção: <b className="text-slate-700">- {fmtCurrency(boletim.retencao)}</b></span>
+              <span className="text-base text-slate-700">Líquido: <b className="text-emerald-600">{fmtCurrency(boletim.valor_liquido)}</b></span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const STATUS_CONFIG: Record<MedicaoStatus, { label: string; cls: string; icon: LucideIcon }> = {
   RASCUNHO: { label: "Rascunho", cls: "bg-slate-100 text-slate-600", icon: Clock },
@@ -40,12 +124,12 @@ interface VistoriaResumo {
 
 interface AvaliarModalProps {
   medicao: Medicao;
-  obraId: string;
+  objetoId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const AvaliarModal = ({ medicao, obraId, onClose, onSuccess }: AvaliarModalProps) => {
+const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalProps) => {
   const queryClient = useQueryClient();
   const [aprovada, setAprovada] = useState<boolean>(true);
   const [observacao, setObservacao] = useState("");
@@ -73,7 +157,7 @@ const AvaliarModal = ({ medicao, obraId, onClose, onSuccess }: AvaliarModalProps
         aprovada,
         observacao_fiscal: observacao,
       });
-      queryClient.invalidateQueries({ queryKey: ["medicoes", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["medicoes", objetoId] });
       onSuccess();
     } catch {
       setError("Erro ao avaliar medição. Tente novamente.");
@@ -257,7 +341,7 @@ const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }: AssinaturaMo
       <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800 space-y-1">
         <p className="font-semibold flex items-center gap-1.5"><Lock className="h-4 w-4" /> Verificações automáticas:</p>
         <ul className="list-disc list-inside space-y-0.5 pl-1">
-          <li>ART/RRT ativa e vinculada à obra</li>
+          <li>ART/RRT ativa e vinculada ao objeto</li>
           <li>Geração de hash SHA-256 do conteúdo</li>
           <li>Registro de timestamp imutável</li>
         </ul>
@@ -276,20 +360,21 @@ const AssinaturaModal = ({ medicao, onConfirm, onCancel, loading }: AssinaturaMo
   </div>
 );
 
-export const MedicoesContent = ({ obraId }: { obraId: string }) => {
+export const MedicoesContent = ({ objetoId }: { objetoId: string }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [assinarModal, setAssinarModal] = useState<Medicao | null>(null);
   const [avaliarModal, setAvaliarModal] = useState<Medicao | null>(null);
+  const [boletimModal, setBoletimModal] = useState<Medicao | null>(null);
   const [assinarLoading, setAssinarLoading] = useState(false);
 
   const { data: medicoes = [], isLoading, isError } = useQuery<Medicao[]>({
-    queryKey: ["medicoes", obraId],
+    queryKey: ["medicoes", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/empresa/obras/${obraId}/medicoes`);
+      const { data } = await api.get(`/empresa/objetos/${objetoId}/medicoes`);
       return data;
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   const handleAssinar = async () => {
@@ -297,7 +382,7 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
     setAssinarLoading(true);
     try {
       await api.post(`/empresa/medicoes/${assinarModal.id}/assinar`, { confirmado: true });
-      queryClient.invalidateQueries({ queryKey: ["medicoes", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["medicoes", objetoId] });
       setAssinarModal(null);
     } catch (e: unknown) {
       const detail =
@@ -314,7 +399,7 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">{medicoes.length} medições</span>
-        <button onClick={() => navigate("/empresa/medicoes/nova")}
+        <button onClick={() => navigate(`/empresa/objetos/${objetoId}/medicoes/nova`)}
           className="inline-flex items-center gap-2 px-3 py-2 bg-brand-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-brand-700/20 hover:bg-brand-500 transition-all">
           <Plus className="h-3.5 w-3.5" />
           Nova Medição
@@ -350,10 +435,14 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
                   <FileText className="h-5 w-5 text-slate-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900">Medição #{m.numero_medicao}</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    Medição #{m.numero_medicao}
+                    {m.origem === "FISCAL" && <span className="ml-2 text-[10px] font-semibold uppercase text-amber-600">fiscal</span>}
+                  </p>
                   <p className="text-xs text-slate-400">
                     Criada em {fmtDate(m.criado_em)}
                     {m.assinada_em && ` • Assinada em ${fmtDate(m.assinada_em)}`}
+                    {m.valor_medido != null && Number(m.valor_medido) > 0 && ` • Líquido ${fmtCurrency(m.valor_medido)}`}
                   </p>
                   {m.hash_assinatura && (
                     <p className="text-xs font-mono text-slate-300 truncate max-w-xs mt-0.5">
@@ -379,6 +468,10 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
                     <Eye className="h-3.5 w-3.5" /> Avaliar
                   </button>
                 )}
+                <button onClick={() => setBoletimModal(m)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl transition-all">
+                  <Table2 className="h-3.5 w-3.5" /> Boletim
+                </button>
                 <button className="flex items-center gap-1 text-slate-400 hover:text-slate-700 transition-colors">
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -400,9 +493,17 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
       {avaliarModal && (
         <AvaliarModal
           medicao={avaliarModal}
-          obraId={obraId}
+          objetoId={objetoId}
           onClose={() => setAvaliarModal(null)}
           onSuccess={() => setAvaliarModal(null)}
+        />
+      )}
+
+      {boletimModal && (
+        <BoletimModal
+          medicaoId={boletimModal.id}
+          numero={boletimModal.numero_medicao}
+          onClose={() => setBoletimModal(null)}
         />
       )}
     </div>
@@ -410,16 +511,16 @@ export const MedicoesContent = ({ obraId }: { obraId: string }) => {
 };
 
 const Medicoes = () => {
-  const { obraId } = useParams<{ obraId: string }>();
-  const id = obraId || "1";
+  const { objetoId } = useParams<{ objetoId: string }>();
+  const id = objetoId || "1";
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Medições</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Obra: CRAS Cidade Nova</p>
+        <p className="text-sm text-slate-500 mt-0.5">Objeto: CRAS Cidade Nova</p>
       </div>
-      <MedicoesContent obraId={id} />
+      <MedicoesContent objetoId={id} />
     </div>
   );
 };

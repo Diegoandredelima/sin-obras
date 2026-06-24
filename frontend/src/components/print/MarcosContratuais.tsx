@@ -10,7 +10,7 @@ interface ContratoBase {
 }
 
 interface Props {
-  obraId: string;
+  objetoId: string;
   /** Quando informado, busca o contrato para o marco de assinatura/valor. */
   contratoId?: string | null;
 }
@@ -24,19 +24,19 @@ interface Marco {
 }
 
 /**
- * Linha do tempo de marcos contratuais da obra: assinatura, ordem de serviço,
+ * Linha do tempo de marcos contratuais do objeto: assinatura, ordem de serviço,
  * aditivos de prazo, readequações/aditivos de valor, apostilamentos,
  * paralisações e termos de recebimento. Fonte: contrato + eventos contratuais
- * (`/acompanhamento/obras/{id}/eventos`).
+ * (`/acompanhamento/objetos/{id}/eventos`).
  */
-const MarcosContratuais = ({ obraId, contratoId }: Props) => {
+const MarcosContratuais = ({ objetoId, contratoId }: Props) => {
   const { data: eventos } = useQuery<EventosContratuais>({
-    queryKey: ["marcos-eventos", obraId],
+    queryKey: ["marcos-eventos", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/acompanhamento/obras/${obraId}/eventos`);
+      const { data } = await api.get(`/acompanhamento/objetos/${objetoId}/eventos`);
       return data;
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
     retry: false,
   });
 

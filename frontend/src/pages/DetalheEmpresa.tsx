@@ -127,8 +127,8 @@ const DetalheEmpresa = () => {
               <p className="text-xs text-sky-600 font-medium">Contratos</p>
             </div>
             <div className="bg-brand-50 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-brand-700">{empresa.total_obras}</p>
-              <p className="text-xs text-brand-600 font-medium">Obras</p>
+              <p className="text-2xl font-bold text-brand-700">{empresa.total_objetos}</p>
+              <p className="text-xs text-brand-600 font-medium">Objetos</p>
             </div>
             <div className="bg-slate-50 rounded-xl p-4 text-center">
               <p className="text-2xl font-bold text-slate-700">{contratos.length}</p>

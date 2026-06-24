@@ -1,11 +1,23 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, BookOpen, CloudSun, AlertCircle, Users, Loader2 } from "lucide-react";
+import { Plus, BookOpen, CloudSun, AlertCircle, Users, Loader2, Trash2, Wrench, HardHat, CloudRain } from "lucide-react";
 import api from "@/services/api";
 import { fmtDate } from "@/utils/format";
 
-const CLIMA_OPTIONS = ["Ensolarado", "Nublado", "Parcialmente nublado", "Chuvoso", "Tempestade", "Ventoso"];
+// Condições de tempo do RDO (espelham o enum CondicaoTempo do backend).
+const TEMPO_OPTIONS = [
+  { value: "BOM", label: "Bom" },
+  { value: "CHUVA_FRACA", label: "Chuva fraca" },
+  { value: "CHUVA_FORTE", label: "Chuva forte" },
+] as const;
+const TEMPO_LABEL: Record<string, string> = Object.fromEntries(TEMPO_OPTIONS.map((o) => [o.value, o.label]));
+
+const INPUT_CLS =
+  "block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all";
+
+interface EquipLinha { nome: string; quantidade: number }
+interface MaoObraLinha { funcao: string; quantidade: number }
 
 interface RegistroDiario {
   id: string;
@@ -15,25 +27,88 @@ interface RegistroDiario {
   atividades_realizadas?: string;
   ocorrencias?: string;
   equipamentos?: string;
+  tempo_manha?: string | null;
+  tempo_tarde?: string | null;
+  pluviometria_mm?: number | string | null;
+  equipamentos_lista?: EquipLinha[] | null;
+  mao_de_obra?: MaoObraLinha[] | null;
+  observacoes_fiscal?: string | null;
 }
 
 interface DiarioFormData {
   data_registro: string;
-  clima: string;
-  qtd_funcionarios: number;
-  equipamentos: string;
+  tempo_manha: string;
+  tempo_tarde: string;
+  pluviometria_mm: string;
+  equipamentos_lista: EquipLinha[];
+  mao_de_obra: MaoObraLinha[];
   atividades_realizadas: string;
   ocorrencias: string;
+  observacoes_fiscal: string;
 }
 
-const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess: () => void; onCancel: () => void }) => {
+/** Editor de linhas {label-field, quantidade} para Equipamento e Mão de Objeto. */
+const ListaQuantidade = <T extends { quantidade: number }>({
+  titulo, icon, linhas, campoNome, placeholder, onChange,
+}: {
+  titulo: string;
+  icon: React.ReactNode;
+  linhas: T[];
+  campoNome: Exclude<keyof T, "quantidade"> & string;
+  placeholder: string;
+  onChange: (linhas: T[]) => void;
+}) => {
+  const setLinha = (i: number, patch: Partial<T>) =>
+    onChange(linhas.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const addLinha = () => onChange([...linhas, { [campoNome]: "", quantidade: 1 } as unknown as T]);
+  const removeLinha = (i: number) => onChange(linhas.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">{icon}{titulo}</label>
+        <button type="button" onClick={addLinha}
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:text-brand-500 transition-colors">
+          <Plus className="h-3.5 w-3.5" /> Adicionar
+        </button>
+      </div>
+      {linhas.length === 0 ? (
+        <p className="text-xs text-slate-400">Nenhum item.</p>
+      ) : (
+        <div className="space-y-2">
+          {linhas.map((l, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input value={String(l[campoNome] ?? "")} placeholder={placeholder}
+                onChange={(e) => setLinha(i, { [campoNome]: e.target.value } as unknown as Partial<T>)}
+                className={INPUT_CLS + " flex-1"}
+              />
+              <input type="number" min="0" step="1" value={Number(l.quantidade)} aria-label="Quantidade"
+                onChange={(e) => setLinha(i, { quantidade: Number(e.target.value) } as Partial<T>)}
+                className={INPUT_CLS + " w-24"}
+              />
+              <button type="button" onClick={() => removeLinha(i)}
+                className="p-2 text-slate-400 hover:text-rose-500 transition-colors" aria-label="Remover">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DiarioForm = ({ objetoId, onSuccess, onCancel }: { objetoId: string; onSuccess: () => void; onCancel: () => void }) => {
   const [form, setForm] = useState<DiarioFormData>({
     data_registro: new Date().toISOString().split("T")[0],
-    clima: "",
-    qtd_funcionarios: 0,
-    equipamentos: "",
+    tempo_manha: "",
+    tempo_tarde: "",
+    pluviometria_mm: "",
+    equipamentos_lista: [],
+    mao_de_obra: [],
     atividades_realizadas: "",
     ocorrencias: "",
+    observacoes_fiscal: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +119,22 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post(`/empresa/obras/${obraId}/diario`, form);
+      const equipamentos = form.equipamentos_lista.filter((l) => l.nome.trim());
+      const maoObra = form.mao_de_obra.filter((l) => l.funcao.trim());
+      const payload = {
+        data_registro: form.data_registro,
+        tempo_manha: form.tempo_manha || null,
+        tempo_tarde: form.tempo_tarde || null,
+        pluviometria_mm: form.pluviometria_mm === "" ? null : Number(form.pluviometria_mm),
+        // Soma da mão de obra mantém o campo legado qtd_funcionarios coerente.
+        qtd_funcionarios: maoObra.reduce((s, l) => s + (Number(l.quantidade) || 0), 0),
+        equipamentos_lista: equipamentos.length ? equipamentos : null,
+        mao_de_obra: maoObra.length ? maoObra : null,
+        atividades_realizadas: form.atividades_realizadas,
+        ocorrencias: form.ocorrencias,
+        observacoes_fiscal: form.observacoes_fiscal || null,
+      };
+      await api.post(`/empresa/objetos/${objetoId}/diario`, payload);
       onSuccess();
     } catch {
       /* TODO: error handling */
@@ -57,50 +147,66 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
       <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
         <Plus className="h-4 w-4 text-brand-500" />
-        Novo Registro — {new Date().toLocaleDateString("pt-BR")}
+        Novo Registro (RDO) — {new Date().toLocaleDateString("pt-BR")}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-slate-700">Data</label>
-            <input type="date" value={form.data_registro} onChange={update("data_registro")} required
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-            />
+            <input type="date" value={form.data_registro} onChange={update("data_registro")} required className={INPUT_CLS} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Clima</label>
-            <select value={form.clima} onChange={update("clima")}
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-            >
+            <label className="text-sm font-medium text-slate-700">Tempo (manhã)</label>
+            <select value={form.tempo_manha} onChange={update("tempo_manha")} className={INPUT_CLS}>
               <option value="">Selecione</option>
-              {CLIMA_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              {TEMPO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Nº de Funcionários</label>
-            <input type="number" min="0" value={form.qtd_funcionarios} onChange={update("qtd_funcionarios")} required
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-            />
+            <label className="text-sm font-medium text-slate-700">Tempo (tarde)</label>
+            <select value={form.tempo_tarde} onChange={update("tempo_tarde")} className={INPUT_CLS}>
+              <option value="">Selecione</option>
+              {TEMPO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-slate-700">Pluviometria (mm)</label>
+            <input type="number" min="0" step="0.1" value={form.pluviometria_mm} onChange={update("pluviometria_mm")}
+              placeholder="0" className={INPUT_CLS} />
           </div>
         </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <ListaQuantidade<EquipLinha>
+            titulo="Equipamentos" icon={<Wrench className="h-4 w-4 text-slate-400" />}
+            linhas={form.equipamentos_lista} campoNome="nome" placeholder="Ex: Betoneira"
+            onChange={(linhas) => setForm({ ...form, equipamentos_lista: linhas })}
+          />
+          <ListaQuantidade<MaoObraLinha>
+            titulo="Mão de objeto" icon={<HardHat className="h-4 w-4 text-slate-400" />}
+            linhas={form.mao_de_obra} campoNome="funcao" placeholder="Ex: Pedreiro"
+            onChange={(linhas) => setForm({ ...form, mao_de_obra: linhas })}
+          />
+        </div>
+
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">Atividades Realizadas <span className="text-rose-500">*</span></label>
           <textarea rows={3} required value={form.atividades_realizadas} onChange={update("atividades_realizadas")}
             placeholder="Descreva as atividades executadas hoje..."
-            className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
+            className={INPUT_CLS + " resize-none"}
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Equipamentos</label>
-            <textarea rows={2} value={form.equipamentos} onChange={update("equipamentos")} placeholder="Ex: 1 betoneira, 1 grua..."
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
+            <label className="text-sm font-medium text-slate-700">Ocorrências</label>
+            <textarea rows={2} value={form.ocorrencias} onChange={update("ocorrencias")} placeholder="Ocorrências, paralisações, acidentes..."
+              className={INPUT_CLS + " resize-none"}
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700">Ocorrências</label>
-            <textarea rows={2} value={form.ocorrencias} onChange={update("ocorrencias")} placeholder="Ocorrências, paralisações, acidentes..."
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
+            <label className="text-sm font-medium text-slate-700">Observações da Fiscalização</label>
+            <textarea rows={2} value={form.observacoes_fiscal} onChange={update("observacoes_fiscal")} placeholder="Preenchimento do fiscal..."
+              className={INPUT_CLS + " resize-none"}
             />
           </div>
         </div>
@@ -119,17 +225,17 @@ const DiarioForm = ({ obraId, onSuccess, onCancel }: { obraId: string; onSuccess
   );
 };
 
-export const DiarioContent = ({ obraId }: { obraId: string }) => {
+export const DiarioContent = ({ objetoId }: { objetoId: string }) => {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
 
   const { data: registros = [], isLoading, isError } = useQuery<RegistroDiario[]>({
-    queryKey: ["diario", obraId],
+    queryKey: ["diario", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/empresa/obras/${obraId}/diario`);
+      const { data } = await api.get(`/empresa/objetos/${objetoId}/diario`);
       return data;
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   return (
@@ -147,8 +253,8 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
 
       {showForm && (
         <DiarioForm
-          obraId={obraId}
-          onSuccess={() => { setShowForm(false); queryClient.invalidateQueries({ queryKey: ["diario", obraId] }); }}
+          objetoId={objetoId}
+          onSuccess={() => { setShowForm(false); queryClient.invalidateQueries({ queryKey: ["diario", objetoId] }); }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -181,9 +287,18 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
                   <span className="text-sm font-bold text-slate-900">
                     {r.data_registro ? fmtDate(r.data_registro + "T12:00:00", new Date(r.data_registro + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })) : "—"}
                   </span>
-                  {r.clima && (
+                  {(r.tempo_manha || r.tempo_tarde) ? (
+                    <span className="flex items-center gap-1 text-xs font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                      <CloudSun className="h-3.5 w-3.5" /> Manhã: {TEMPO_LABEL[r.tempo_manha || ""] || "—"} · Tarde: {TEMPO_LABEL[r.tempo_tarde || ""] || "—"}
+                    </span>
+                  ) : r.clima ? (
                     <span className="flex items-center gap-1 text-xs font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
                       <CloudSun className="h-3.5 w-3.5" /> {r.clima}
+                    </span>
+                  ) : null}
+                  {r.pluviometria_mm != null && Number(r.pluviometria_mm) > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
+                      <CloudRain className="h-3.5 w-3.5" /> {Number(r.pluviometria_mm)} mm
                     </span>
                   )}
                   <span className="flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
@@ -202,10 +317,32 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
                     <p className="text-sm text-amber-800">{r.ocorrencias}</p>
                   </div>
                 )}
-                {r.equipamentos && (
-                  <div>
-                    <p className="text-xs font-semibold text-slate-400 mb-0.5 uppercase tracking-wide">Equipamentos</p>
-                    <p className="text-xs text-slate-500">{r.equipamentos}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(r.equipamentos_lista?.length || r.equipamentos) && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 mb-0.5 uppercase tracking-wide">Equipamentos</p>
+                      {r.equipamentos_lista?.length ? (
+                        <ul className="text-xs text-slate-500 space-y-0.5">
+                          {r.equipamentos_lista.map((e, i) => <li key={i}>{e.nome} — {e.quantidade}</li>)}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-slate-500">{r.equipamentos}</p>
+                      )}
+                    </div>
+                  )}
+                  {r.mao_de_obra?.length ? (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-400 mb-0.5 uppercase tracking-wide">Mão de objeto</p>
+                      <ul className="text-xs text-slate-500 space-y-0.5">
+                        {r.mao_de_obra.map((m, i) => <li key={i}>{m.funcao} — {m.quantidade}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+                {r.observacoes_fiscal && (
+                  <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <p className="text-xs font-semibold text-slate-400 mb-0.5 uppercase tracking-wide">Fiscalização</p>
+                    <p className="text-sm text-slate-600">{r.observacoes_fiscal}</p>
                   </div>
                 )}
               </div>
@@ -219,16 +356,16 @@ export const DiarioContent = ({ obraId }: { obraId: string }) => {
 };
 
 const DiarioObras = () => {
-  const { obraId } = useParams<{ obraId: string }>();
-  const id = obraId || "1";
+  const { objetoId } = useParams<{ objetoId: string }>();
+  const id = objetoId || "1";
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Diário de Obras</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Obra: CRAS Cidade Nova</p>
+        <p className="text-sm text-slate-500 mt-0.5">Objeto: CRAS Cidade Nova</p>
       </div>
-      <DiarioContent obraId={id} />
+      <DiarioContent objetoId={id} />
     </div>
   );
 };

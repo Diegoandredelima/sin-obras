@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import api from "@/services/api";
 import { fmtCurrency } from "@/utils/format";
-import type { RelatorioObraRow } from "@/types";
+import type { RelatorioObjetoRow } from "@/types";
 import RelatorioDetalhePanel from "@/components/RelatorioDetalhePanel";
 
 // ================================================================
@@ -145,7 +145,7 @@ const Relatorio = () => {
 
   const [advancedOpen, setAdvancedOpen]   = useState(false);
   const [selecionadas, setSelecionadas]   = useState<Set<string>>(new Set());
-  const [selectedRow, setSelectedRow]     = useState<RelatorioObraRow | null>(null);
+  const [selectedRow, setSelectedRow]     = useState<RelatorioObjetoRow | null>(null);
   const [sortKey, setSortKey]             = useState<SortKey | null>(null);
   const [sortDir, setSortDir]             = useState<SortDir>("asc");
 
@@ -185,25 +185,25 @@ const Relatorio = () => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Obras filtradas
-  const { data, isLoading, isError, isFetching } = useQuery<RelatorioObraRow[]>({
+  // Objetos filtradas
+  const { data, isLoading, isError, isFetching } = useQuery<RelatorioObjetoRow[]>({
     queryKey: ["rel-builder", aplicado],
     queryFn: async () => {
-      const { data } = await api.get("/relatorios/obras", { params: aplicado ?? {} });
+      const { data } = await api.get("/relatorios/objetos", { params: aplicado ?? {} });
       return data;
     },
     enabled: aplicado !== null,
   });
 
-  const obras = data ?? [];
-  const totalValor = obras.reduce(
+  const objetos = data ?? [];
+  const totalValor = objetos.reduce(
     (acc, o) => acc + Number(o.valor_final ?? o.valor_global ?? o.valor_contrato ?? 0), 0,
   );
 
   // Ordenação client-side
-  const obrasOrdenadas = useMemo(() => {
-    if (!sortKey) return obras;
-    return [...obras].sort((a, b) => {
+  const objetosOrdenadas = useMemo(() => {
+    if (!sortKey) return objetos;
+    return [...objetos].sort((a, b) => {
       let va: string | number = "";
       let vb: string | number = "";
       if (sortKey === "titulo")     { va = a.titulo ?? "";                    vb = b.titulo ?? ""; }
@@ -216,17 +216,17 @@ const Relatorio = () => {
       if (va > vb) return sortDir === "asc" ?  1 : -1;
       return 0;
     });
-  }, [obras, sortKey, sortDir]);
+  }, [objetos, sortKey, sortDir]);
 
   // Resumo por situação (cards)
   const resumoPorSituacao = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const o of obras) {
+    for (const o of objetos) {
       const sit = o.situacao ?? "—";
       counts[sit] = (counts[sit] ?? 0) + 1;
     }
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [obras]);
+  }, [objetos]);
 
   // ── Ações ──────────────────────────────────────────────────────
 
@@ -243,7 +243,7 @@ const Relatorio = () => {
     setSearchParams({});
   }
 
-  function toggleObra(id: string) {
+  function toggleObjeto(id: string) {
     setSelecionadas((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -252,7 +252,7 @@ const Relatorio = () => {
   }
   function toggleTodas() {
     setSelecionadas((prev) =>
-      prev.size === obras.length ? new Set() : new Set(obras.map((o) => o.obra_id)),
+      prev.size === objetos.length ? new Set() : new Set(objetos.map((o) => o.objeto_id)),
     );
   }
 
@@ -260,13 +260,13 @@ const Relatorio = () => {
     const n = selecionadas.size;
     if (n === 0) return;
     if (n > LOTE_MAX) {
-      alert(`Você selecionou ${n} obras. O limite para impressão individual em lote é ${LOTE_MAX}.`);
+      alert(`Você selecionou ${n} objetos. O limite para impressão individual em lote é ${LOTE_MAX}.`);
       return;
     }
     if (n > LOTE_AVISO && !window.confirm(
-      `Você selecionou ${n} obras. Serão geradas ${n} páginas. Deseja continuar?`,
+      `Você selecionou ${n} objetos. Serão geradas ${n} páginas. Deseja continuar?`,
     )) return;
-    window.open(`/relatorio/imprimir-obras?ids=${[...selecionadas].join(",")}`, "_blank", "noopener");
+    window.open(`/relatorio/imprimir-objetos?ids=${[...selecionadas].join(",")}`, "_blank", "noopener");
   }
 
   function imprimir(modo: "resumido" | "completo") {
@@ -276,22 +276,22 @@ const Relatorio = () => {
 
   async function exportarXlsx() {
     try {
-      const response = await api.get("/relatorios/export-obras", {
+      const response = await api.get("/relatorios/export-objetos", {
         params: aplicado ?? {},
         responseType: "blob",
       });
       const url  = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href  = url;
-      link.download = `obras_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.download = `objetos_${new Date().toISOString().slice(0, 10)}.xlsx`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      alert("Erro ao exportar obras.");
+      alert("Erro ao exportar objetos.");
     }
   }
 
-  const podeImprimir = aplicado !== null && obras.length > 0 && !stale;
+  const podeImprimir = aplicado !== null && objetos.length > 0 && !stale;
 
   // Header helper para colunas ordenáveis
   const Th = ({
@@ -329,7 +329,7 @@ const Relatorio = () => {
               value={draft.search}
               onChange={(e) => set("search", e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && gerar()}
-              placeholder="Buscar por obra, município, empresa ou nº de contrato..."
+              placeholder="Buscar por objeto, município, empresa ou nº de contrato..."
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-9 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
             />
             {draft.search && (
@@ -434,7 +434,7 @@ const Relatorio = () => {
         {/* Ação principal */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <span className="text-xs text-slate-400">
-            {draftFiltros > 0 ? `${draftFiltros} filtro(s) selecionado(s)` : "Nenhum filtro — gera todas as obras"}
+            {draftFiltros > 0 ? `${draftFiltros} filtro(s) selecionado(s)` : "Nenhum filtro — gera todas as objetos"}
             {draftFiltros > 0 && (
               <button onClick={limparTudo} className="ml-3 text-slate-400 hover:text-slate-600 underline">limpar</button>
             )}
@@ -465,7 +465,7 @@ const Relatorio = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-brand-50/60 border border-brand-100 rounded-2xl px-5 py-4">
             <div className="flex items-center gap-6 text-sm flex-wrap">
               <span className="text-slate-600">
-                <span className="font-bold text-slate-900">{isLoading ? "…" : obras.length}</span> obra(s)
+                <span className="font-bold text-slate-900">{isLoading ? "…" : objetos.length}</span> objeto(s)
               </span>
               <span className="text-slate-600">
                 Total: <span className="font-bold text-slate-900">{fmtCurrency(totalValor)}</span>
@@ -489,7 +489,7 @@ const Relatorio = () => {
                 onClick={imprimirIndividuais}
                 disabled={selecionadas.size === 0}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                title="Imprime o relatório individual de cada obra selecionada"
+                title="Imprime o relatório individual de cado objeto selecionada"
               >
                 <Printer className="h-4 w-4" /> Imprimir individuais{selecionadas.size > 0 ? ` (${selecionadas.size})` : ""}
               </button>
@@ -546,7 +546,7 @@ const Relatorio = () => {
               <span className="flex items-center gap-2">
                 {selecionadas.size > LOTE_AVISO && <AlertTriangle className="h-4 w-4 shrink-0" />}
                 <span>
-                  <span className="font-semibold">{selecionadas.size}</span> obra(s) selecionada(s) para impressão individual
+                  <span className="font-semibold">{selecionadas.size}</span> objeto(s) selecionada(s) para impressão individual
                   {selecionadas.size > LOTE_MAX
                     ? ` — acima do limite de ${LOTE_MAX}. Use "Imprimir Completo".`
                     : selecionadas.size > LOTE_AVISO
@@ -577,10 +577,10 @@ const Relatorio = () => {
                 <p className="text-sm font-medium text-slate-500">Erro ao carregar dados.</p>
                 <p className="text-xs text-slate-400 mt-1">Verifique se a migração da view foi aplicada (alembic upgrade head).</p>
               </div>
-            ) : obras.length === 0 ? (
+            ) : objetos.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-16 text-center">
                 <Building2 className="h-10 w-10 text-slate-300 mb-3" />
-                <p className="text-sm font-medium text-slate-500">Nenhuma obra encontrada para os filtros</p>
+                <p className="text-sm font-medium text-slate-500">Nenhum objeto encontrada para os filtros</p>
                 <button onClick={limparTudo} className="mt-3 text-xs text-brand-700 hover:text-brand-500">Limpar filtros</button>
               </div>
             ) : (
@@ -591,14 +591,14 @@ const Relatorio = () => {
                       <th className="px-4 py-2.5 font-semibold w-10">
                         <input
                           type="checkbox"
-                          checked={obras.length > 0 && selecionadas.size === obras.length}
-                          ref={(el) => { if (el) el.indeterminate = selecionadas.size > 0 && selecionadas.size < obras.length; }}
+                          checked={objetos.length > 0 && selecionadas.size === objetos.length}
+                          ref={(el) => { if (el) el.indeterminate = selecionadas.size > 0 && selecionadas.size < objetos.length; }}
                           onChange={toggleTodas}
                           className="h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-700/30 cursor-pointer"
                           title="Selecionar todas"
                         />
                       </th>
-                      <Th col="titulo"     label="Obra" />
+                      <Th col="titulo"     label="Objeto" />
                       <Th col="orgao"      label="Órgão"   className="hidden md:table-cell" />
                       <Th col="empresa"    label="Empresa" className="hidden lg:table-cell" />
                       <Th col="valor"      label="Valor"   className="text-right" />
@@ -608,20 +608,20 @@ const Relatorio = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {obrasOrdenadas.map((o) => {
+                    {objetosOrdenadas.map((o) => {
                       const sit = o.situacao ? SITUACAO_BADGE[o.situacao] : null;
                       return (
                         <tr
-                          key={o.obra_id}
+                          key={o.objeto_id}
                           onClick={() => setSelectedRow(o)}
-                          className={`cursor-pointer hover:bg-slate-50/70 transition-colors ${selecionadas.has(o.obra_id) ? "bg-brand-50/40" : ""}`}
+                          className={`cursor-pointer hover:bg-slate-50/70 transition-colors ${selecionadas.has(o.objeto_id) ? "bg-brand-50/40" : ""}`}
                         >
                           {/* Checkbox — stopPropagation para não abrir o painel */}
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
-                              checked={selecionadas.has(o.obra_id)}
-                              onChange={() => toggleObra(o.obra_id)}
+                              checked={selecionadas.has(o.objeto_id)}
+                              onChange={() => toggleObjeto(o.objeto_id)}
                               className="h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-700/30 cursor-pointer"
                             />
                           </td>

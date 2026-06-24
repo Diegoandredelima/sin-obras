@@ -39,7 +39,7 @@ const Empresas = () => {
   const totais = useMemo(() => ({
     empresas: empresas.length,
     contratos: empresas.reduce((s, e) => s + (e.total_contratos || 0), 0),
-    obras: empresas.reduce((s, e) => s + (e.total_obras || 0), 0),
+    objetos: empresas.reduce((s, e) => s + (e.total_objetos || 0), 0),
   }), [empresas]);
 
   const filtradas = useMemo(() => {
@@ -59,7 +59,7 @@ const Empresas = () => {
         <div>
           <p className="text-sm font-medium text-slate-400 mb-1">Cadastro</p>
           <h2 className="text-2xl font-bold text-slate-800">Empresas Executoras</h2>
-          <p className="text-sm text-slate-500 mt-1">Empresas contratadas para execução das obras.</p>
+          <p className="text-sm text-slate-500 mt-1">Empresas contratadas para execução das objetos.</p>
         </div>
         {podeEditar && (
           <Link
@@ -74,7 +74,7 @@ const Empresas = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card icon={Building2} label="Empresas cadastradas" value={totais.empresas} cls="bg-sky-50 text-sky-600" />
         <Card icon={Briefcase} label="Contratos vinculados" value={totais.contratos} cls="bg-brand-50 text-brand-700" />
-        <Card icon={HardHat} label="Obras executadas" value={totais.obras} cls="bg-accent-50 text-accent-600" />
+        <Card icon={HardHat} label="Objetos executadas" value={totais.objetos} cls="bg-accent-50 text-accent-600" />
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -130,8 +130,8 @@ const Empresas = () => {
                     <p className="text-[10px] text-slate-400">contratos</p>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-700">{e.total_obras}</p>
-                    <p className="text-[10px] text-slate-400">obras</p>
+                    <p className="text-sm font-bold text-slate-700">{e.total_objetos}</p>
+                    <p className="text-[10px] text-slate-400">objetos</p>
                   </div>
                 </div>
                 {podeEditar && (

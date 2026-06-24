@@ -7,10 +7,10 @@ const Privacidade = () => (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-700">1. Coleta de Dados</h2>
         <p className="text-sm text-slate-600 leading-relaxed">
-          O SIN-Obras coleta apenas os dados estritamente necessários para a gestão de obras
+          O SIN-Obras coleta apenas os dados estritamente necessários para a gestão de objetos
           públicas do Estado do Rio Grande do Norte. Isso inclui dados cadastrais de usuários
-          (nome, e-mail, matrícula institucional ou CNPJ), registros de obras, contratos,
-          medições e diários de obras.
+          (nome, e-mail, matrícula institucional ou CNPJ), registros de objetos, contratos,
+          medições e diários de objetos.
         </p>
       </section>
 
@@ -18,7 +18,7 @@ const Privacidade = () => (
         <h2 className="text-lg font-semibold text-slate-700">2. Finalidade</h2>
         <p className="text-sm text-slate-600 leading-relaxed">
           Os dados coletados são utilizados exclusivamente para fins de fiscalização,
-          acompanhamento, transparência e controle de obras públicas, em conformidade
+          acompanhamento, transparência e controle de objetos públicas, em conformidade
           com a legislação estadual e federal aplicável.
         </p>
       </section>

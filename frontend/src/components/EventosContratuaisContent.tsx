@@ -67,14 +67,14 @@ const TimelineItem = ({
   );
 };
 
-export const EventosContratuaisContent = ({ obraId }: { obraId: string }) => {
+export const EventosContratuaisContent = ({ objetoId }: { objetoId: string }) => {
   const { data, isLoading, error } = useQuery<EventosContratuais>({
-    queryKey: ["eventos-contratuais", obraId],
+    queryKey: ["eventos-contratuais", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/acompanhamento/obras/${obraId}/eventos`);
+      const { data } = await api.get(`/acompanhamento/objetos/${objetoId}/eventos`);
       return data;
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   if (isLoading) {
@@ -159,7 +159,7 @@ export const EventosContratuaisContent = ({ obraId }: { obraId: string }) => {
         <div className="flex flex-col items-center justify-center py-16 text-slate-300">
           <History className="h-12 w-12 mb-3" />
           <p className="text-sm font-medium">Nenhum evento registrado</p>
-          <p className="text-xs mt-1">Os eventos contratuais desta obra aparecerão aqui.</p>
+          <p className="text-xs mt-1">Os eventos contratuais deste objeto aparecerão aqui.</p>
         </div>
       )}
 

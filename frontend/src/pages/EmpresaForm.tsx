@@ -67,6 +67,14 @@ const EmpresaForm = () => {
     enabled: isEdicao,
   });
 
+  const { data: municipios = [] } = useQuery<string[]>({
+    queryKey: ["municipios"],
+    queryFn: async () => {
+      const { data } = await api.get("/objetos/municipios/lista");
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
   const {
     register,
     handleSubmit,
@@ -180,9 +188,19 @@ const EmpresaForm = () => {
             <Field label="Logradouro" id="endereco" placeholder="Rua, número, bairro"
               error={errors.endereco?.message} registration={register("endereco")} />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <Field label="Município" id="municipio" placeholder="Natal"
-                  error={errors.municipio?.message} registration={register("municipio")} />
+              <div className="sm:col-span-2 space-y-1.5">
+                <label htmlFor="municipio" className="block text-sm font-medium text-slate-700">Município</label>
+                <select
+                  id="municipio"
+                  {...register("municipio")}
+                  className={`block w-full rounded-xl border ${errors.municipio ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
+                >
+                  <option value="">Selecione...</option>
+                  {municipios.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                {errors.municipio && <p className="text-xs text-rose-600 mt-0.5">{errors.municipio.message}</p>}
               </div>
               <Field label="UF" id="uf" placeholder="RN"
                 error={errors.uf?.message} registration={register("uf")} />

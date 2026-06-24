@@ -22,11 +22,11 @@ type ArtRrtFormData = z.infer<typeof artRrtSchema>;
 const ArtRrtModal = ({
   open,
   onClose,
-  obraId,
+  objetoId,
 }: {
   open: boolean;
   onClose: () => void;
-  obraId: string;
+  objetoId: string;
 }) => {
   const queryClient = useQueryClient();
   const {
@@ -44,13 +44,13 @@ const ArtRrtModal = ({
       await api.post("/art-rrt", {
         numero: data.numero,
         tipo: data.tipo,
-        obra_id: obraId,
+        objeto_id: objetoId,
         data_emissao: data.data_emissao || undefined,
         data_validade: data.data_validade || undefined,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["art-rrt", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["art-rrt", objetoId] });
       reset();
       onClose();
     },
@@ -218,17 +218,17 @@ const ArtRrtCard = ({ art, onInativar }: { art: ArtRrt; onInativar: (id: string)
   );
 };
 
-export const ArtRrtContent = ({ obraId }: { obraId: string }) => {
+export const ArtRrtContent = ({ objetoId }: { objetoId: string }) => {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
 
   const { data: arts = [], isLoading, error } = useQuery<ArtRrt[]>({
-    queryKey: ["art-rrt", obraId],
+    queryKey: ["art-rrt", objetoId],
     queryFn: async () => {
-      const { data } = await api.get(`/art-rrt/obra/${obraId}`);
+      const { data } = await api.get(`/art-rrt/objeto/${objetoId}`);
       return Array.isArray(data) ? data : [];
     },
-    enabled: !!obraId,
+    enabled: !!objetoId,
   });
 
   const inativarMutation = useMutation({
@@ -236,7 +236,7 @@ export const ArtRrtContent = ({ obraId }: { obraId: string }) => {
       await api.delete(`/art-rrt/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["art-rrt", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["art-rrt", objetoId] });
     },
   });
 
@@ -284,7 +284,7 @@ export const ArtRrtContent = ({ obraId }: { obraId: string }) => {
         <div className="flex flex-col items-center justify-center py-16 text-slate-300">
           <Hash className="h-12 w-12 mb-3" />
           <p className="text-sm font-medium">Nenhum documento cadastrado</p>
-          <p className="text-xs mt-1">Cadastre uma ART ou RRT para esta obra.</p>
+          <p className="text-xs mt-1">Cadastre uma ART ou RRT para este objeto.</p>
         </div>
       )}
 
@@ -303,7 +303,7 @@ export const ArtRrtContent = ({ obraId }: { obraId: string }) => {
       <ArtRrtModal
         open={showModal}
         onClose={() => setShowModal(false)}
-        obraId={obraId}
+        objetoId={objetoId}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Cookie, Shield } from "lucide-react";
 
-const CONSENT_KEY = "sinobras-cookie-consent";
+const CONSENT_KEY = "@@@@sinobjeto@@s@@-cookie-consent";
 
 type Consent = "accepted" | "rejected" | null;
 

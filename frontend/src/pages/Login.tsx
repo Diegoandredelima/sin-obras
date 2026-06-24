@@ -68,7 +68,7 @@ const Login = () => {
             className="text-5xl font-black leading-none tracking-tight mb-4"
             style={{ fontFamily: "var(--font-condensed)" }}
           >
-            Sistema de<br />Gestão de<br />Obras
+            Sistema de<br />Gestão de<br />Objetos
           </h1>
           <p className="text-sm text-white/55 leading-relaxed max-w-xs">
             Acompanhe o cronograma físico-financeiro, valide ARTs e realize

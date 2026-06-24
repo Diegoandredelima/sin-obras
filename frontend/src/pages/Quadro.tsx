@@ -99,11 +99,11 @@ const TarefaCard = ({
 const TarefaModal = ({
   open,
   onClose,
-  obraId,
+  objetoId,
 }: {
   open: boolean;
   onClose: () => void;
-  obraId?: string | null;
+  objetoId?: string | null;
 }) => {
   const queryClient = useQueryClient();
   const {
@@ -123,7 +123,7 @@ const TarefaModal = ({
         prioridade: data.prioridade,
         prazo: data.prazo || undefined,
         descricao: data.descricao || undefined,
-        obra_id: obraId || undefined,
+        objeto_id: objetoId || undefined,
       };
       await api.post("/tarefas", payload);
     },
@@ -216,15 +216,15 @@ const TarefaModal = ({
 
 const Quadro = () => {
   const [searchParams] = useSearchParams();
-  const obraId = searchParams.get("obra_id");
+  const objetoId = searchParams.get("objeto_id");
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
 
   const { data: tarefas = [], isLoading, error } = useQuery<Tarefa[]>({
-    queryKey: ["tarefas", obraId],
+    queryKey: ["tarefas", objetoId],
     queryFn: async () => {
       const { data } = await api.get("/tarefas", {
-        params: obraId ? { obra_id: obraId } : undefined,
+        params: objetoId ? { objeto_id: objetoId } : undefined,
       });
       return Array.isArray(data) ? data : [];
     },
@@ -255,7 +255,7 @@ const Quadro = () => {
           <h2 className="text-2xl font-bold text-slate-900">Quadro de Tarefas</h2>
           <p className="text-sm text-slate-500 mt-0.5">
             {tarefas.length} tarefas no total
-            {obraId && <span className="text-slate-400"> (filtrado por obra)</span>}
+            {objetoId && <span className="text-slate-400"> (filtrado por objeto)</span>}
           </p>
         </div>
         <button
@@ -316,7 +316,7 @@ const Quadro = () => {
         </div>
       )}
 
-      <TarefaModal open={showModal} onClose={() => setShowModal(false)} obraId={obraId} />
+      <TarefaModal open={showModal} onClose={() => setShowModal(false)} objetoId={objetoId} />
     </div>
   );
 };
