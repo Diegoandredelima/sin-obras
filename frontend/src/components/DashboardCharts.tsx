@@ -69,10 +69,10 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
   );
 
   const orgaoData = useMemo(
-    () => (resumo?.obras_por_orgao ?? []).map((o) => ({
+    () => (resumo?.objetos_por_orgao ?? []).map((o) => ({
       orgao: o.orgao.length > 18 ? o.orgao.slice(0, 17) + "…" : o.orgao,
       orgaoFull: o.orgao,
-      obras: o.total_obras,
+      objetos: o.total_objetos,
       valor: o.valor_total,
     })),
     [resumo],
@@ -104,12 +104,12 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
                         />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${v} obras`, ""]} />
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [`${v} objetos`, ""]} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-2xl font-bold text-slate-900">{totalSaude}</span>
-                  <span className="text-[10px] uppercase tracking-wide text-slate-400">obras</span>
+                  <span className="text-[10px] uppercase tracking-wide text-slate-400">objetos</span>
                 </div>
               </div>
               <div className="flex-1 space-y-2">
@@ -141,8 +141,8 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
           )}
         </Card>
 
-        {/* Obras por status operacional */}
-        <Card icon={TrendingUp} title="Obras por status">
+        {/* Objetos por status operacional */}
+        <Card icon={TrendingUp} title="Objetos por status">
           {statusData.length === 0 ? (
             <p className="text-sm text-slate-400 italic py-12 text-center">Nenhum dado disponível.</p>
           ) : (
@@ -153,7 +153,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
                   type="category" dataKey="name" width={92} axisLine={false} tickLine={false}
                   tick={{ fontSize: 12, fill: "#64748b" }}
                 />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1f5f9" }} formatter={(v: unknown) => [`${v} obras`, ""]} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1f5f9" }} formatter={(v: unknown) => [`${v} objetos`, ""]} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22}>
                   {statusData.map((d) => <Cell key={d.key} fill={d.color} />)}
                 </Bar>
@@ -165,15 +165,15 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
 
       {resumo && orgaoData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Card icon={Building2} title="Obras por órgão">
+          <Card icon={Building2} title="Objetos por órgão">
             <ResponsiveContainer width="100%" height={Math.max(176, orgaoData.length * 32)}>
               <BarChart data={orgaoData} layout="vertical" margin={{ left: 4, right: 24 }}>
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="orgao" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                 <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f1f5f9" }}
-                  formatter={(v: unknown) => [`${v} obras`, ""]}
+                  formatter={(v: unknown) => [`${v} objetos`, ""]}
                   labelFormatter={(_: unknown, p?: ReadonlyArray<{ payload?: { orgaoFull?: string } }>) => p?.[0]?.payload?.orgaoFull ?? ""} />
-                <Bar dataKey="obras" fill={BRAND} radius={[0, 6, 6, 0]} barSize={18} />
+                <Bar dataKey="objetos" fill={BRAND} radius={[0, 6, 6, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
