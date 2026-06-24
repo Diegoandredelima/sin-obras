@@ -1,8 +1,24 @@
 # 📊 SIN-Obras — Status de Implementação
 
-> **Última atualização:** 21/06/2026
+> **Última atualização:** 24/06/2026
 > **Projeto:** Sistema Integrado de Obras — Secretaria de Infraestrutura do RN (SIN-RN)
 > **Repositório:** https://github.com/Diegoandredelima/sin-obras
+
+---
+
+## 🔄 Reestruturação de domínio — `Obra → Objeto` + inversão de hierarquia (24/06/2026)
+
+Mudança de nomenclatura e modelagem em **banco + backend + frontend + mobile**:
+
+- **Contrato** vira o documento-mãe: `Contrato 1—N Objeto` (antes era `Obra 1—N Contrato`).
+- **`Obra` → `Objeto`** (tabela `obras` → `objetos`); link canônico `objetos.contrato_id`.
+  Coluna legada `contratos.obra_id` **removida**.
+- Nova entidade **`Item`** (tabela `itens`): `Objeto 1—N Item` (partes constitutivas).
+- Todas as FKs `obra_id` → `objeto_id`; enums `*_obra_enum` → `*_objeto_enum`;
+  rotas `/api/obras` → `/api/objetos` (frontend `/obras` → `/objetos` com redirect de compatibilidade).
+- Migration `a2b3c4d5e6f7` (idempotente, preserva dados) — **596 objetos migrados sem perda**.
+- Mantidos por nomenclatura legal/distinta: `DiarioObra`/"Diário de Obra" (RDO),
+  `mao_de_obra` (força de trabalho), "Fiscal de Obras" (cargo), marca `SIN-Obras`.
 
 ---
 
@@ -56,7 +72,7 @@
 | Health check real (DB + MinIO) | `backend/app/main.py` | ✅ |
 | Paginação genérica `PaginatedResponse[T]` | `backend/app/schemas/common.py` | ✅ |
 
-**Modelos SQLAlchemy — 30 tabelas mapeadas:**
+**Modelos SQLAlchemy — 32 tabelas mapeadas:**
 
 | Model(s) | Arquivo | Tabela(s) |
 |---|---|---|
@@ -66,7 +82,7 @@
 | `AuditLog` | `models/auditoria.py` | `audit_logs` |
 | `ArtRrt` | `models/art_rrt.py` | `art_rrt` |
 | `Tarefa` | `models/tarefa.py` | `tarefas` |
-| `DiarioObra`, `Medicao`, `Notificacao` | `models/portal.py` | 3 tabelas |
+| `DiarioObra`, `Medicao`, `Notificacao`, `MedicaoItem`, `FotoMedicao` | `models/portal.py` | 5 tabelas |
 | `Vistoria`, `ChecklistItem`, `FotoVistoria` | `models/vistoria.py` | 3 tabelas |
 | `OrdemServico`, `AditivoPrazo`, `Paralisacao`, `Readequacao`, `Apostilamento`, `Reajuste`, `TermoRecebimento`, `NotificacaoExtrajudicial`, `Portaria` | `models/acompanhamento.py` | 9 tabelas |
 | `Alerta` | `models/alerta.py` | `alertas` |
@@ -98,13 +114,13 @@
 | Artefato | Status |
 |---|---|
 | JWT + bcrypt (pinado em 3.2.2 por compatibilidade com passlib) | ✅ |
-| RBAC com 6 roles: EMPRESA(0) < FISCAL(1) < APOIO_N2(1) < ENGENHEIRO(2) < COORDENADOR(3) < SECRETARIO(4) | ✅ |
+| RBAC hierárquico: EMPRESA(0) < FISCAL(1) < APOIO_N1(2) < APOIO_N2(3) < COORDENADOR(4) < SECRETARIO(5); ENGENHEIRO≈APOIO_N2 (legado) | ✅ |
 | Todos os endpoints protegidos com `require_minimum_role` | ✅ |
 | `POST /auth/registrar` protegido (exige COORDENADOR+) | ✅ |
 | Refresh Token — renovação automática no frontend | ✅ |
 | Rate limiting — 20 req/min no `/auth/login` | ✅ |
 | Serviço de Auditoria imutável (RF12) | ✅ |
-| Router de auth: login, refresh, me, logout, registrar, update me | ✅ |
+| Router de auth: login, refresh, me, logout, registrar, update me, **listar usuários** (`GET /auth/usuarios`), **gestão de usuário** (`PATCH /auth/usuarios/{id}` — perfil/cargo/role/ativo, COORDENADOR+) | ✅ |
 
 **Credenciais de desenvolvimento (seed executado):**
 
@@ -112,8 +128,9 @@
 |---|---|---|
 | Secretário | `10001` | `sin@2026` |
 | Coordenador | `10002` | `sin@2026` |
-| Engenheiro | `10003` | `sin@2026` |
+| Apoio N2 | `10003` | `sin@2026` |
 | Fiscal | `10004` | `sin@2026` |
+| Apoio N1 | `10005` | `sin@2026` |
 | Empresa | `12345678000195` | `empresa@2026` |
 
 ### 1.4 Testes ✅
@@ -124,7 +141,7 @@
 | pytest-cov instalado — cobertura de código no `make test` e CI | ✅ |
 | Banco de testes isolado (`sinobras_test`) | ✅ |
 | Limpeza de tabelas entre testes (autouse clean_tables) | ✅ |
-| 12 testes: auth (7) + obras (7) — **100% passando** | ✅ |
+| 20 testes: auth (7) + obras (7) + medições (8) — **100% passando** | ✅ |
 
 **Suite de testes:**
 
@@ -132,6 +149,7 @@
 |---|---|
 | `tests/test_auth.py` | login sucesso, credenciais inválidas, usuário inativo, me autenticado, me sem token, refresh token, RBAC acesso negado |
 | `tests/test_obras.py` | criar obra (engenheiro), criar obra bloqueado (empresa), listar, buscar por ID, 404, stats, sem autenticação |
+| `tests/test_medicoes.py` | boletim básico (qtd × preço), desconto de vãos, acumulado entre medições aprovadas, bloqueio sem foto, bloqueio sem ART, assinar fluxo empresa, criar+concluir pelo fiscal, 403 empresa tentando concluir |
 
 ### 1.5 Banco de Dados — Reestruturação e Carga ✅
 
@@ -144,7 +162,7 @@ Realizado em 18/06/2026.
 | `ff6285b72f48` | 9 tabelas de acompanhamento (`ordens_servico`, `aditivos_prazo`, `paralisacoes`, etc.) |
 | `b2f3a1c9d4e7` | Tabelas `empresas` e `orgaos`; enum `situacao_obra_enum`; +14 colunas em `contratos`; +18 colunas em `obras` |
 | `c3d4e5f6a7b8` | `contratos.fiscal_nome` e `contratos.gestor_nome` |
-| `03ce3a3976aa` | Roles APOIO_N2 no enum de usuários |
+| `03ce3a3976aa` | Roles APOIO_N1 e APOIO_N2 no enum de usuários |
 | `27b769b34877` | Tabela `delegacoes` (obra → fiscal/apoio) |
 
 **Dados oficiais carregados** (fonte: `Acompanhamento de obras.xlsx`):
@@ -195,7 +213,8 @@ Realizado em 18/06/2026.
 | Detalhe do Contrato | `/contratos/:id` | `pages/DetalheContrato.tsx` | ✅ Unificado com dados da obra + abas Diário/Medições/Curva-S/Eventos |
 | Quadro de Tarefas | `/quadro` | `pages/Quadro.tsx` | ✅ Kanban tipado |
 | Diário de Obras | `/empresa/obras/:id/diario` | `pages/DiarioObras.tsx` | ✅ Conectado ao endpoint real (sem mock) |
-| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ Modal de assinatura + avaliação fiscal |
+| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ Lista + BoletimModal (7 colunas) + badge fiscal + valor líquido |
+| Nova Medição | `/empresa/obras/:obraId/medicoes/nova` | `pages/NovaMedicao.tsx` | ✅ Editor de boletim: eventos → qty/desconto → fotos → assinar/concluir |
 | Relatórios | `/relatorio` | `pages/Relatorio.tsx` | ✅ Gráficos de barras com dados reais |
 | Central de Alertas | `/alertas` | `pages/Alertas.tsx` | ✅ Alertas automáticos + delegação + resolução |
 | Gestão de Equipe | `/gestao` | `pages/Gestao.tsx` | ✅ Delegação de obras para fiscais/apoios |
@@ -236,20 +255,34 @@ Realizado em 18/06/2026.
 ### Backend ✅
 - ✅ Diário de Obras — CRUD completo (`GET/POST/PUT /empresa/obras/{id}/diario`)
 - ✅ Medições — rascunho, assinatura digital SHA-256, avaliação fiscal, fluxo de aprovação/reprovação
+- ✅ **Boletim de Medição físico-financeiro** — 7 colunas calculadas (bruto, acumulado anterior/atual, total contratado, saldo, retenção, líquido)
+- ✅ **Itens de medição** — CRUD em `medicao_itens` (qtd × preço unitário congelado, desconto de vãos)
+- ✅ **Fotos por item** — hash SHA-256 + carimbo do servidor + geo em `fotos_medicao` (invioláveis — RN03)
+- ✅ **Fluxo do fiscal** — criação de medição com `origem=FISCAL`, vai direto para APROVADA via `concluir_medicao_fiscal`; fluxo da empresa exige ART + foto por item (RN01)
+- ✅ **Storage MinIO real** — `services/storage.py` com boto3; fallback gracioso `mock://` se MinIO indisponível
+- ✅ **Atualização financeira automática** — ao aprovar medição, recalcula `Obra.valor_medido` e `saldo_a_medir`
+- ✅ Novos endpoints: `POST/PUT/DELETE /empresa/medicoes/itens`, `POST /empresa/medicoes/{id}/fotos`, `GET /empresa/medicoes/{id}/boletim`, `POST /empresa/obras/{id}/medicoes/fiscal`, `POST /empresa/medicoes/{id}/concluir`
 - ✅ RN01 — Travamento por ART implementado em `services/portal.py`
 - ✅ Notificações — sistema (`GET /notificacoes`, `PATCH /notificacoes/{id}/lida`)
 - ✅ Alertas automáticos — geração por obra (`POST /alertas/gerar`), delegação, resolução
 - ✅ Delegação — CRUD (`POST/GET/DELETE /delegacoes`), vinculo fiscal/apoio por obra
 
+**Migração aplicada:**
+
+| Revisão | Conteúdo |
+|---|---|
+| `f7a1b2c3d4e5` | `Contrato.percentual_retencao`; extensão de `medicoes` (origem, autor, contrato, período, retenção); `medicao_itens`; `fotos_medicao` — migração defensiva (checa existência via `sa.inspect`) |
+
 ### Frontend — Páginas ✅
 | Página | Rota | Arquivo | Status |
 |---|---|---|---|
 | Diário de Obras | `/empresa/obras/:id/diario` | `pages/DiarioObras.tsx` | ✅ useQuery real + formulário POST |
-| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ useQuery real + modal de assinatura |
+| Medições | `/empresa/obras/:id/medicoes` | `pages/Medicoes.tsx` | ✅ lista com valor líquido + badge fiscal + BoletimModal (7 colunas) |
+| Nova Medição | `/empresa/obras/:obraId/medicoes/nova` | `pages/NovaMedicao.tsx` | ✅ editor de boletim: qtd/desconto por evento, prévia ao vivo, upload foto por item, assinar/concluir |
 | Abas na Obra/Contrato | — | `DetalheObra.tsx` / `DetalheContrato.tsx` | ✅ Diário e Medições como abas inline |
 
 ### Pendências do Bloco 3 ⏳
-- ⏳ Wizard de nova medição (Metas → Submetas → Eventos)
+- ⏳ `/empresa/obras` — Lista das obras vinculadas à empresa logada
 
 ---
 
@@ -303,17 +336,20 @@ Realizado em 18/06/2026.
 
 ## 📱 BLOCO 4 — App Mobile de Fiscalização
 
-**Status: `🔄 Estrutura criada — integração pendente`**
+**Status: `🔄 Estrutura criada e medições integradas — vistoria pendente`**
 
 | Artefato | Status |
 |---|---|
 | Projeto Expo (`App.tsx`, `app.json`) | ✅ |
 | Tela de Check-in Georreferenciado | ✅ estrutura criada |
 | Tela de Checklist Dinâmico | ✅ estrutura criada |
-| Câmera com metadados invioláveis (RN03) | ✅ estrutura criada |
+| Câmera com metadados invioláveis (RN03) | ✅ `services/camera.ts` — câmera nativa, SHA-256 local, geo, timestamp servidor |
 | Modo Offline com SQLite + fila de sync | ✅ estrutura criada |
 | Backend: `api/vistorias.py`, `services/vistoria.py` | ✅ |
-| Integração real com API do backend | ⏳ |
+| **Tela de Medição do Fiscal** (`MedicaoScreen.tsx`) | ✅ eventos → qty → criar medição → foto por item → concluir |
+| **`medicaoAPI`** em `services/api.ts` | ✅ `getEventos`, `criarFiscal`, `getBoletim`, `uploadFoto`, `concluir` |
+| **`uploadFotoMedicao`** em `services/camera.ts` | ✅ multipart com GPS e hash |
+| Integração real com API do backend (vistoria check-in/checklist) | ⏳ |
 
 ---
 
@@ -371,6 +407,11 @@ Realizado em 18/06/2026.
 | `tsc --noEmit` falhava com TS6306/TS6310 | `tsconfig.node.json` com `noEmit:true` sendo referenciado como project reference | Substituído `noEmit:true` por `composite:true` |
 | `variacao` possivelmente null em `DetalheContrato` | `variacao !== 0` não narrowava `number \| null` | Adicionado `variacao != null &&` antes da comparação |
 | `POST /auth/registrar` sem autenticação | Endpoint criado sem dependency de role | Adicionado `require_minimum_role(Role.COORDENADOR)` |
+| `MedicaoCreate.obra_id` gerando 422 | `obra_id` era `UUID` (obrigatório) mas o endpoint o define pelo path param após validação Pydantic | Alterado para `obra_id: UUID \| None = None` em `schemas/portal.py` |
+| Migração `f7a1b2c3d4e5` falhou ao criar tabelas já existentes | `Base.metadata.create_all` no startup cria tabelas antes do Alembic — "criação dupla" | Migração refatorada com helpers defensivos `_has_table()`, `_has_column()` e `checkfirst=True` no enum |
+| `ModuleNotFoundError: No module named 'app'` ao rodar alembic | Alembic sem `PYTHONPATH=/app` no container | Prefixar com `-e PYTHONPATH=/app` no `docker compose exec` |
+| MSYS path conversion no Windows quebrava `-e PYTHONPATH=/app` | Git Bash converte `/app` → caminho Windows | Prefixar com `MSYS_NO_PATHCONV=1` todos os comandos que passam paths POSIX ao `docker compose exec` |
+| `services/vistoria.py` importava campo JSONB removido | `fazer_checkin` usava `eventos_declarados` (campo legado) para montar checklist | Atualizado para consultar `MedicaoItem.evento_id` via JOIN em `medicao_itens` |
 
 ---
 
@@ -440,12 +481,13 @@ Sin-Obras/
 │   │   │   ├── delegacao.py          ✅ (CRUD delegações)
 │   │   │   ├── acompanhamento.py     ✅ (eventos contratuais)
 │   │   │   └── curva_s.py            ✅ (curva-S de progresso)
-│   │   └── services/                 ✅ (14 serviços)
+│   │   └── services/                 ✅ (15 serviços — inclui storage.py MinIO/boto3)
 │   └── tests/
 │       ├── __init__.py               ✅
 │       ├── conftest.py               ✅ (sync engine + async API)
 │       ├── test_auth.py              ✅ (7 testes)
-│       └── test_obras.py             ✅ (7 testes)
+│       ├── test_obras.py             ✅ (7 testes)
+│       └── test_medicoes.py          ✅ (8 testes — boletim, acumulado, fotos, ART, fluxo fiscal)
 │
 ├── frontend/
 │   ├── Dockerfile                    ✅ (dev: node:22-slim + npm run dev)
@@ -487,7 +529,8 @@ Sin-Obras/
 │       │   ├── DetalheContrato.tsx   ✅ (unificado obra + abas + ?tab=)
 │       │   ├── Quadro.tsx            ✅ (Kanban)
 │       │   ├── DiarioObras.tsx       ✅ (conectado ao endpoint real)
-│       │   ├── Medicoes.tsx          ✅ (conectado ao endpoint real)
+│       │   ├── Medicoes.tsx          ✅ (lista + BoletimModal 7 colunas + badge fiscal)
+│       │   ├── NovaMedicao.tsx       ✅ (editor boletim — eventos, qty, fotos, assinar/concluir)
 │       │   ├── Relatorio.tsx         ✅ (gráficos de barras com dados reais)
 │       │   ├── Alertas.tsx           ✅ (central de alertas + delegação + resolução)
 │       │   ├── Gestao.tsx            ✅ (delegação de obras para fiscais/apoios)
@@ -499,6 +542,16 @@ Sin-Obras/
 │       └── store/auth.ts             ✅ (Zustand + persist + refreshToken)
 │
 └── mobile/
-    ├── App.tsx                       🔄 (estrutura Expo)
-    └── src/                          🔄 (telas, serviços — integração pendente)
+    ├── App.tsx                       ✅ (Expo + navegação Stack + Bottom Tabs + MedicaoScreen)
+    └── src/
+        ├── screens/
+        │   ├── CheckinScreen.tsx     ✅ (estrutura criada)
+        │   ├── ChecklistScreen.tsx   ✅ (estrutura criada)
+        │   ├── ResultadoVistoriaScreen.tsx ✅ (estrutura criada)
+        │   ├── MedicaoScreen.tsx     ✅ (fiscal: eventos → qty → foto por item → concluir)
+        │   └── SyncScreen.tsx        ✅ (estrutura criada)
+        └── services/
+            ├── api.ts                ✅ (Axios + JWT + refresh + vistoriaAPI + medicaoAPI + empresaAPI)
+            ├── camera.ts             ✅ (câmera nativa SHA-256 geo + uploadFotoVistoria + uploadFotoMedicao)
+            └── geofencing.ts         ✅ (GPS + checagem de raio)
 ```
