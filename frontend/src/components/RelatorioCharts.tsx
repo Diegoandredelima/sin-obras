@@ -16,27 +16,27 @@ interface Props {
 }
 
 /**
- * Bloco de gráficos CSS do relatório (Obras por Status, Obras por Órgão,
+ * Bloco de gráficos CSS do relatório (Objetos por Status, Objetos por Órgão,
  * Valor por Órgão). Componente apresentacional — o pai busca os dados.
  * Reutilizado no Dashboard e no template de impressão "completo".
  */
 const RelatorioCharts = ({ data, print = false }: Props) => {
-  const maxStatus = Math.max(...data.obras_por_status.map((s) => s.total), 1);
-  const maxOrgao  = Math.max(...data.obras_por_orgao.map((o) => o.total_obras), 1);
-  const maxValor  = Math.max(...data.obras_por_orgao.map((o) => o.valor_total), 1);
+  const maxStatus = Math.max(...data.objetos_por_status.map((s) => s.total), 1);
+  const maxOrgao  = Math.max(...data.objetos_por_orgao.map((o) => o.total_objetos), 1);
+  const maxValor  = Math.max(...data.objetos_por_orgao.map((o) => o.valor_total), 1);
   const trans = print ? "" : "transition-all duration-700";
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Obras por Status */}
+        {/* Objetos por Status */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 print-card print-avoid-break">
           <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-slate-400" />
-            Obras por Status
+            Objetos por Status
           </h3>
           <div className="space-y-3">
-            {data.obras_por_status.map((s) => (
+            {data.objetos_por_status.map((s) => (
               <div key={s.status} className="flex items-center gap-3">
                 <span className="text-xs font-medium text-slate-600 w-28 shrink-0">{s.label}</span>
                 <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
@@ -48,20 +48,20 @@ const RelatorioCharts = ({ data, print = false }: Props) => {
                 <span className="text-xs font-semibold text-slate-700 w-6 text-right">{s.total}</span>
               </div>
             ))}
-            {data.obras_por_status.length === 0 && (
+            {data.objetos_por_status.length === 0 && (
               <p className="text-sm text-slate-400 italic">Nenhum dado disponível.</p>
             )}
           </div>
         </div>
 
-        {/* Obras por Órgão */}
+        {/* Objetos por Órgão */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 print-card print-avoid-break">
           <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <Building2 className="h-4 w-4 text-slate-400" />
-            Obras por Órgão
+            Objetos por Órgão
           </h3>
           <div className="space-y-3">
-            {data.obras_por_orgao.map((o, i) => (
+            {data.objetos_por_orgao.map((o, i) => (
               <div key={i} className="flex items-center gap-3">
                 <span className="text-xs font-medium text-slate-600 w-28 shrink-0 truncate" title={o.orgao}>
                   {o.orgao}
@@ -69,13 +69,13 @@ const RelatorioCharts = ({ data, print = false }: Props) => {
                 <div className="flex-1 h-6 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full bg-brand-500 rounded-full ${trans}`}
-                    style={{ width: `${(o.total_obras / maxOrgao) * 100}%` }}
+                    style={{ width: `${(o.total_objetos / maxOrgao) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs font-semibold text-slate-700 w-6 text-right">{o.total_obras}</span>
+                <span className="text-xs font-semibold text-slate-700 w-6 text-right">{o.total_objetos}</span>
               </div>
             ))}
-            {data.obras_por_orgao.length === 0 && (
+            {data.objetos_por_orgao.length === 0 && (
               <p className="text-sm text-slate-400 italic">Nenhum dado disponível.</p>
             )}
           </div>
@@ -89,7 +89,7 @@ const RelatorioCharts = ({ data, print = false }: Props) => {
           Valor Contratado por Órgão (R$)
         </h3>
         <div className="space-y-3">
-          {data.obras_por_orgao.map((o, i) => (
+          {data.objetos_por_orgao.map((o, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="text-xs font-medium text-slate-600 w-28 shrink-0 truncate" title={o.orgao}>
                 {o.orgao}
@@ -107,7 +107,7 @@ const RelatorioCharts = ({ data, print = false }: Props) => {
               </div>
             </div>
           ))}
-          {data.obras_por_orgao.length === 0 && (
+          {data.objetos_por_orgao.length === 0 && (
             <p className="text-sm text-slate-400 italic">Nenhum dado disponível.</p>
           )}
         </div>

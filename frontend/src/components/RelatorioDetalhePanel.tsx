@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Printer, Loader2, Building2 } from "lucide-react";
 import api from "@/services/api";
 import { fmtCurrency, fmtDate, fmtPercent } from "@/utils/format";
-import type { ObraDetalhe } from "@/components/print/ObraReportBody";
-import type { RelatorioObraRow } from "@/types";
+import type { ObjetoDetalhe } from "@/components/print/ObjetoReportBody";
+import type { RelatorioObjetoRow } from "@/types";
 
 interface ContratoDetalhe {
   id: string;
@@ -75,14 +75,14 @@ const KPI = ({ label, value, sub }: { label: string; value: string; sub?: string
 );
 
 interface Props {
-  row: RelatorioObraRow;
+  row: RelatorioObjetoRow;
   onClose: () => void;
 }
 
 const RelatorioDetalhePanel = ({ row, onClose }: Props) => {
-  const { data: obra, isLoading: obraLoading } = useQuery<ObraDetalhe>({
-    queryKey: ["rel-detalhe-obra", row.obra_id],
-    queryFn: async () => { const { data } = await api.get(`/obras/${row.obra_id}`); return data; },
+  const { data: objeto, isLoading: objetoLoading } = useQuery<ObjetoDetalhe>({
+    queryKey: ["rel-detalhe-objeto", row.objeto_id],
+    queryFn: async () => { const { data } = await api.get(`/objetos/${row.objeto_id}`); return data; },
     staleTime: 2 * 60 * 1000,
   });
 
@@ -110,11 +110,11 @@ const RelatorioDetalhePanel = ({ row, onClose }: Props) => {
     return () => { document.body.style.overflow = prev; };
   }, []);
 
-  const isLoading = obraLoading || (!!row.contrato_id && contratoLoading);
+  const isLoading = objetoLoading || (!!row.contrato_id && contratoLoading);
 
   const printUrl = row.contrato_id
     ? `/contratos/${row.contrato_id}/relatorio`
-    : `/obras/${row.obra_id}/relatorio`;
+    : `/objetos/${row.objeto_id}/relatorio`;
 
   const sit = row.situacao ? SITUACAO_BADGE[row.situacao] : null;
   const valorExibido = row.valor_final ?? row.valor_global ?? row.valor_contrato;
@@ -184,51 +184,51 @@ const RelatorioDetalhePanel = ({ row, onClose }: Props) => {
               <KPI label="Saldo a medir" value={fmtCurrency(row.saldo_a_medir, "—")} />
             </div>
 
-            {/* ── Obra ── */}
+            {/* ── Objeto ── */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Building2 className="h-4 w-4 text-brand-700 shrink-0" />
-                <span className="text-sm font-bold text-slate-800">Obra</span>
+                <span className="text-sm font-bold text-slate-800">Objeto</span>
                 <div className="flex-1 h-px bg-slate-100" />
               </div>
 
               <Section title="Identificação">
-                <Field label="Título" value={obra?.titulo ?? row.titulo} />
-                <Field label="Órgão" value={obra?.orgao ?? row.orgao} />
-                <Field label="Município" value={obra?.municipio ?? row.municipio} />
-                {obra?.endereco && <Field label="Endereço" value={obra.endereco} />}
+                <Field label="Título" value={objeto?.titulo ?? row.titulo} />
+                <Field label="Órgão" value={objeto?.orgao ?? row.orgao} />
+                <Field label="Município" value={objeto?.municipio ?? row.municipio} />
+                {objeto?.endereco && <Field label="Endereço" value={objeto.endereco} />}
                 <Field
                   label="Status operacional"
-                  value={obra?.status ? STATUS_LABEL[obra.status] ?? obra.status : "—"}
+                  value={objeto?.status ? STATUS_LABEL[objeto.status] ?? objeto.status : "—"}
                 />
                 <Field
                   label="Situação"
                   value={
-                    obra?.situacao
-                      ? `${SITUACAO_LABEL[obra.situacao] ?? obra.situacao}${obra.ano_referencia ? ` / ${obra.ano_referencia}` : ""}`
+                    objeto?.situacao
+                      ? `${SITUACAO_LABEL[objeto.situacao] ?? objeto.situacao}${objeto.ano_referencia ? ` / ${objeto.ano_referencia}` : ""}`
                       : "—"
                   }
                 />
               </Section>
 
               <Section title="Prazos">
-                {obra?.prazo_inicial_dias && (
-                  <Field label="Prazo inicial" value={`${obra.prazo_inicial_dias} dias`} />
+                {objeto?.prazo_inicial_dias && (
+                  <Field label="Prazo inicial" value={`${objeto.prazo_inicial_dias} dias`} />
                 )}
-                <Field label="Ordem de serviço" value={fmtDate(obra?.data_inicio ?? null)} />
+                <Field label="Ordem de serviço" value={fmtDate(objeto?.data_inicio ?? null)} />
                 <Field
                   label="Vigência"
-                  value={`${fmtDate(obra?.vigencia_inicio ?? null)} → ${fmtDate(obra?.vigencia_fim ?? null)}`}
+                  value={`${fmtDate(objeto?.vigencia_inicio ?? null)} → ${fmtDate(objeto?.vigencia_fim ?? null)}`}
                 />
                 <Field
                   label="Execução"
-                  value={`${fmtDate(obra?.execucao_inicio ?? null)} → ${fmtDate(obra?.execucao_fim ?? null)}`}
+                  value={`${fmtDate(objeto?.execucao_inicio ?? null)} → ${fmtDate(objeto?.execucao_fim ?? null)}`}
                 />
               </Section>
 
-              {obra?.metas && obra.metas.length > 0 && (
-                <Section title={`Metas (${obra.metas.length})`}>
-                  {obra.metas.map((m) => (
+              {objeto?.metas && objeto.metas.length > 0 && (
+                <Section title={`Metas (${objeto.metas.length})`}>
+                  {objeto.metas.map((m) => (
                     <div key={m.id} className="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-3">
                       <span className="text-sm text-slate-700 min-w-0 truncate">{m.descricao}</span>
                       <span className="text-sm font-semibold text-slate-900 shrink-0">{fmtCurrency(m.valor)}</span>
@@ -237,11 +237,11 @@ const RelatorioDetalhePanel = ({ row, onClose }: Props) => {
                 </Section>
               )}
 
-              {(obra?.historico || obra?.observacoes || obra?.importante) && (
+              {(objeto?.historico || objeto?.observacoes || objeto?.importante) && (
                 <Section title="Observações">
-                  {obra.importante && <Field label="Importante" value={obra.importante} />}
-                  {obra.historico && <Field label="Histórico" value={obra.historico} />}
-                  {obra.observacoes && <Field label="Observações" value={obra.observacoes} />}
+                  {objeto.importante && <Field label="Importante" value={objeto.importante} />}
+                  {objeto.historico && <Field label="Histórico" value={objeto.historico} />}
+                  {objeto.observacoes && <Field label="Observações" value={objeto.observacoes} />}
                 </Section>
               )}
             </div>
