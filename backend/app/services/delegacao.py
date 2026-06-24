@@ -1,7 +1,7 @@
 """
 SIN-Obras — Serviço de Delegação de Obras
 
-Gerencia a atribuição de fiscais e apoios a obras pelo Chefe de Setor.
+Gerencia a atribuição de fiscais e apoios a objetos pelo Chefe de Setor.
 """
 from uuid import UUID
 
@@ -14,12 +14,12 @@ from app.models.delegacao import DelegacaoObra
 
 async def list_delegacoes(
     db: AsyncSession,
-    obra_id: UUID | None = None,
+    objeto_id: UUID | None = None,
     usuario_id: UUID | None = None,
 ) -> list[DelegacaoObra]:
     query = select(DelegacaoObra)
-    if obra_id:
-        query = query.where(DelegacaoObra.obra_id == obra_id)
+    if objeto_id:
+        query = query.where(DelegacaoObra.objeto_id == objeto_id)
     if usuario_id:
         query = query.where(DelegacaoObra.usuario_id == usuario_id)
     query = query.order_by(DelegacaoObra.criado_em.desc())
@@ -30,17 +30,17 @@ async def list_delegacoes(
 async def create_delegacao(
     db: AsyncSession,
     delegado_por_id: UUID,
-    obra_id: UUID,
+    objeto_id: UUID,
     usuario_id: UUID,
     funcao: str,
     data_inicio: str,
     data_fim: str | None = None,
     observacao: str | None = None,
 ) -> DelegacaoObra:
-    # Desativar delegações anteriores do mesmo usuário para a mesma obra/função
+    # Desativar delegações anteriores do mesmo usuário para a mesma objeto/função
     existing = await db.execute(
         select(DelegacaoObra).where(
-            DelegacaoObra.obra_id == obra_id,
+            DelegacaoObra.objeto_id == objeto_id,
             DelegacaoObra.usuario_id == usuario_id,
             DelegacaoObra.funcao == funcao,
             DelegacaoObra.ativo == True,
@@ -50,7 +50,7 @@ async def create_delegacao(
         d.ativo = False
 
     db_obj = DelegacaoObra(
-        obra_id=obra_id,
+        objeto_id=objeto_id,
         usuario_id=usuario_id,
         delegado_por_id=delegado_por_id,
         funcao=funcao,

@@ -1,7 +1,7 @@
 """
 SIN-Obras — Router de Delegação de Obras
 
-Permite ao Chefe de Setor delegar obras para fiscais e apoios.
+Permite ao Chefe de Setor delegar objetos para fiscais e apoios.
 """
 from uuid import UUID
 
@@ -20,13 +20,13 @@ router = APIRouter(prefix="/delegacoes", tags=["Delegações"])
 
 @router.get("", response_model=list[DelegacaoResponse])
 async def list_delegacoes(
-    obra_id: UUID | None = None,
+    objeto_id: UUID | None = None,
     usuario_id: UUID | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2)),
 ):
-    """Lista delegações com filtros opcionais por obra ou usuário."""
-    return await delegacao_service.list_delegacoes(db, obra_id, usuario_id)
+    """Lista delegações com filtros opcionais por objeto ou usuário."""
+    return await delegacao_service.list_delegacoes(db, objeto_id, usuario_id)
 
 
 @router.post("", response_model=DelegacaoResponse, status_code=status.HTTP_201_CREATED)
@@ -35,11 +35,11 @@ async def create_delegacao(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.COORDENADOR)),
 ):
-    """Delega uma obra a um fiscal ou apoio. (Acesso: Chefe de Setor+)"""
+    """Delega uma objeto a um fiscal ou apoio. (Acesso: Chefe de Setor+)"""
     obj = await delegacao_service.create_delegacao(
         db,
         delegado_por_id=current_user.id,
-        obra_id=payload.obra_id,
+        objeto_id=payload.objeto_id,
         usuario_id=payload.usuario_id,
         funcao=payload.funcao,
         data_inicio=payload.data_inicio,
@@ -63,5 +63,5 @@ async def revogar_delegacao(
     obj = await delegacao_service.revogar_delegacao(db, id)
     await registrar_auditoria(
         db, current_user.id, "DelegacaoObra", str(obj.id), "REVOGAR",
-        descricao=f"Delegação de {obj.usuario_id} para obra {obj.obra_id} revogada",
+        descricao=f"Delegação de {obj.usuario_id} para objeto {obj.objeto_id} revogada",
     )

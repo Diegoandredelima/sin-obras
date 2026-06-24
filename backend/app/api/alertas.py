@@ -20,14 +20,14 @@ router = APIRouter(prefix="/alertas", tags=["Alertas"])
 
 @router.get("", response_model=list[AlertaResponse])
 async def list_alertas(
-    obra_id: UUID | None = None,
+    objeto_id: UUID | None = None,
     prioridade: str | None = None,
     resolvido: bool | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2)),
 ):
     """Lista alertas com filtros opcionais."""
-    return await alerta_service.list_alertas(db, obra_id, prioridade, resolvido)
+    return await alerta_service.list_alertas(db, objeto_id, prioridade, resolvido)
 
 
 @router.post("/gerar", response_model=dict)

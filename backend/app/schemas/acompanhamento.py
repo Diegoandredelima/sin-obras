@@ -22,7 +22,7 @@ class OrdemServicoCreate(OrdemServicoBase):
 
 class OrdemServicoResponse(OrdemServicoBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -45,7 +45,7 @@ class AditivoPrazoCreate(AditivoPrazoBase):
 
 class AditivoPrazoResponse(AditivoPrazoBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -67,7 +67,7 @@ class ParalisacaoCreate(ParalisacaoBase):
 
 class ParalisacaoResponse(ParalisacaoBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -90,7 +90,7 @@ class ReadequacaoCreate(ReadequacaoBase):
 
 class ReadequacaoResponse(ReadequacaoBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -151,7 +151,7 @@ class TermoRecebimentoCreate(TermoRecebimentoBase):
 
 class TermoRecebimentoResponse(TermoRecebimentoBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -172,7 +172,7 @@ class NotificacaoExtrajudicialCreate(NotificacaoExtrajudicialBase):
 
 class NotificacaoExtrajudicialResponse(NotificacaoExtrajudicialBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     empresa_id: UUID
     criado_em: datetime
 
@@ -195,7 +195,7 @@ class PortariaCreate(PortariaBase):
 
 class PortariaResponse(PortariaBase):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     criado_em: datetime
 
     model_config = {"from_attributes": True}

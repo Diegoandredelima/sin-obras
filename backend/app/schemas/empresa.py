@@ -68,11 +68,11 @@ class ContratoResumo(BaseModel):
 class EmpresaDetalhe(EmpresaResumo):
     criado_em: datetime
     total_contratos: int = 0
-    total_obras: int = 0
+    total_objetos: int = 0
 
 
 class EmpresaListItem(EmpresaResumo):
     """Item de listagem com contadores agregados para os cards/lista."""
     criado_em: datetime
     total_contratos: int = 0
-    total_obras: int = 0
+    total_objetos: int = 0

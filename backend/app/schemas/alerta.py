@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 class AlertaResponse(BaseModel):
     id: UUID
-    obra_id: UUID | None
+    objeto_id: UUID | None
     tipo: str
     prioridade: str
     titulo: str

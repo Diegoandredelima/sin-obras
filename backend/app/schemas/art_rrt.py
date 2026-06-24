@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class ArtRrtBase(BaseModel):
     numero: str = Field(..., max_length=100)
     tipo: str = Field(..., max_length=10) # 'ART' ou 'RRT'
-    obra_id: UUID
+    objeto_id: UUID
     data_emissao: date | None = None
     data_validade: date | None = None
     arquivo_url: str | None = None

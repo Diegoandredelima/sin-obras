@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 
 class DelegacaoCreate(BaseModel):
-    obra_id: UUID
+    objeto_id: UUID
     usuario_id: UUID
     funcao: str = "FISCAL"
     data_inicio: date
@@ -18,7 +18,7 @@ class DelegacaoCreate(BaseModel):
 
 class DelegacaoResponse(BaseModel):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     usuario_id: UUID
     delegado_por_id: UUID | None
     funcao: str

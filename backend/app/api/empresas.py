@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
 from app.models.cadastro import Empresa
-from app.models.obra import Contrato, Obra
+from app.models.objeto import Contrato, Objeto
 from app.models.usuario import Usuario
 from app.schemas.empresa import (
     ContratoResumo,
@@ -29,14 +29,14 @@ async def _contadores(db: AsyncSession, empresa_id: UUID) -> tuple[int, int]:
     total_contratos = await db.scalar(
         select(func.count()).select_from(Contrato).where(Contrato.empresa_ref_id == empresa_id)
     )
-    # Obras ligam-se à empresa via contrato (Obra.contrato_id -> Contrato.empresa_ref_id)
-    total_obras = await db.scalar(
+    # Objetos ligam-se à empresa via contrato (Objeto.contrato_id -> Contrato.empresa_ref_id)
+    total_objetos = await db.scalar(
         select(func.count())
-        .select_from(Obra)
-        .join(Contrato, Obra.contrato_id == Contrato.id)
+        .select_from(Objeto)
+        .join(Contrato, Objeto.contrato_id == Contrato.id)
         .where(Contrato.empresa_ref_id == empresa_id)
     )
-    return total_contratos or 0, total_obras or 0
+    return total_contratos or 0, total_objetos or 0
 
 
 @router.get("", response_model=list[EmpresaListItem])
@@ -44,15 +44,15 @@ async def list_empresas(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    """Lista todas as empresas cadastradas com contadores de contratos e obras."""
+    """Lista todas as empresas cadastradas com contadores de contratos e objetos."""
     contratos_sub = (
         select(Contrato.empresa_ref_id, func.count().label("n"))
         .group_by(Contrato.empresa_ref_id)
         .subquery()
     )
-    obras_sub = (
-        select(Contrato.empresa_ref_id.label("empresa_ref_id"), func.count(Obra.id).label("n"))
-        .join(Obra, Obra.contrato_id == Contrato.id)
+    objetos_sub = (
+        select(Contrato.empresa_ref_id.label("empresa_ref_id"), func.count(Objeto.id).label("n"))
+        .join(Objeto, Objeto.contrato_id == Contrato.id)
         .group_by(Contrato.empresa_ref_id)
         .subquery()
     )
@@ -61,10 +61,10 @@ async def list_empresas(
         select(
             Empresa,
             func.coalesce(contratos_sub.c.n, 0),
-            func.coalesce(obras_sub.c.n, 0),
+            func.coalesce(objetos_sub.c.n, 0),
         )
         .outerjoin(contratos_sub, contratos_sub.c.empresa_ref_id == Empresa.id)
-        .outerjoin(obras_sub, obras_sub.c.empresa_ref_id == Empresa.id)
+        .outerjoin(objetos_sub, objetos_sub.c.empresa_ref_id == Empresa.id)
         .order_by(Empresa.razao_social)
     )
 
@@ -72,9 +72,9 @@ async def list_empresas(
         EmpresaListItem(
             **{c.name: getattr(e, c.name) for c in Empresa.__table__.columns},
             total_contratos=n_contratos,
-            total_obras=n_obras,
+            total_objetos=n_objetos,
         )
-        for e, n_contratos, n_obras in result.all()
+        for e, n_contratos, n_objetos in result.all()
     ]
 
 
@@ -109,7 +109,7 @@ async def create_empresa(
     return EmpresaDetalhe(
         **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
         total_contratos=0,
-        total_obras=0,
+        total_objetos=0,
     )
 
 
@@ -155,11 +155,11 @@ async def update_empresa(
     await db.commit()
     await db.refresh(empresa)
 
-    total_contratos, total_obras = await _contadores(db, empresa.id)
+    total_contratos, total_objetos = await _contadores(db, empresa.id)
     return EmpresaDetalhe(
         **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
         total_contratos=total_contratos,
-        total_obras=total_obras,
+        total_objetos=total_objetos,
     )
 
 
@@ -175,12 +175,12 @@ async def get_empresa(
     if not empresa:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empresa não encontrada.")
 
-    total_contratos, total_obras = await _contadores(db, empresa.id)
+    total_contratos, total_objetos = await _contadores(db, empresa.id)
 
     return EmpresaDetalhe(
         **{c.name: getattr(empresa, c.name) for c in Empresa.__table__.columns},
         total_contratos=total_contratos,
-        total_obras=total_obras,
+        total_objetos=total_objetos,
     )
 
 

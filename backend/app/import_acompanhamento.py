@@ -34,8 +34,8 @@ import openpyxl
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
-from app.models import Contrato, Empresa, Obra, Orgao
-from app.models.obra import SaudeObra, SituacaoObra, StatusObra
+from app.models import Contrato, Empresa, Objeto, Orgao
+from app.models.objeto import SaudeObjeto, SituacaoObjeto, StatusObjeto
 
 XLSX_PATH = os.environ.get("IMPORT_XLSX", "/app/_import/Acompanhamento.xlsx")
 SHEET = "OBRAS"
@@ -144,41 +144,41 @@ def parse_ano(*vals) -> int | None:
     return None
 
 
-def map_situacao(raw: str | None) -> SituacaoObra | None:
+def map_situacao(raw: str | None) -> SituacaoObjeto | None:
     if not raw:
         return None
     s = raw.strip().upper()
     if s.startswith("CONCLU"):
-        return SituacaoObra.CONCLUIDA
+        return SituacaoObjeto.CONCLUIDA
     if s.startswith("RESCI"):  # cobre "RESCISÃO" e o typo "RESCIDIDA"
-        return SituacaoObra.RESCINDIDA
+        return SituacaoObjeto.RESCINDIDA
     if "ARQUIV" in s:
-        return SituacaoObra.ARQUIVADA
+        return SituacaoObjeto.ARQUIVADA
     if "EXTINT" in s:
-        return SituacaoObra.EXTINTA
+        return SituacaoObjeto.EXTINTA
     if "CEDID" in s:
-        return SituacaoObra.CEDIDA
+        return SituacaoObjeto.CEDIDA
     if s.startswith("INACAB"):
-        return SituacaoObra.INACABADA
+        return SituacaoObjeto.INACABADA
     if s.startswith("AND"):
-        return SituacaoObra.EM_ANDAMENTO
+        return SituacaoObjeto.EM_ANDAMENTO
     if "INIC" in s and "REINIC" not in s:
-        return SituacaoObra.A_INICIAR
+        return SituacaoObjeto.A_INICIAR
     if s.startswith("PAR"):
-        return SituacaoObra.PARALISADA
+        return SituacaoObjeto.PARALISADA
     return None
 
 
 SITUACAO_TO_STATUS = {
-    SituacaoObra.A_INICIAR: StatusObra.PLANEJADA,
-    SituacaoObra.EM_ANDAMENTO: StatusObra.EM_EXECUCAO,
-    SituacaoObra.PARALISADA: StatusObra.PARALISADA,
-    SituacaoObra.INACABADA: StatusObra.PARALISADA,
-    SituacaoObra.CONCLUIDA: StatusObra.CONCLUIDA,
-    SituacaoObra.RESCINDIDA: StatusObra.PARALISADA,
-    SituacaoObra.ARQUIVADA: StatusObra.PARALISADA,
-    SituacaoObra.EXTINTA: StatusObra.PARALISADA,
-    SituacaoObra.CEDIDA: StatusObra.PARALISADA,
+    SituacaoObjeto.A_INICIAR: StatusObjeto.PLANEJADA,
+    SituacaoObjeto.EM_ANDAMENTO: StatusObjeto.EM_EXECUCAO,
+    SituacaoObjeto.PARALISADA: StatusObjeto.PARALISADA,
+    SituacaoObjeto.INACABADA: StatusObjeto.PARALISADA,
+    SituacaoObjeto.CONCLUIDA: StatusObjeto.CONCLUIDA,
+    SituacaoObjeto.RESCINDIDA: StatusObjeto.PARALISADA,
+    SituacaoObjeto.ARQUIVADA: StatusObjeto.PARALISADA,
+    SituacaoObjeto.EXTINTA: StatusObjeto.PARALISADA,
+    SituacaoObjeto.CEDIDA: StatusObjeto.PARALISADA,
 }
 
 
@@ -232,7 +232,7 @@ async def importar():
             ).scalars()
         }
 
-        stats = {"contratos": 0, "obras": 0, "empresas_novas": 0,
+        stats = {"contratos": 0, "objetos": 0, "empresas_novas": 0,
                  "orgaos_novos": 0, "pulados": 0, "sem_numero": 0}
         seen = set()
 
@@ -315,17 +315,17 @@ async def importar():
             await db.flush()
             stats["contratos"] += 1
 
-            # --- Obra ---
+            # --- Objeto ---
             sit_raw = clean_str(cell(row, "situacao"))
             situacao = map_situacao(sit_raw)
-            status = SITUACAO_TO_STATUS.get(situacao, StatusObra.PLANEJADA)
+            status = SITUACAO_TO_STATUS.get(situacao, StatusObjeto.PLANEJADA)
             objeto = clean_str(cell(row, "objeto"))
-            titulo = (objeto or f"Obra {numero}")[:300]
+            titulo = (objeto or f"Objeto {numero}")[:300]
             pct = parse_pct(cell(row, "execucao_pct")) or Decimal("0.00")
             if pct > Decimal("100"):
                 pct = Decimal("100.00")
 
-            obra = Obra(
+            objeto = Objeto(
                 titulo=titulo,
                 descricao=objeto,
                 municipio=(clean_str(cell(row, "municipio")) or "")[:100] or None,
@@ -335,7 +335,7 @@ async def importar():
                 situacao_origem=sit_raw[:100] if sit_raw else None,
                 ano_referencia=parse_ano(sit_raw, cell(row, "exec_fim"),
                                          cell(row, "vig_fim")),
-                saude=SaudeObra.VERDE,
+                saude=SaudeObjeto.VERDE,
                 percentual_executado=pct,
                 contrato_id=contrato.id,
                 orgao=sigla,
@@ -353,8 +353,8 @@ async def importar():
                 importante=clean_str(cell(row, "importante")),
                 observacoes=build_observacoes(row),
             )
-            db.add(obra)
-            stats["obras"] += 1
+            db.add(objeto)
+            stats["objetos"] += 1
 
             if stats["contratos"] % 100 == 0:
                 await db.flush()

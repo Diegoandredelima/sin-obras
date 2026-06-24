@@ -16,10 +16,10 @@ from app.models.tarefa import Tarefa
 from app.schemas.tarefa import TarefaCreate, TarefaUpdate
 
 
-async def get_tarefas(db: AsyncSession, obra_id: UUID | None = None, responsavel_id: UUID | None = None):
+async def get_tarefas(db: AsyncSession, objeto_id: UUID | None = None, responsavel_id: UUID | None = None):
     query = select(Tarefa)
-    if obra_id:
-        query = query.where(Tarefa.obra_id == obra_id)
+    if objeto_id:
+        query = query.where(Tarefa.objeto_id == objeto_id)
     if responsavel_id:
         query = query.where(Tarefa.responsavel_id == responsavel_id)
 

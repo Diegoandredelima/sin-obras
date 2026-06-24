@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Contrato
+from app.models.objeto import Contrato
 from app.schemas.contrato import ContratoCreate, ContratoUpdate
 
 

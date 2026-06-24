@@ -3,7 +3,7 @@ SIN-Obras — Serviço de ART/RRT
 
 Este módulo gerencia o ciclo de vida dos registros de Anotação de Responsabilidade
 Técnica (ART) e Registro de Responsabilidade Técnica (RRT), associando engenheiros
-e empresas às respectivas obras, validando o período de vigência e ativação de termos.
+e empresas às respectivas objetos, validando o período de vigência e ativação de termos.
 """
 
 from uuid import UUID
@@ -16,8 +16,8 @@ from app.models.art_rrt import ArtRrt
 from app.schemas.art_rrt import ArtRrtCreate
 
 
-async def get_art_rrt_by_obra(db: AsyncSession, obra_id: UUID):
-    result = await db.execute(select(ArtRrt).where(ArtRrt.obra_id == obra_id, ArtRrt.ativa == True))
+async def get_art_rrt_by_objeto(db: AsyncSession, objeto_id: UUID):
+    result = await db.execute(select(ArtRrt).where(ArtRrt.objeto_id == objeto_id, ArtRrt.ativa == True))
     return result.scalars().all()
 
 async def create_art_rrt(db: AsyncSession, usuario_id: UUID, obj_in: ArtRrtCreate) -> ArtRrt:

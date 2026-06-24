@@ -17,24 +17,24 @@ class ResumoPorStatus(BaseModel):
 
 class ResumoPorOrgao(BaseModel):
     orgao: str
-    total_obras: int
+    total_objetos: int
     valor_total: float
 
 
 class RelatorioResumo(BaseModel):
-    total_obras: int
+    total_objetos: int
     total_contratos: int
     total_empresas: int
-    obras_por_status: list[ResumoPorStatus]
-    obras_por_orgao: list[ResumoPorOrgao]
+    objetos_por_status: list[ResumoPorStatus]
+    objetos_por_orgao: list[ResumoPorOrgao]
     valor_total_contratos: float
 
 
-class RelatorioObraRow(BaseModel):
-    """Linha denormalizada da view `vw_relatorio_obras` (obra + contrato +
+class RelatorioObjetoRow(BaseModel):
+    """Linha denormalizada da view `vw_relatorio_objetos` (objeto + contrato +
     empresa + órgão) usada no construtor de relatórios e na impressão."""
 
-    obra_id: UUID
+    objeto_id: UUID
     titulo: str
     municipio: str | None = None
     status: str | None = None

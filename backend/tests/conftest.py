@@ -67,6 +67,12 @@ def client(sync_engine):
     """
     from app.main import app
 
+    # Desliga o rate limiter de login: em testes todas as requisições vêm do
+    # mesmo endereço e compartilham o bucket "20/minute" da sessão inteira,
+    # estourando o limite conforme a suíte cresce (429 → login sem token).
+    from app.api.auth import limiter
+    limiter.enabled = False
+
     async_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     TestSession = async_sessionmaker(
         bind=async_engine, class_=AsyncSession, expire_on_commit=False

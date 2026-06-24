@@ -18,13 +18,13 @@ router = APIRouter(prefix="/tarefas", tags=["Tarefas Kanban"])
 
 @router.get("", response_model=list[TarefaResponse])
 async def list_tarefas(
-    obra_id: UUID | None = None,
+    objeto_id: UUID | None = None,
     responsavel_id: UUID | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Lista tarefas com filtros opcionais."""
-    return await tarefa_service.get_tarefas(db, obra_id, responsavel_id)
+    return await tarefa_service.get_tarefas(db, objeto_id, responsavel_id)
 
 @router.post("", response_model=TarefaResponse, status_code=status.HTTP_201_CREATED)
 async def create_tarefa(

@@ -6,7 +6,7 @@ Gerencia a estrutura hierárquica em 3 níveis do cronograma físico-financeiro:
   2. Submeta (ex: Fundações, Pilares, Lajes)
   3. Evento (ex: item de serviço unitário — m³ de concreto, m² de fôrma, etc.)
 
-Esses itens formam a base para a declaração de medições e avanço de obras.
+Esses itens formam a base para a declaração de medições e avanço de objetos.
 """
 
 from uuid import UUID
@@ -15,8 +15,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Evento, Meta, Submeta
-from app.schemas.obra import EventoBase, EventoCreate, MetaCreate, SubmetaCreate
+from app.models.objeto import Evento, Meta, Submeta
+from app.schemas.objeto import EventoBase, EventoCreate, MetaCreate, SubmetaCreate
 
 
 # ---------------------------------------------------------------------------
@@ -29,8 +29,8 @@ async def create_meta(db: AsyncSession, obj_in: MetaCreate) -> Meta:
     await db.refresh(db_obj)
     return db_obj
 
-async def get_metas_by_obra(db: AsyncSession, obra_id: UUID):
-    result = await db.execute(select(Meta).where(Meta.obra_id == obra_id).order_by(Meta.ordem))
+async def get_metas_by_objeto(db: AsyncSession, objeto_id: UUID):
+    result = await db.execute(select(Meta).where(Meta.objeto_id == objeto_id).order_by(Meta.ordem))
     return result.scalars().all()
 
 # ---------------------------------------------------------------------------
@@ -75,3 +75,8 @@ async def update_evento(db: AsyncSession, evento_id: UUID, obj_in: EventoBase) -
     await db.flush()
     await db.refresh(db_obj)
     return db_obj
+
+async def delete_evento(db: AsyncSession, evento_id: UUID) -> None:
+    db_obj = await get_evento_by_id(db, evento_id)
+    await db.delete(db_obj)
+    await db.flush()

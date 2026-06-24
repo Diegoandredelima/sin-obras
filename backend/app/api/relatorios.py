@@ -13,16 +13,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
 from app.models.cadastro import Empresa
-from app.models.obra import Contrato, Obra
+from app.models.objeto import Contrato, Objeto
 from app.models.usuario import Usuario
 from app.schemas.relatorio import (
-    RelatorioObraRow,
+    RelatorioObjetoRow,
     RelatorioResumo,
     ResumoPorOrgao,
     ResumoPorStatus,
 )
 from app.services import export_relatorio as export_svc
-from app.services.obra import scope_obras_por_usuario
+from app.services.objeto import scope_objetos_por_usuario
 
 router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
@@ -41,26 +41,26 @@ async def resumo_relatorio(
 ):
     """Retorna dados agregados para a tela de relatórios."""
 
-    obras_no_escopo = scope_obras_por_usuario(
-        select(Obra).where(Obra.ativo == True), current_user
+    objetos_no_escopo = scope_objetos_por_usuario(
+        select(Objeto).where(Objeto.ativo == True), current_user
     ).subquery()
-    total_obras = await db.scalar(select(func.count()).select_from(obras_no_escopo))
+    total_objetos = await db.scalar(select(func.count()).select_from(objetos_no_escopo))
     total_contratos = await db.scalar(select(func.count(Contrato.id)))
     total_empresas = await db.scalar(select(func.count(Empresa.id)))
     valor_total = await db.scalar(
         select(func.coalesce(func.sum(Contrato.valor_global), 0))
     )
 
-    # Obras por status
+    # Objetos por status
     status_rows = await db.execute(
-        scope_obras_por_usuario(
-            select(Obra.status, func.count(Obra.id)).where(
-                Obra.ativo == True, Obra.status.is_not(None)
+        scope_objetos_por_usuario(
+            select(Objeto.status, func.count(Objeto.id)).where(
+                Objeto.ativo == True, Objeto.status.is_not(None)
             ),
             current_user,
-        ).group_by(Obra.status)
+        ).group_by(Objeto.status)
     )
-    obras_por_status = [
+    objetos_por_status = [
         ResumoPorStatus(
             status=row[0],
             label=STATUS_LABELS.get(row[0], row[0]),
@@ -69,43 +69,43 @@ async def resumo_relatorio(
         for row in status_rows
     ]
 
-    # Obras por órgão (top 10)
+    # Objetos por órgão (top 10)
     orgao_rows = await db.execute(
-        scope_obras_por_usuario(
+        scope_objetos_por_usuario(
             select(
-                Obra.orgao,
-                func.count(Obra.id),
+                Objeto.orgao,
+                func.count(Objeto.id),
                 func.coalesce(func.sum(Contrato.valor_global), 0),
             )
-            .join(Contrato, Obra.contrato_id == Contrato.id, isouter=True)
-            .where(Obra.ativo == True),
+            .join(Contrato, Objeto.contrato_id == Contrato.id, isouter=True)
+            .where(Objeto.ativo == True),
             current_user,
         )
-        .group_by(Obra.orgao)
-        .order_by(func.count(Obra.id).desc())
+        .group_by(Objeto.orgao)
+        .order_by(func.count(Objeto.id).desc())
         .limit(10)
     )
-    obras_por_orgao = [
+    objetos_por_orgao = [
         ResumoPorOrgao(
             orgao=row[0] or "Não informado",
-            total_obras=row[1],
+            total_objetos=row[1],
             valor_total=float(row[2]),
         )
         for row in orgao_rows
     ]
 
     return RelatorioResumo(
-        total_obras=total_obras or 0,
+        total_objetos=total_objetos or 0,
         total_contratos=total_contratos or 0,
         total_empresas=total_empresas or 0,
-        obras_por_status=obras_por_status,
-        obras_por_orgao=obras_por_orgao,
+        objetos_por_status=objetos_por_status,
+        objetos_por_orgao=objetos_por_orgao,
         valor_total_contratos=float(valor_total or 0),
     )
 
 
-@router.get("/obras", response_model=list[RelatorioObraRow])
-async def relatorio_obras(
+@router.get("/objetos", response_model=list[RelatorioObjetoRow])
+async def relatorio_objetos(
     search: str | None = Query(None, description="Busca por título, município, empresa ou nº de contrato"),
     situacao: str | None = Query(None),
     status: str | None = Query(None),
@@ -125,7 +125,7 @@ async def relatorio_obras(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
-    """Linhas denormalizadas (view `vw_relatorio_obras`) com filtros combináveis.
+    """Linhas denormalizadas (view `vw_relatorio_objetos`) com filtros combináveis.
 
     Alimenta o construtor de relatórios e os templates de impressão. Retorna a
     lista completa (até `limit`) — não paginado, pois é usado para gerar o
@@ -179,11 +179,11 @@ async def relatorio_obras(
 
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
     sql = text(
-        f"SELECT * FROM vw_relatorio_obras{where} "
+        f"SELECT * FROM vw_relatorio_objetos{where} "
         "ORDER BY titulo ASC LIMIT :limit"
     )
     result = await db.execute(sql, params)
-    return [RelatorioObraRow.model_validate(row) for row in result.mappings()]
+    return [RelatorioObjetoRow.model_validate(row) for row in result.mappings()]
 
 
 @router.get("/anos")
@@ -191,11 +191,11 @@ async def anos_disponiveis(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
-    """Retorna o intervalo de anos disponíveis na view vw_relatorio_obras."""
+    """Retorna o intervalo de anos disponíveis na view vw_relatorio_objetos."""
     result = await db.execute(text(
         "SELECT MIN(EXTRACT(YEAR FROM data_ref))::int, "
         "MAX(EXTRACT(YEAR FROM data_ref))::int "
-        "FROM vw_relatorio_obras WHERE data_ref IS NOT NULL"
+        "FROM vw_relatorio_objetos WHERE data_ref IS NOT NULL"
     ))
     row = result.one_or_none()
     ano_atual = date.today().year
@@ -217,8 +217,8 @@ async def empresas_lista(
     return [{"id": str(r[0]), "razao_social": r[1]} for r in result]
 
 
-@router.get("/export-obras")
-async def export_obras_filtradas(
+@router.get("/export-objetos")
+async def export_objetos_filtradas(
     search: str | None = Query(None),
     situacao: str | None = Query(None),
     status: str | None = Query(None),
@@ -233,7 +233,7 @@ async def export_obras_filtradas(
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
-    """Exporta em XLSX a lista de obras com os mesmos filtros de /obras."""
+    """Exporta em XLSX a lista de objetos com os mesmos filtros de /objetos."""
     conditions: list[str] = []
     params: dict = {"limit": 2000}
 
@@ -281,12 +281,12 @@ async def export_obras_filtradas(
             params["mes_fim"] = 6 if sem == 1 else 12
 
     where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = text(f"SELECT * FROM vw_relatorio_obras{where} ORDER BY titulo ASC LIMIT :limit")
+    sql = text(f"SELECT * FROM vw_relatorio_objetos{where} ORDER BY titulo ASC LIMIT :limit")
     result = await db.execute(sql, params)
-    obras = [RelatorioObraRow.model_validate(row) for row in result.mappings()]
+    objetos = [RelatorioObjetoRow.model_validate(row) for row in result.mappings()]
 
-    buf = export_svc.gerar_xlsx_obras(obras)
-    filename = f"obras_{date.today().isoformat()}.xlsx"
+    buf = export_svc.gerar_xlsx_objetos(objetos)
+    filename = f"objetos_{date.today().isoformat()}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -305,11 +305,11 @@ async def export_relatorio(
 
     if formato == "xlsx":
         buf = export_svc.gerar_xlsx(data)
-        filename = f"relatorio_obras_{data['total_obras']}_obras.xlsx"
+        filename = f"relatorio_objetos_{data['total_objetos']}_objetos.xlsx"
         media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     else:
         buf = export_svc.gerar_pdf(data)
-        filename = f"relatorio_obras_{data['total_obras']}_obras.pdf"
+        filename = f"relatorio_objetos_{data['total_objetos']}_objetos.pdf"
         media_type = "application/pdf"
 
     return StreamingResponse(

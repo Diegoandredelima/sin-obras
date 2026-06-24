@@ -16,7 +16,7 @@ class TarefaBase(BaseModel):
     status: StatusTarefa = StatusTarefa.A_FAZER
     prioridade: PrioridadeTarefa = PrioridadeTarefa.MEDIA
     prazo: date | None = None
-    obra_id: UUID | None = None
+    objeto_id: UUID | None = None
     responsavel_id: UUID | None = None
 
 class TarefaCreate(TarefaBase):
@@ -28,7 +28,7 @@ class TarefaUpdate(BaseModel):
     status: StatusTarefa | None = None
     prioridade: PrioridadeTarefa | None = None
     prazo: date | None = None
-    obra_id: UUID | None = None
+    objeto_id: UUID | None = None
     responsavel_id: UUID | None = None
 
 class TarefaResponse(TarefaBase):

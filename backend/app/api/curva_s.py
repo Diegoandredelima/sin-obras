@@ -14,11 +14,11 @@ from app.services import curva_s as curva_service
 router = APIRouter(prefix="/curva-s", tags=["Curva S Preditiva"])
 
 
-@router.get("/obras/{obra_id}")
+@router.get("/objetos/{objeto_id}")
 async def get_curva_s(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
     """Retorna dados da Curva S: Planejado, Realizado e Preditivo."""
-    return await curva_service.compute_curva_s(db, obra_id)
+    return await curva_service.compute_curva_s(db, objeto_id)

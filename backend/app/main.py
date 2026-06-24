@@ -17,13 +17,15 @@ from app.api.acompanhamento import router as acompanhamento_router
 from app.api.alertas import router as alertas_router
 from app.api.art_rrt import router as art_rrt_router
 from app.api.auth import router as auth_router
+from app.api.catalogo import router as catalogo_router
 from app.api.contratos import router as contratos_router
 from app.api.cronograma import router as cronograma_router
 from app.api.curva_s import router as curva_s_router
 from app.api.delegacao import router as delegacao_router
+from app.api.documentos import router as documentos_router
 from app.api.empresas import router as empresas_router
 from app.api.notificacoes import router as notificacoes_router
-from app.api.obras import router as obras_router
+from app.api.objetos import router as objetos_router
 from app.api.orgaos import router as orgaos_router
 from app.api.portal import router as portal_router
 from app.api.relatorios import router as relatorios_router
@@ -82,7 +84,7 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 app.include_router(auth_router, prefix="/api")
-app.include_router(obras_router, prefix="/api")
+app.include_router(objetos_router, prefix="/api")
 app.include_router(contratos_router, prefix="/api")
 app.include_router(cronograma_router, prefix="/api")
 app.include_router(empresas_router, prefix="/api")
@@ -90,9 +92,11 @@ app.include_router(tarefas_router, prefix="/api")
 app.include_router(art_rrt_router, prefix="/api")
 app.include_router(portal_router, prefix="/api")
 app.include_router(relatorios_router, prefix="/api")
+app.include_router(documentos_router, prefix="/api")
 app.include_router(notificacoes_router, prefix="/api")
 app.include_router(vistorias_router, prefix="/api")
 app.include_router(orgaos_router, prefix="/api")
+app.include_router(catalogo_router, prefix="/api")
 app.include_router(acompanhamento_router, prefix="/api")
 app.include_router(curva_s_router, prefix="/api")
 app.include_router(delegacao_router, prefix="/api")

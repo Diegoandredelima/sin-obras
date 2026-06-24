@@ -16,14 +16,14 @@ from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(prefix="/art-rrt", tags=["ART/RRT"])
 
-@router.get("/obra/{obra_id}", response_model=list[ArtRrtResponse])
-async def list_art_rrt_by_obra(
-    obra_id: UUID,
+@router.get("/objeto/{objeto_id}", response_model=list[ArtRrtResponse])
+async def list_art_rrt_by_objeto(
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
-    """Lista as ARTs/RRTs ativas de uma obra."""
-    return await art_rrt_service.get_art_rrt_by_obra(db, obra_id)
+    """Lista as ARTs/RRTs ativas de uma objeto."""
+    return await art_rrt_service.get_art_rrt_by_obra(db, objeto_id)
 
 @router.post("", response_model=ArtRrtResponse, status_code=status.HTTP_201_CREATED)
 async def create_art_rrt(

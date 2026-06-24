@@ -36,7 +36,7 @@ async def checkin(
     current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
 ):
     """
-    RF05 — Realiza check-in georreferenciado na obra.
+    RF05 — Realiza check-in georreferenciado na objeto.
     Valida geofencing via Haversine e cria vistoria com checklist automático.
     """
     vistoria = await vistoria_service.fazer_checkin(db, current_user.id, payload)

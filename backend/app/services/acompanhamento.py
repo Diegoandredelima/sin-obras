@@ -2,7 +2,7 @@
 SIN-Obras — Serviço de Acompanhamento de Prazos e Contratos.
 
 Expõe CRUD para as 9 tabelas de acompanhamento e um endpoint consolidado
-de timeline (todos os eventos contratuais de uma obra).
+de timeline (todos os eventos contratuais de uma objeto).
 """
 from uuid import UUID
 
@@ -21,7 +21,7 @@ from app.models.acompanhamento import (
     Reajuste,
     TermoRecebimento,
 )
-from app.models.obra import Contrato, Obra
+from app.models.objeto import Contrato, Objeto
 from app.models.portal import Medicao
 from app.schemas.acompanhamento import (
     AditivoPrazoCreate,
@@ -52,39 +52,39 @@ async def _get_or_404(db: AsyncSession, model, obj_id: UUID):
 # Eventos consolidados (timeline)
 # ---------------------------------------------------------------------------
 async def get_eventos_contratuais(
-    db: AsyncSession, obra_id: UUID
+    db: AsyncSession, objeto_id: UUID
 ) -> EventoContratualResponse:
-    """Retorna todos os eventos contratuais vinculados a uma obra."""
+    """Retorna todos os eventos contratuais vinculados a uma objeto."""
 
     async def _fetch(model, filter_col):
-        stmt = select(model).where(filter_col == obra_id).order_by(model.criado_em.desc())
+        stmt = select(model).where(filter_col == objeto_id).order_by(model.criado_em.desc())
         result = await db.execute(stmt)
         return result.scalars().all()
 
-    ordens = await _fetch(OrdemServico, OrdemServico.obra_id)
-    aditivos = await _fetch(AditivoPrazo, AditivoPrazo.obra_id)
-    paralisacoes = await _fetch(Paralisacao, Paralisacao.obra_id)
-    readequacoes = await _fetch(Readequacao, Readequacao.obra_id)
-    termos = await _fetch(TermoRecebimento, TermoRecebimento.obra_id)
-    notificacoes = await _fetch(NotificacaoExtrajudicial, NotificacaoExtrajudicial.obra_id)
-    portarias = await _fetch(Portaria, Portaria.obra_id)
+    ordens = await _fetch(OrdemServico, OrdemServico.objeto_id)
+    aditivos = await _fetch(AditivoPrazo, AditivoPrazo.objeto_id)
+    paralisacoes = await _fetch(Paralisacao, Paralisacao.objeto_id)
+    readequacoes = await _fetch(Readequacao, Readequacao.objeto_id)
+    termos = await _fetch(TermoRecebimento, TermoRecebimento.objeto_id)
+    notificacoes = await _fetch(NotificacaoExtrajudicial, NotificacaoExtrajudicial.objeto_id)
+    portarias = await _fetch(Portaria, Portaria.objeto_id)
 
-    # Apostilamento: vinculado a contrato → obra via contrato_id na tabela obras
+    # Apostilamento: vinculado a contrato → objeto via contrato_id na tabela objetos
     apost_stmt = (
         select(Apostilamento)
         .join(Contrato, Apostilamento.contrato_id == Contrato.id)
-        .join(Obra, Obra.contrato_id == Contrato.id)
-        .where(Obra.id == obra_id)
+        .join(Objeto, Objeto.contrato_id == Contrato.id)
+        .where(Objeto.id == objeto_id)
         .order_by(Apostilamento.criado_em.desc())
     )
     apost_result = await db.execute(apost_stmt)
     apostilamentos = apost_result.scalars().all()
 
-    # Reajuste: vinculado a medição (que tem obra_id)
+    # Reajuste: vinculado a medição (que tem objeto_id)
     reaj_stmt = (
         select(Reajuste)
         .join(Medicao, Reajuste.medicao_id == Medicao.id)
-        .where(Medicao.obra_id == obra_id)
+        .where(Medicao.objeto_id == objeto_id)
         .order_by(Reajuste.criado_em.desc())
     )
     reaj_result = await db.execute(reaj_stmt)
@@ -106,14 +106,14 @@ async def get_eventos_contratuais(
 # ---------------------------------------------------------------------------
 # Ordens de Serviço
 # ---------------------------------------------------------------------------
-async def list_ordens_servico(db: AsyncSession, obra_id: UUID):
-    stmt = select(OrdemServico).where(OrdemServico.obra_id == obra_id).order_by(OrdemServico.data_emissao.desc())
+async def list_ordens_servico(db: AsyncSession, objeto_id: UUID):
+    stmt = select(OrdemServico).where(OrdemServico.objeto_id == objeto_id).order_by(OrdemServico.data_emissao.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_ordem_servico(db: AsyncSession, obra_id: UUID, obj_in: OrdemServicoCreate) -> OrdemServico:
-    db_obj = OrdemServico(obra_id=obra_id, **obj_in.model_dump())
+async def create_ordem_servico(db: AsyncSession, objeto_id: UUID, obj_in: OrdemServicoCreate) -> OrdemServico:
+    db_obj = OrdemServico(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -123,14 +123,14 @@ async def create_ordem_servico(db: AsyncSession, obra_id: UUID, obj_in: OrdemSer
 # ---------------------------------------------------------------------------
 # Aditivos de Prazo
 # ---------------------------------------------------------------------------
-async def list_aditivos_prazo(db: AsyncSession, obra_id: UUID):
-    stmt = select(AditivoPrazo).where(AditivoPrazo.obra_id == obra_id).order_by(AditivoPrazo.numero.desc())
+async def list_aditivos_prazo(db: AsyncSession, objeto_id: UUID):
+    stmt = select(AditivoPrazo).where(AditivoPrazo.objeto_id == objeto_id).order_by(AditivoPrazo.numero.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_aditivo_prazo(db: AsyncSession, obra_id: UUID, obj_in: AditivoPrazoCreate) -> AditivoPrazo:
-    db_obj = AditivoPrazo(obra_id=obra_id, **obj_in.model_dump())
+async def create_aditivo_prazo(db: AsyncSession, objeto_id: UUID, obj_in: AditivoPrazoCreate) -> AditivoPrazo:
+    db_obj = AditivoPrazo(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -140,14 +140,14 @@ async def create_aditivo_prazo(db: AsyncSession, obra_id: UUID, obj_in: AditivoP
 # ---------------------------------------------------------------------------
 # Paralisações
 # ---------------------------------------------------------------------------
-async def list_paralisacoes(db: AsyncSession, obra_id: UUID):
-    stmt = select(Paralisacao).where(Paralisacao.obra_id == obra_id).order_by(Paralisacao.data_evento.desc())
+async def list_paralisacoes(db: AsyncSession, objeto_id: UUID):
+    stmt = select(Paralisacao).where(Paralisacao.objeto_id == objeto_id).order_by(Paralisacao.data_evento.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_paralisacao(db: AsyncSession, obra_id: UUID, obj_in: ParalisacaoCreate) -> Paralisacao:
-    db_obj = Paralisacao(obra_id=obra_id, **obj_in.model_dump())
+async def create_paralisacao(db: AsyncSession, objeto_id: UUID, obj_in: ParalisacaoCreate) -> Paralisacao:
+    db_obj = Paralisacao(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -157,14 +157,14 @@ async def create_paralisacao(db: AsyncSession, obra_id: UUID, obj_in: Paralisaca
 # ---------------------------------------------------------------------------
 # Readequações
 # ---------------------------------------------------------------------------
-async def list_readequacoes(db: AsyncSession, obra_id: UUID):
-    stmt = select(Readequacao).where(Readequacao.obra_id == obra_id).order_by(Readequacao.numero.desc())
+async def list_readequacoes(db: AsyncSession, objeto_id: UUID):
+    stmt = select(Readequacao).where(Readequacao.objeto_id == objeto_id).order_by(Readequacao.numero.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_readequacao(db: AsyncSession, obra_id: UUID, obj_in: ReadequacaoCreate) -> Readequacao:
-    db_obj = Readequacao(obra_id=obra_id, **obj_in.model_dump())
+async def create_readequacao(db: AsyncSession, objeto_id: UUID, obj_in: ReadequacaoCreate) -> Readequacao:
+    db_obj = Readequacao(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -208,14 +208,14 @@ async def create_reajuste(db: AsyncSession, medicao_id: UUID, obj_in: ReajusteCr
 # ---------------------------------------------------------------------------
 # Termos de Recebimento
 # ---------------------------------------------------------------------------
-async def list_termos_recebimento(db: AsyncSession, obra_id: UUID):
-    stmt = select(TermoRecebimento).where(TermoRecebimento.obra_id == obra_id).order_by(TermoRecebimento.data_emissao.desc())
+async def list_termos_recebimento(db: AsyncSession, objeto_id: UUID):
+    stmt = select(TermoRecebimento).where(TermoRecebimento.objeto_id == objeto_id).order_by(TermoRecebimento.data_emissao.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_termo_recebimento(db: AsyncSession, obra_id: UUID, obj_in: TermoRecebimentoCreate) -> TermoRecebimento:
-    db_obj = TermoRecebimento(obra_id=obra_id, **obj_in.model_dump())
+async def create_termo_recebimento(db: AsyncSession, objeto_id: UUID, obj_in: TermoRecebimentoCreate) -> TermoRecebimento:
+    db_obj = TermoRecebimento(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -225,14 +225,14 @@ async def create_termo_recebimento(db: AsyncSession, obra_id: UUID, obj_in: Term
 # ---------------------------------------------------------------------------
 # Notificações Extrajudiciais
 # ---------------------------------------------------------------------------
-async def list_notificacoes_extrajudiciais(db: AsyncSession, obra_id: UUID):
-    stmt = select(NotificacaoExtrajudicial).where(NotificacaoExtrajudicial.obra_id == obra_id).order_by(NotificacaoExtrajudicial.data_emissao.desc())
+async def list_notificacoes_extrajudiciais(db: AsyncSession, objeto_id: UUID):
+    stmt = select(NotificacaoExtrajudicial).where(NotificacaoExtrajudicial.objeto_id == objeto_id).order_by(NotificacaoExtrajudicial.data_emissao.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_notificacao_extrajudicial(db: AsyncSession, obra_id: UUID, obj_in: NotificacaoExtrajudicialCreate) -> NotificacaoExtrajudicial:
-    db_obj = NotificacaoExtrajudicial(obra_id=obra_id, **obj_in.model_dump())
+async def create_notificacao_extrajudicial(db: AsyncSession, objeto_id: UUID, obj_in: NotificacaoExtrajudicialCreate) -> NotificacaoExtrajudicial:
+    db_obj = NotificacaoExtrajudicial(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -242,14 +242,14 @@ async def create_notificacao_extrajudicial(db: AsyncSession, obra_id: UUID, obj_
 # ---------------------------------------------------------------------------
 # Portarias
 # ---------------------------------------------------------------------------
-async def list_portarias(db: AsyncSession, obra_id: UUID):
-    stmt = select(Portaria).where(Portaria.obra_id == obra_id).order_by(Portaria.data_emissao.desc())
+async def list_portarias(db: AsyncSession, objeto_id: UUID):
+    stmt = select(Portaria).where(Portaria.objeto_id == objeto_id).order_by(Portaria.data_emissao.desc())
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-async def create_portaria(db: AsyncSession, obra_id: UUID, obj_in: PortariaCreate) -> Portaria:
-    db_obj = Portaria(obra_id=obra_id, **obj_in.model_dump())
+async def create_portaria(db: AsyncSession, objeto_id: UUID, obj_in: PortariaCreate) -> Portaria:
+    db_obj = Portaria(objeto_id=objeto_id, **obj_in.model_dump())
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)

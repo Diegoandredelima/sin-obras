@@ -27,7 +27,7 @@ from app.models import (  # noqa — importa todos para criar as tabelas
     Medicao,
     Meta,
     Notificacao,
-    Obra,
+    Objeto,
     OrdemServico,
     Paralisacao,
     Portaria,
@@ -42,7 +42,7 @@ from app.models.acompanhamento import (
     TipoPortaria,
     TipoTermoRecebimento,
 )
-from app.models.obra import SaudeObra, StatusObra
+from app.models.objeto import SaudeObjeto, StatusObjeto
 
 # ---------------------------------------------------------------------------
 # Usuários de teste — um por perfil
@@ -100,10 +100,10 @@ USUARIOS_SEED = [
 
 
 # ---------------------------------------------------------------------------
-# Obra de demonstração
+# Objeto de demonstração
 # ---------------------------------------------------------------------------
-async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_id):
-    """Cria uma obra de demonstração com cronograma completo e dados de acompanhamento."""
+async def criar_objeto_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_id):
+    """Cria uma objeto de demonstração com cronograma completo e dados de acompanhamento."""
 
     # Contrato
     contrato = Contrato(
@@ -123,8 +123,8 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
     db.add(contrato)
     await db.flush()
 
-    # Obra
-    obra = Obra(
+    # Objeto
+    objeto = Objeto(
         titulo="Reforma Escola Estadual João Pessoa",
         descricao="Reforma completa com ampliação de 4 salas de aula e modernização da infraestrutura.",
         endereco="Rua das Flores, 100 — Alecrim",
@@ -133,8 +133,8 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
         data_inicio=date(2026, 2, 1),
         data_fim_prevista=date(2026, 12, 31),
         data_ordem_servico=date(2026, 2, 1),
-        status=StatusObra.EM_EXECUCAO,
-        saude=SaudeObra.VERDE,
+        status=StatusObjeto.EM_EXECUCAO,
+        saude=SaudeObjeto.VERDE,
         percentual_executado=35.00,
         raio_geofencing_metros=200,
         contrato_id=contrato.id,
@@ -142,12 +142,12 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
         gestor_id=coordenador_id,
         orgao="SEEC",
     )
-    db.add(obra)
+    db.add(objeto)
     await db.flush()
 
     # Ordem de Serviço
     db.add(OrdemServico(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         numero="001/2026-SIN",
         data_emissao=date(2026, 1, 25),
         data_inicio=date(2026, 2, 1),
@@ -157,7 +157,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Aditivo de Prazo
     db.add(AditivoPrazo(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         numero=1,
         dias_adicionados=30,
         nova_data_vigencia=date(2027, 2, 13),
@@ -170,7 +170,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Paralisação
     db.add(Paralisacao(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         tipo=TipoParalisacao.PARALISACAO,
         data_evento=date(2026, 7, 15),
         data_publicacao=date(2026, 7, 18),
@@ -182,7 +182,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Reinício
     db.add(Paralisacao(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         tipo=TipoParalisacao.REINICIO,
         data_evento=date(2026, 8, 1),
         data_publicacao=date(2026, 8, 3),
@@ -194,7 +194,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Portaria — designação do fiscal
     db.add(Portaria(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         usuario_id=fiscal_id,
         tipo=TipoPortaria.FISCAL,
         numero="045/2026-GS/SIN",
@@ -205,7 +205,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Portaria — designação do gestor
     db.add(Portaria(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         usuario_id=coordenador_id,
         tipo=TipoPortaria.GESTOR,
         numero="046/2026-GS/SIN",
@@ -216,7 +216,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Termo de Recebimento Provisório
     db.add(TermoRecebimento(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         tipo=TipoTermoRecebimento.PROVISORIO,
         numero="005/2027-SIN",
         data_emissao=date(2027, 1, 10),
@@ -227,7 +227,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Meta 1
     meta1 = Meta(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         descricao="1 — Serviços Preliminares e Infraestrutura",
         valor=150_000.00,
         ordem=1,
@@ -259,7 +259,7 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
 
     # Meta 2
     meta2 = Meta(
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         descricao="2 — Estrutura e Alvenaria",
         valor=600_000.00,
         ordem=2,
@@ -292,13 +292,13 @@ async def criar_obra_demo(db, engenheiro_id, empresa_id, fiscal_id, coordenador_
     db.add(Tarefa(
         titulo="Verificar nota fiscal do concreto — lote #3",
         descricao="Checar validade da NF e conformidade com o contrato antes de liberar pagamento.",
-        obra_id=obra.id,
+        objeto_id=objeto.id,
         responsavel_id=engenheiro_id,
     ))
 
-    print(f"  ✅ Obra criada: {obra.titulo}")
+    print(f"  ✅ Objeto criado: {objeto.titulo}")
     print(f"  ✅ Contrato: {contrato.numero_contrato}")
-    return obra
+    return objeto
 
 
 # ---------------------------------------------------------------------------
@@ -338,8 +338,8 @@ async def seed():
             usuarios_criados[u["tipo"]] = usuario
             print(f"  ✅ {u['tipo'].value}: {u['nome']} (matrícula/CNPJ: {u['matricula_cnpj']})")
 
-        print("\n  🏗️  Criando obra de demonstração...\n")
-        await criar_obra_demo(
+        print("\n  🏗️  Criando objeto de demonstração...\n")
+        await criar_objeto_demo(
             db,
             engenheiro_id=usuarios_criados[Role.APOIO_N2].id,
             empresa_id=usuarios_criados[Role.EMPRESA].id,

@@ -42,8 +42,8 @@ class Alerta(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=True
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=True
     )
     tipo: Mapped[str] = mapped_column(
         Enum(TipoAlerta, name="tipo_alerta_enum"), nullable=False
@@ -71,7 +71,7 @@ class Alerta(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
     delegado_para = relationship("Usuario", foreign_keys=[delegado_para_id], lazy="selectin")
 
     def __repr__(self) -> str:

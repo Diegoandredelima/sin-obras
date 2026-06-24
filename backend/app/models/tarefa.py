@@ -45,8 +45,8 @@ class Tarefa(Base):
         nullable=False,
     )
     prazo: Mapped[date | None] = mapped_column(Date, nullable=True)
-    obra_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=True
+    objeto_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=True
     )
     responsavel_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
@@ -58,7 +58,7 @@ class Tarefa(Base):
     )
 
     # Relacionamentos (opcionais, mas bons para carregamento ansioso se necessário)
-    # obra = relationship("Obra", lazy="selectin")
+    # objeto = relationship("Objeto", lazy="selectin")
     # responsavel = relationship("Usuario", lazy="selectin")
 
     def __repr__(self) -> str:

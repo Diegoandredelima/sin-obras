@@ -21,8 +21,8 @@ class DelegacaoObra(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     usuario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False
@@ -44,9 +44,9 @@ class DelegacaoObra(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
     usuario = relationship("Usuario", foreign_keys=[usuario_id], lazy="selectin")
     delegado_por = relationship("Usuario", foreign_keys=[delegado_por_id], lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<DelegacaoObra obra={self.obra_id} usuario={self.usuario_id} {self.funcao}>"
+        return f"<DelegacaoObra objeto={self.objeto_id} usuario={self.usuario_id} {self.funcao}>"

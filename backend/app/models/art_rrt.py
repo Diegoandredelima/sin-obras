@@ -20,8 +20,8 @@ class ArtRrt(Base):
     )
     numero: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     tipo: Mapped[str] = mapped_column(String(10), nullable=False) # 'ART' ou 'RRT'
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     usuario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False
@@ -37,7 +37,7 @@ class ArtRrt(Base):
     )
 
     # Relacionamentos
-    # obra = relationship("Obra", lazy="selectin")
+    # objeto = relationship("Objeto", lazy="selectin")
     # usuario = relationship("Usuario", lazy="selectin")
 
     def __repr__(self) -> str:

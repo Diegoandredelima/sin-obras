@@ -11,17 +11,17 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Evento, Meta, Obra, Submeta
+from app.models.objeto import Evento, Meta, Objeto, Submeta
 from app.models.portal import Medicao, StatusMedicao
 
 
-async def compute_curva_s(db: AsyncSession, obra_id: UUID) -> dict:
-    obra = (await db.execute(select(Obra).where(Obra.id == obra_id))).scalar_one_or_none()
-    if not obra:
-        return {"error": "Obra não encontrada"}
+async def compute_curva_s(db: AsyncSession, objeto_id: UUID) -> dict:
+    objeto = (await db.execute(select(Objeto).where(Objeto.id == objeto_id))).scalar_one_or_none()
+    if not objeto:
+        return {"error": "Objeto não encontrada"}
 
     # Buscar cronograma planejado
-    metas_stmt = select(Meta).where(Meta.obra_id == obra_id)
+    metas_stmt = select(Meta).where(Meta.objeto_id == objeto_id)
     metas_result = await db.execute(metas_stmt)
     metas = metas_result.scalars().all()
 
@@ -38,15 +38,15 @@ async def compute_curva_s(db: AsyncSession, obra_id: UUID) -> dict:
     # Buscar medições aprovadas
     med_stmt = (
         select(Medicao)
-        .where(Medicao.obra_id == obra_id, Medicao.status == StatusMedicao.APROVADA)
+        .where(Medicao.objeto_id == objeto_id, Medicao.status == StatusMedicao.APROVADA)
         .order_by(Medicao.criado_em.asc())
     )
     med_result = await db.execute(med_stmt)
     medicoes = med_result.scalars().all()
 
     # Determinar período
-    data_inicio = obra.data_inicio or obra.criado_em.date() if obra.criado_em else date.today()
-    data_fim = obra.data_fim_prevista or data_inicio + timedelta(days=365)
+    data_inicio = objeto.data_inicio or objeto.criado_em.date() if objeto.criado_em else date.today()
+    data_fim = objeto.data_fim_prevista or data_inicio + timedelta(days=365)
 
     total_dias = max((data_fim - data_inicio).days, 1)
     meses = max(total_dias // 30, 1)

@@ -14,7 +14,7 @@ from app.models.vistoria import ResultadoVistoria
 # Vistoria
 # ---------------------------------------------------------------------------
 class CheckinRequest(BaseModel):
-    obra_id: UUID
+    objeto_id: UUID
     medicao_id: UUID | None = None
     latitude: float
     longitude: float
@@ -38,7 +38,7 @@ class ChecklistItemResponse(BaseModel):
 
 class VistoriaResponse(BaseModel):
     id: UUID
-    obra_id: UUID
+    objeto_id: UUID
     fiscal_id: UUID
     medicao_id: UUID | None
     checkin_em: datetime | None

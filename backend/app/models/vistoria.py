@@ -25,7 +25,7 @@ class Vistoria(Base):
     __tablename__ = "vistorias"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    obra_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False)
+    objeto_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False)
     fiscal_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False)
     medicao_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("medicoes.id"), nullable=True)
 
@@ -45,7 +45,7 @@ class Vistoria(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<Vistoria obra={self.obra_id} fiscal={self.fiscal_id} resultado={self.resultado}>"
+        return f"<Vistoria objeto={self.objeto_id} fiscal={self.fiscal_id} resultado={self.resultado}>"
 
 
 class ChecklistItem(Base):

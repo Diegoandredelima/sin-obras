@@ -43,14 +43,14 @@ router = APIRouter(prefix="/acompanhamento", tags=["Acompanhamento Contratual"])
 # ---------------------------------------------------------------------------
 
 
-@router.get("/obras/{obra_id}/eventos", response_model=EventoContratualResponse)
+@router.get("/objetos/{objeto_id}/eventos", response_model=EventoContratualResponse)
 async def get_eventos_contratuais(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    """Retorna todos os eventos contratuais de uma obra (timeline completa)."""
-    return await svc.get_eventos_contratuais(db, obra_id)
+    """Retorna todos os eventos contratuais de uma objeto (timeline completa)."""
+    return await svc.get_eventos_contratuais(db, objeto_id)
 
 
 # ---------------------------------------------------------------------------
@@ -59,29 +59,29 @@ async def get_eventos_contratuais(
 
 
 @router.get(
-    "/obras/{obra_id}/ordens-servico",
+    "/objetos/{objeto_id}/ordens-servico",
     response_model=list[OrdemServicoResponse],
 )
 async def list_ordens_servico(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_ordens_servico(db, obra_id)
+    return await svc.list_ordens_servico(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/ordens-servico",
+    "/objetos/{objeto_id}/ordens-servico",
     response_model=OrdemServicoResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_ordem_servico(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: OrdemServicoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_ordem_servico(db, obra_id, payload)
+    obj = await svc.create_ordem_servico(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "OrdemServico", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -95,29 +95,29 @@ async def create_ordem_servico(
 
 
 @router.get(
-    "/obras/{obra_id}/aditivos-prazo",
+    "/objetos/{objeto_id}/aditivos-prazo",
     response_model=list[AditivoPrazoResponse],
 )
 async def list_aditivos_prazo(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_aditivos_prazo(db, obra_id)
+    return await svc.list_aditivos_prazo(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/aditivos-prazo",
+    "/objetos/{objeto_id}/aditivos-prazo",
     response_model=AditivoPrazoResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_aditivo_prazo(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: AditivoPrazoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_aditivo_prazo(db, obra_id, payload)
+    obj = await svc.create_aditivo_prazo(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "AditivoPrazo", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -131,29 +131,29 @@ async def create_aditivo_prazo(
 
 
 @router.get(
-    "/obras/{obra_id}/paralisacoes",
+    "/objetos/{objeto_id}/paralisacoes",
     response_model=list[ParalisacaoResponse],
 )
 async def list_paralisacoes(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_paralisacoes(db, obra_id)
+    return await svc.list_paralisacoes(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/paralisacoes",
+    "/objetos/{objeto_id}/paralisacoes",
     response_model=ParalisacaoResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_paralisacao(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: ParalisacaoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_paralisacao(db, obra_id, payload)
+    obj = await svc.create_paralisacao(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "Paralisacao", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -167,29 +167,29 @@ async def create_paralisacao(
 
 
 @router.get(
-    "/obras/{obra_id}/readequacoes",
+    "/objetos/{objeto_id}/readequacoes",
     response_model=list[ReadequacaoResponse],
 )
 async def list_readequacoes(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_readequacoes(db, obra_id)
+    return await svc.list_readequacoes(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/readequacoes",
+    "/objetos/{objeto_id}/readequacoes",
     response_model=ReadequacaoResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_readequacao(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: ReadequacaoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_readequacao(db, obra_id, payload)
+    obj = await svc.create_readequacao(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "Readequacao", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -275,29 +275,29 @@ async def create_reajuste(
 
 
 @router.get(
-    "/obras/{obra_id}/termos-recebimento",
+    "/objetos/{objeto_id}/termos-recebimento",
     response_model=list[TermoRecebimentoResponse],
 )
 async def list_termos_recebimento(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_termos_recebimento(db, obra_id)
+    return await svc.list_termos_recebimento(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/termos-recebimento",
+    "/objetos/{objeto_id}/termos-recebimento",
     response_model=TermoRecebimentoResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_termo_recebimento(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: TermoRecebimentoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_termo_recebimento(db, obra_id, payload)
+    obj = await svc.create_termo_recebimento(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "TermoRecebimento", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -311,29 +311,29 @@ async def create_termo_recebimento(
 
 
 @router.get(
-    "/obras/{obra_id}/notificacoes-extrajudiciais",
+    "/objetos/{objeto_id}/notificacoes-extrajudiciais",
     response_model=list[NotificacaoExtrajudicialResponse],
 )
 async def list_notificacoes_extrajudiciais(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_notificacoes_extrajudiciais(db, obra_id)
+    return await svc.list_notificacoes_extrajudiciais(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/notificacoes-extrajudiciais",
+    "/objetos/{objeto_id}/notificacoes-extrajudiciais",
     response_model=NotificacaoExtrajudicialResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_notificacao_extrajudicial(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: NotificacaoExtrajudicialCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_notificacao_extrajudicial(db, obra_id, payload)
+    obj = await svc.create_notificacao_extrajudicial(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "NotificacaoExtrajudicial", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),
@@ -347,29 +347,29 @@ async def create_notificacao_extrajudicial(
 
 
 @router.get(
-    "/obras/{obra_id}/portarias",
+    "/objetos/{objeto_id}/portarias",
     response_model=list[PortariaResponse],
 )
 async def list_portarias(
-    obra_id: UUID,
+    objeto_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA)),
 ):
-    return await svc.list_portarias(db, obra_id)
+    return await svc.list_portarias(db, objeto_id)
 
 
 @router.post(
-    "/obras/{obra_id}/portarias",
+    "/objetos/{objeto_id}/portarias",
     response_model=PortariaResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def create_portaria(
-    obra_id: UUID,
+    objeto_id: UUID,
     payload: PortariaCreate,
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.ENGENHEIRO)),
 ):
-    obj = await svc.create_portaria(db, obra_id, payload)
+    obj = await svc.create_portaria(db, objeto_id, payload)
     await registrar_auditoria(
         db, current_user.id, "Portaria", str(obj.id), "CREATE",
         dados_depois=payload.model_dump(mode="json"),

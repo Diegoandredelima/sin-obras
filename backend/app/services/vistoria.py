@@ -12,8 +12,8 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.obra import Obra
-from app.models.portal import Medicao
+from app.models.objeto import Objeto
+from app.models.portal import MedicaoItem
 from app.models.vistoria import ChecklistItem, FotoVistoria, ResultadoVistoria, Vistoria
 from app.schemas.vistoria import CheckinRequest, ChecklistItemUpdate, VistoriaFinalizarRequest
 
@@ -41,38 +41,38 @@ async def fazer_checkin(
 ) -> Vistoria:
     """
     RF05 — Check-in georreferenciado:
-    1. Obtém coordenadas da obra
+    1. Obtém coordenadas da objeto
     2. Calcula distância com Haversine
-    3. Compara com raio configurado na obra
+    3. Compara com raio configurado na objeto
     4. Cria registro de vistoria com resultado georreferenciado
     """
-    # Buscar obra
-    obra_result = await db.execute(select(Obra).where(Obra.id == payload.obra_id, Obra.ativo == True))
-    obra = obra_result.scalar_one_or_none()
-    if not obra:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra não encontrada.")
+    # Buscar objeto
+    objeto_result = await db.execute(select(Objeto).where(Objeto.id == payload.objeto_id, Objeto.ativo == True))
+    objeto = objeto_result.scalar_one_or_none()
+    if not objeto:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Objeto não encontrada.")
 
-    # Extrair coordenadas da obra (PostGIS)
-    obra_lat, obra_lon = None, None
-    if obra.localizacao is not None:
+    # Extrair coordenadas da objeto (PostGIS)
+    objeto_lat, objeto_lon = None, None
+    if objeto.localizacao is not None:
         # GeoAlchemy2 retorna WKBElement; precisamos converter
         from geoalchemy2.shape import to_shape
         try:
-            ponto = to_shape(obra.localizacao)
-            obra_lat, obra_lon = ponto.y, ponto.x
+            ponto = to_shape(objeto.localizacao)
+            objeto_lat, objeto_lon = ponto.y, ponto.x
         except Exception:
             pass
 
     # Calcular distância
     distancia = None
     dentro_raio = False
-    if obra_lat is not None:
-        distancia = _haversine_metros(payload.latitude, payload.longitude, obra_lat, obra_lon)
-        dentro_raio = distancia <= obra.raio_geofencing_metros
+    if objeto_lat is not None:
+        distancia = _haversine_metros(payload.latitude, payload.longitude, objeto_lat, objeto_lon)
+        dentro_raio = distancia <= objeto.raio_geofencing_metros
 
     # Criar vistoria
     vistoria = Vistoria(
-        obra_id=payload.obra_id,
+        objeto_id=payload.objeto_id,
         fiscal_id=fiscal_id,
         medicao_id=payload.medicao_id,
         local_checkin=f"SRID=4326;POINT({payload.longitude} {payload.latitude})",
@@ -84,17 +84,13 @@ async def fazer_checkin(
     db.add(vistoria)
     await db.flush()
 
-    # Gerar checklist a partir dos eventos declarados na medição
+    # Gerar checklist a partir dos itens do boletim da medição
     if payload.medicao_id:
-        med_result = await db.execute(select(Medicao).where(Medicao.id == payload.medicao_id))
-        medicao = med_result.scalar_one_or_none()
-        if medicao and medicao.eventos_declarados:
-            for ev in medicao.eventos_declarados:
-                item = ChecklistItem(
-                    vistoria_id=vistoria.id,
-                    evento_id=ev["evento_id"],
-                )
-                db.add(item)
+        itens_result = await db.execute(
+            select(MedicaoItem.evento_id).where(MedicaoItem.medicao_id == payload.medicao_id)
+        )
+        for (evento_id,) in itens_result.all():
+            db.add(ChecklistItem(vistoria_id=vistoria.id, evento_id=evento_id))
 
     await db.flush()
     await db.refresh(vistoria)

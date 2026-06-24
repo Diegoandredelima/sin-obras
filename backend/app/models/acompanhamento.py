@@ -51,8 +51,8 @@ class OrdemServico(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     numero: Mapped[str] = mapped_column(String(50), nullable=False)
     data_emissao: Mapped[date] = mapped_column(Date, nullable=False)
@@ -65,7 +65,7 @@ class OrdemServico(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<OrdemServico {self.numero}>"
@@ -81,8 +81,8 @@ class AditivoPrazo(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     numero: Mapped[int] = mapped_column(Integer, nullable=False)
     dias_adicionados: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -98,10 +98,10 @@ class AditivoPrazo(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<AditivoPrazo #{self.numero} obra={self.obra_id}>"
+        return f"<AditivoPrazo #{self.numero} objeto={self.objeto_id}>"
 
 
 # ---------------------------------------------------------------------------
@@ -114,8 +114,8 @@ class Paralisacao(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     tipo: Mapped[str] = mapped_column(
         Enum(TipoParalisacao, name="tipo_paralisacao_enum"),
@@ -133,10 +133,10 @@ class Paralisacao(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<Paralisacao {self.tipo} obra={self.obra_id}>"
+        return f"<Paralisacao {self.tipo} objeto={self.objeto_id}>"
 
 
 # ---------------------------------------------------------------------------
@@ -149,8 +149,8 @@ class Readequacao(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     numero: Mapped[int] = mapped_column(Integer, nullable=False)
     tipo: Mapped[str] = mapped_column(
@@ -169,7 +169,7 @@ class Readequacao(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<Readequacao #{self.numero} {self.tipo}>"
@@ -245,8 +245,8 @@ class TermoRecebimento(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     tipo: Mapped[str] = mapped_column(
         Enum(TipoTermoRecebimento, name="tipo_termo_recebimento_enum"),
@@ -263,10 +263,10 @@ class TermoRecebimento(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<TermoRecebimento {self.tipo} obra={self.obra_id}>"
+        return f"<TermoRecebimento {self.tipo} objeto={self.objeto_id}>"
 
 
 # ---------------------------------------------------------------------------
@@ -279,8 +279,8 @@ class NotificacaoExtrajudicial(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     empresa_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
@@ -297,7 +297,7 @@ class NotificacaoExtrajudicial(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
     empresa = relationship("Usuario", foreign_keys=[empresa_id], lazy="selectin")
 
     def __repr__(self) -> str:
@@ -314,8 +314,8 @@ class Portaria(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    obra_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("obras.id", ondelete="CASCADE"), nullable=False
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
     )
     usuario_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=False
@@ -335,7 +335,7 @@ class Portaria(Base):
         nullable=False,
     )
 
-    obra = relationship("Obra", lazy="selectin")
+    objeto = relationship("Objeto", lazy="selectin")
     usuario = relationship("Usuario", foreign_keys=[usuario_id], lazy="selectin")
 
     def __repr__(self) -> str:

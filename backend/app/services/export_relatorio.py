@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.cadastro import Empresa
-from app.models.obra import Contrato, Obra
+from app.models.objeto import Contrato, Objeto
 
 STATUS_LABELS = {
     "EM_EXECUCAO": "Em Execução",
@@ -33,15 +33,15 @@ THIN_BORDER = Border(
 
 
 async def _fetch_data(db: AsyncSession) -> dict:
-    total_obras = await db.scalar(select(func.count(Obra.id)).where(Obra.ativo == True))
+    total_objetos = await db.scalar(select(func.count(Objeto.id)).where(Objeto.ativo == True))
     total_contratos = await db.scalar(select(func.count(Contrato.id)))
     total_empresas = await db.scalar(select(func.count(Empresa.id)))
     valor_total = await db.scalar(select(func.coalesce(func.sum(Contrato.valor_global), 0)))
 
     status_rows = await db.execute(
-        select(Obra.status, func.count(Obra.id))
-        .where(Obra.ativo == True, Obra.status.is_not(None))
-        .group_by(Obra.status)
+        select(Objeto.status, func.count(Objeto.id))
+        .where(Objeto.ativo == True, Objeto.status.is_not(None))
+        .group_by(Objeto.status)
     )
     por_status = [
         (STATUS_LABELS.get(row[0], row[0]), row[1])
@@ -49,11 +49,11 @@ async def _fetch_data(db: AsyncSession) -> dict:
     ]
 
     orgao_rows = await db.execute(
-        select(Obra.orgao, func.count(Obra.id), func.coalesce(func.sum(Contrato.valor_global), 0))
-        .join(Contrato, Obra.contrato_id == Contrato.id, isouter=True)
-        .where(Obra.ativo == True)
-        .group_by(Obra.orgao)
-        .order_by(func.count(Obra.id).desc())
+        select(Objeto.orgao, func.count(Objeto.id), func.coalesce(func.sum(Contrato.valor_global), 0))
+        .join(Contrato, Objeto.contrato_id == Contrato.id, isouter=True)
+        .where(Objeto.ativo == True)
+        .group_by(Objeto.orgao)
+        .order_by(func.count(Objeto.id).desc())
         .limit(15)
     )
     por_orgao = [
@@ -62,7 +62,7 @@ async def _fetch_data(db: AsyncSession) -> dict:
     ]
 
     return {
-        "total_obras": total_obras or 0,
+        "total_objetos": total_objetos or 0,
         "total_contratos": total_contratos or 0,
         "total_empresas": total_empresas or 0,
         "valor_total": float(valor_total or 0),
@@ -88,7 +88,7 @@ def gerar_xlsx(data: dict) -> BytesIO:
     ws.row_dimensions[3].height = 22
 
     indicadores = [
-        ("Total de Obras", data["total_obras"]),
+        ("Total de Objetos", data["total_objetos"]),
         ("Total de Contratos", data["total_contratos"]),
         ("Total de Empresas", data["total_empresas"]),
         ("Valor Total dos Contratos", f"R$ {data['valor_total']:,.2f}"),
@@ -101,7 +101,7 @@ def gerar_xlsx(data: dict) -> BytesIO:
 
     row = 9
     ws.merge_cells(f"A{row}:C{row}")
-    ws.cell(row=row, column=1, value="Obras por Status").font = Font(bold=True, size=12)
+    ws.cell(row=row, column=1, value="Objetos por Status").font = Font(bold=True, size=12)
     row += 1
     for col, h in enumerate(["Status", "Total"], 1):
         c = ws.cell(row=row, column=col, value=h)
@@ -118,9 +118,9 @@ def gerar_xlsx(data: dict) -> BytesIO:
 
     row += 2
     ws.merge_cells(f"A{row}:D{row}")
-    ws.cell(row=row, column=1, value="Top 15 Órgãos por Volume de Obras").font = Font(bold=True, size=12)
+    ws.cell(row=row, column=1, value="Top 15 Órgãos por Volume de Objetos").font = Font(bold=True, size=12)
     row += 1
-    for col, h in enumerate(["Órgão", "Total Obras", "Valor Total (R$)"], 1):
+    for col, h in enumerate(["Órgão", "Total Objetos", "Valor Total (R$)"], 1):
         c = ws.cell(row=row, column=col, value=h)
         c.font = HEADER_FONT
         c.fill = HEADER_FILL
@@ -151,11 +151,11 @@ SITUACAO_LABELS_EXPORT = {
 }
 
 
-def gerar_xlsx_obras(obras: list) -> BytesIO:
-    """Gera planilha XLSX a partir da lista de obras filtradas."""
+def gerar_xlsx_objetos(objetos: list) -> BytesIO:
+    """Gera planilha XLSX a partir da lista de objetos filtradas."""
     wb = Workbook()
     ws = wb.active
-    ws.title = "Obras"
+    ws.title = "Objetos"
 
     headers = [
         "Título", "Município", "Órgão", "Empresa", "Nº Contrato",
@@ -179,7 +179,7 @@ def gerar_xlsx_obras(obras: list) -> BytesIO:
         c.alignment = Alignment(horizontal="center", wrap_text=True)
     ws.row_dimensions[2].height = 22
 
-    for row_idx, o in enumerate(obras, 3):
+    for row_idx, o in enumerate(objetos, 3):
         row_data = [
             o.titulo,
             o.municipio or "",
@@ -230,7 +230,7 @@ def gerar_pdf(data: dict) -> BytesIO:
     pdf.cell(0, 10, "Indicadores Gerais", ln=True)
     pdf.set_font("DejaVu", "", 11)
     indicadores = [
-        ("Total de Obras:", str(data["total_obras"])),
+        ("Total de Objetos:", str(data["total_objetos"])),
         ("Total de Contratos:", str(data["total_contratos"])),
         ("Total de Empresas:", str(data["total_empresas"])),
         ("Valor Total dos Contratos:", f"R$ {data['valor_total']:,.2f}"),
@@ -241,7 +241,7 @@ def gerar_pdf(data: dict) -> BytesIO:
     pdf.ln(5)
 
     pdf.set_font("DejaVu", "B", 13)
-    pdf.cell(0, 10, "Obras por Status", ln=True)
+    pdf.cell(0, 10, "Objetos por Status", ln=True)
     pdf.set_font("DejaVu", "B", 10)
     pdf.set_fill_color(27, 94, 32)
     pdf.set_text_color(255, 255, 255)
@@ -257,12 +257,12 @@ def gerar_pdf(data: dict) -> BytesIO:
     pdf.ln(8)
 
     pdf.set_font("DejaVu", "B", 13)
-    pdf.cell(0, 10, "Top 15 Orgaos por Volume de Obras", ln=True)
+    pdf.cell(0, 10, "Top 15 Orgaos por Volume de Objetos", ln=True)
     pdf.set_font("DejaVu", "B", 10)
     pdf.set_fill_color(27, 94, 32)
     pdf.set_text_color(255, 255, 255)
     pdf.cell(100, 8, "Orgao", border=1, fill=True)
-    pdf.cell(30, 8, "Obras", border=1, fill=True, align="C")
+    pdf.cell(30, 8, "Objetos", border=1, fill=True, align="C")
     pdf.cell(40, 8, "Valor (R$)", border=1, fill=True, align="C")
     pdf.ln()
     pdf.set_font("DejaVu", "", 9)
