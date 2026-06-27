@@ -146,6 +146,13 @@ async def create_objeto(db: AsyncSession, obj_in: ObjetoCreate, criado_por_id: U
 
     db.add(db_obj)
     await db.flush()
+
+    # Vinculação a um orçamento (template): copia a EAP para dentro do objeto,
+    # com o BDI embutido no preço (Opção A — cópia congelada).
+    if getattr(obj_in, "orcamento_id", None):
+        from app.services import orcamento as orcamento_service
+        await orcamento_service.copiar_orcamento_para_objeto(db, obj_in.orcamento_id, db_obj.id)
+
     await db.refresh(db_obj)
     return db_obj
 

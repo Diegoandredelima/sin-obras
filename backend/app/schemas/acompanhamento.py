@@ -46,6 +46,8 @@ class AditivoPrazoCreate(AditivoPrazoBase):
 class AditivoPrazoResponse(AditivoPrazoBase):
     id: UUID
     objeto_id: UUID
+    status_tramitacao: str | None = None
+    solicitado_por_id: UUID | None = None
     criado_em: datetime
 
     model_config = {"from_attributes": True}
@@ -68,6 +70,8 @@ class ParalisacaoCreate(ParalisacaoBase):
 class ParalisacaoResponse(ParalisacaoBase):
     id: UUID
     objeto_id: UUID
+    status_tramitacao: str | None = None
+    solicitado_por_id: UUID | None = None
     criado_em: datetime
 
     model_config = {"from_attributes": True}

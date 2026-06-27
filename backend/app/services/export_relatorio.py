@@ -23,9 +23,9 @@ STATUS_LABELS = {
     "PLANEJADA": "Planejada",
 }
 
-HEADER_FILL = PatternFill(start_color="1B5E20", end_color="1B5E20", fill_type="solid")
+HEADER_FILL = PatternFill(start_color="1B3C73", end_color="1B3C73", fill_type="solid")
 HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
-TITLE_FONT = Font(name="Calibri", bold=True, size=14, color="1B5E20")
+TITLE_FONT = Font(name="Calibri", bold=True, size=14, color="1B3C73")
 THIN_BORDER = Border(
     left=Side(style="thin"), right=Side(style="thin"),
     top=Side(style="thin"), bottom=Side(style="thin"),

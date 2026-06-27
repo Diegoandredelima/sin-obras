@@ -16,7 +16,9 @@ from .auditoria import AuditLog
 from .cadastro import Empresa, Orgao
 from .catalogo import CatalogoClasse, CatalogoItem
 from .delegacao import DelegacaoObra
-from .objeto import Contrato, Evento, Item, Meta, Objeto, Submeta
+from .documento import Documento, TipoDocumento
+from .objeto import Contrato, Evento, EventoMemoria, Item, Meta, Objeto, Submeta
+from .orcamento import Orcamento, StatusOrcamento
 from .portal import (
     CondicaoTempo,
     DiarioObra,
@@ -42,6 +44,9 @@ __all__ = [
     "Meta",
     "Submeta",
     "Evento",
+    "EventoMemoria",
+    "Orcamento",
+    "StatusOrcamento",
     "AuditLog",
     "Tarefa",
     "ArtRrt",
@@ -66,4 +71,6 @@ __all__ = [
     "Portaria",
     "Alerta",
     "DelegacaoObra",
+    "Documento",
+    "TipoDocumento",
 ]

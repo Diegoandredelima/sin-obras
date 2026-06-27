@@ -2,7 +2,7 @@
 SIN-Obras — Schemas de Relatório
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -28,6 +28,54 @@ class RelatorioResumo(BaseModel):
     objetos_por_status: list[ResumoPorStatus]
     objetos_por_orgao: list[ResumoPorOrgao]
     valor_total_contratos: float
+
+
+class ProgressoMetaRow(BaseModel):
+    """Avanço planejado × realizado de uma Meta do cronograma."""
+
+    meta_id: UUID
+    descricao: str
+    ordem: int
+    valor_planejado: Decimal
+    valor_realizado: Decimal
+    percentual: Decimal
+
+
+class RelatorioCronograma(BaseModel):
+    """Progresso físico-financeiro por meta de um objeto."""
+
+    objeto_id: UUID
+    objeto_titulo: str
+    metas: list[ProgressoMetaRow]
+    valor_planejado_total: Decimal
+    valor_realizado_total: Decimal
+    percentual_total: Decimal
+
+
+class FotoMedicaoRow(BaseModel):
+    """Uma foto inviolável vinculada (opcionalmente) a um item da medição."""
+
+    id: UUID
+    url_storage: str | None = None
+    filename: str | None = None
+    carimbo_servidor: datetime | None = None
+    item_descricao: str | None = None
+
+
+class MedicaoFotosGroup(BaseModel):
+    medicao_id: UUID
+    numero_medicao: int
+    data_fim_periodo: date | None = None
+    fotos: list[FotoMedicaoRow]
+
+
+class RelatorioFotos(BaseModel):
+    """Compilação das fotos de todas as medições de um objeto."""
+
+    objeto_id: UUID
+    objeto_titulo: str
+    medicoes: list[MedicaoFotosGroup]
+    total_fotos: int
 
 
 class RelatorioObjetoRow(BaseModel):

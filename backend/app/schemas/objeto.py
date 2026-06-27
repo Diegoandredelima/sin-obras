@@ -12,6 +12,25 @@ from app.models.objeto import SaudeObjeto, SituacaoObjeto, StatusObjeto
 
 
 # ---------------------------------------------------------------------------
+# Memória de Cálculo Contratada (linha do grid C/P × L × H × N × %)
+# ---------------------------------------------------------------------------
+class EventoMemoriaLinha(BaseModel):
+    ordem: int = 0
+    descricao: str | None = None
+    comprimento: Decimal | None = None  # C/P
+    largura: Decimal | None = None       # L
+    altura: Decimal | None = None        # H
+    percentual: Decimal | None = None    # %
+    n_repeticoes: Decimal = Field(default=Decimal("1"))  # N
+    quantidade: Decimal = Field(default=Decimal("0"))    # A/V resultante
+
+class EventoMemoriaResponse(EventoMemoriaLinha):
+    id: UUID
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
 # Evento
 # ---------------------------------------------------------------------------
 class EventoBase(BaseModel):
@@ -19,14 +38,26 @@ class EventoBase(BaseModel):
     quantidade: Decimal = Field(default=Decimal("0.0"))
     unidade: str = Field(default="un", max_length=20)
     valor_unitario: Decimal = Field(default=Decimal("0.0"))
+    codigo_referencia: str | None = Field(None, max_length=50)
+    criterio_medicao: str | None = None
+    # Memória de cálculo contratada (opcional). Quando presente, substitui as
+    # linhas existentes (replace-all). A soma das linhas justifica `quantidade`.
+    memoria: list[EventoMemoriaLinha] | None = None
 
 class EventoCreate(EventoBase):
     submeta_id: UUID
 
-class EventoResponse(EventoBase):
+class EventoResponse(BaseModel):
+    descricao: str
+    quantidade: Decimal
+    unidade: str
+    valor_unitario: Decimal
+    codigo_referencia: str | None = None
+    criterio_medicao: str | None = None
     id: UUID
     submeta_id: UUID
     valor_total: Decimal
+    memoria: list[EventoMemoriaResponse] = []
 
     model_config = {"from_attributes": True}
 
@@ -117,6 +148,8 @@ class ObjetoBase(BaseModel):
     percentual_executado: Decimal = Field(default=Decimal("0.0"))
     raio_geofencing_metros: int = 200
     contrato_id: UUID | None = None
+    # Orçamento (template) cuja EAP será copiada para este objeto na criação.
+    orcamento_id: UUID | None = None
     responsavel_id: UUID | None = None
 
 class ObjetoCreate(ObjetoBase):
@@ -187,3 +220,56 @@ class ObjetoDetalheResponse(ObjetoResponse):
     observacoes: str | None = None
     itens: list[ItemResponse] = []
     metas: list[MetaResponse] = []
+
+# ---------------------------------------------------------------------------
+# Cronograma (Versões e Parcelas)
+# ---------------------------------------------------------------------------
+class CronogramaParcelaBase(BaseModel):
+    evento_id: UUID
+    periodo_numero: int
+    quantidade_prevista: Decimal
+
+class CronogramaParcelaCreate(CronogramaParcelaBase):
+    pass
+
+class CronogramaParcelaResponse(CronogramaParcelaBase):
+    id: UUID
+    versao_id: UUID
+    # Snapshot do orçamento congelado nesta versão (Decisão 2).
+    quantidade_contratada: Decimal | None = None
+    valor_unitario: Decimal | None = None
+    descricao_evento: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class CronogramaVersaoBase(BaseModel):
+    numero_versao: int
+    ativa: bool = False
+    linha_de_base: bool = False
+    justificativa: str | None = None
+    total_periodos: int
+
+class CronogramaVersaoCreate(BaseModel):
+    justificativa: str | None = None
+    parcelas: list[CronogramaParcelaCreate]
+
+class CronogramaVersaoResponse(CronogramaVersaoBase):
+    id: UUID
+    objeto_id: UUID
+    criado_por_id: UUID | None = None
+    criado_em: datetime
+    parcelas: list[CronogramaParcelaResponse] = []
+
+    model_config = {"from_attributes": True}
+
+
+class CronogramaPrevisaoParcela(BaseModel):
+    evento_id: UUID
+    quantidade_prevista: Decimal
+
+
+class CronogramaPrevisaoResponse(BaseModel):
+    periodo: int
+    versao_id: UUID | None = None
+    parcelas: list[CronogramaPrevisaoParcela] = []

@@ -3,7 +3,7 @@ SIN-Obras — Exportação de Documentos de Objeto (XLS)
 
 Gera os arquivos XLSX dos documentos de objeto (Boletim de Medição, Memória de
 Cálculo e RDO) reaproveitando o cálculo de boletim de ``services.portal`` e o
-padrão visual de ``services.export_relatorio`` (cabeçalho verde SIN, bordas).
+padrão visual de ``services.export_relatorio`` (cabeçalho azul SIN, bordas).
 Os PDFs equivalentes são gerados no frontend pelas rotas de impressão
 (PrintLayout), portanto aqui só tratamos do formato XLS.
 """
@@ -21,9 +21,9 @@ from app.models.objeto import Contrato, Objeto
 from app.models.portal import DiarioObra, MedicaoItem
 from app.services import portal as portal_service
 
-HEADER_FILL = PatternFill(start_color="1B5E20", end_color="1B5E20", fill_type="solid")
+HEADER_FILL = PatternFill(start_color="1B3C73", end_color="1B3C73", fill_type="solid")
 HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
-TITLE_FONT = Font(name="Calibri", bold=True, size=13, color="1B5E20")
+TITLE_FONT = Font(name="Calibri", bold=True, size=13, color="1B3C73")
 LABEL_FONT = Font(name="Calibri", bold=True, size=10, color="555555")
 THIN_BORDER = Border(
     left=Side(style="thin"), right=Side(style="thin"),
@@ -99,7 +99,11 @@ async def gerar_boletim_xlsx(db: AsyncSession, medicao_id: UUID) -> tuple[BytesI
         ("% PER.", 9), ("% ACUM.", 9), ("PREÇO UNIT.", 14),
         ("VLR PERÍODO", 14), ("VLR ACUM.", 14), ("SALDO", 14),
     ]
-    extra = [f"Contrato: {contrato_num or '—'}    Boletim da {medicao.numero_medicao}ª Medição"]
+    numero_art = boletim.get("numero_art")
+    extra = [
+        f"Contrato: {contrato_num or '—'}    ART/RRT: {numero_art or '—'}"
+        f"    Boletim da {medicao.numero_medicao}ª Medição"
+    ]
     row = _header_inst(ws, len(cols), "BOLETIM DE MEDIÇÃO", objeto_titulo, extra)
 
     for i, (titulo, larg) in enumerate(cols, start=1):

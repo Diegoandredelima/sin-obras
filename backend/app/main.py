@@ -21,11 +21,15 @@ from app.api.catalogo import router as catalogo_router
 from app.api.contratos import router as contratos_router
 from app.api.cronograma import router as cronograma_router
 from app.api.curva_s import router as curva_s_router
+from app.api.dashboard import router as dashboard_router
 from app.api.delegacao import router as delegacao_router
 from app.api.documentos import router as documentos_router
+from app.api.documentos_contratuais import router as documentos_contratuais_router
 from app.api.empresas import router as empresas_router
+from app.api.ia import router as ia_router
 from app.api.notificacoes import router as notificacoes_router
 from app.api.objetos import router as objetos_router
+from app.api.orcamentos import router as orcamentos_router
 from app.api.orgaos import router as orgaos_router
 from app.api.portal import router as portal_router
 from app.api.relatorios import router as relatorios_router
@@ -49,7 +53,20 @@ async def lifespan(app: FastAPI):
         )
         import app.models  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
+
+    # Agendador de tarefas periódicas (RF27) — best-effort, nunca impede o startup.
+    _shutdown = None
+    try:
+        from app.services.scheduler import shutdown_scheduler, start_scheduler
+        start_scheduler()
+        _shutdown = shutdown_scheduler
+    except Exception:  # noqa: BLE001
+        pass
+
     yield
+
+    if _shutdown:
+        _shutdown()
     await engine.dispose()
 
 
@@ -85,6 +102,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 app.include_router(auth_router, prefix="/api")
 app.include_router(objetos_router, prefix="/api")
+app.include_router(orcamentos_router, prefix="/api")
 app.include_router(contratos_router, prefix="/api")
 app.include_router(cronograma_router, prefix="/api")
 app.include_router(empresas_router, prefix="/api")
@@ -101,6 +119,9 @@ app.include_router(acompanhamento_router, prefix="/api")
 app.include_router(curva_s_router, prefix="/api")
 app.include_router(delegacao_router, prefix="/api")
 app.include_router(alertas_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
+app.include_router(ia_router, prefix="/api")
+app.include_router(documentos_contratuais_router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

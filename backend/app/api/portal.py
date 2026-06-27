@@ -6,11 +6,12 @@ Endpoints: Diário de Obras, Medições (com assinatura e fluxo de fiscalizaçã
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
-from app.models.portal import OrigemMedicao
+from app.models.portal import OrigemMedicao, StatusMedicao
 from app.models.usuario import Usuario
 from app.schemas.portal import (
     DiarioCreate,
@@ -52,7 +53,7 @@ async def list_diario(
 ):
     """Lista todos os registros do Diário de Obras."""
     _bloquear_apoio_n1(current_user)
-    return await portal_service.get_diario_by_obra(db, objeto_id)
+    return await portal_service.get_diario_by_objeto(db, objeto_id)
 
 
 @router.post("/objetos/{objeto_id}/diario", response_model=DiarioResponse, status_code=status.HTTP_201_CREATED)
@@ -93,7 +94,7 @@ async def list_medicoes(
 ):
     """Lista as medições de uma objeto."""
     _bloquear_apoio_n1(current_user)
-    return await portal_service.get_medicoes_by_obra(db, objeto_id)
+    return await portal_service.get_medicoes_by_objeto(db, objeto_id)
 
 
 @router.post("/objetos/{objeto_id}/medicoes", response_model=MedicaoResponse, status_code=status.HTTP_201_CREATED)
@@ -117,7 +118,7 @@ async def create_medicao_fiscal(
     objeto_id: UUID,
     payload: MedicaoCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL))
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2))
 ):
     """Cria uma medição de origem FISCAL (o fiscal mede diretamente, com foto)."""
     payload.objeto_id = objeto_id
@@ -210,13 +211,16 @@ async def upload_foto_medicao(
     medicao_item_id: UUID | None = Form(default=None),
     latitude: float | None = Form(default=None),
     longitude: float | None = Form(default=None),
+    titulo: str | None = Form(default=None),
+    descricao: str | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: Usuario = Depends(require_minimum_role(Role.EMPRESA))
 ):
     """Anexa foto de validação à medição (opcionalmente vinculada a um item)."""
     _bloquear_apoio_n1(current_user)
     foto = await portal_service.upload_foto_medicao(
-        db, id, current_user.id, medicao_item_id, latitude, longitude, file
+        db, id, current_user.id, medicao_item_id, latitude, longitude, file,
+        titulo=titulo, descricao=descricao,
     )
     await registrar_auditoria(db, current_user.id, "FotoMedicao", str(foto.id), "UPLOAD",
                                descricao=f"Foto registrada — hash: {foto.hash_sha256[:12]}...")
@@ -228,7 +232,7 @@ async def concluir_medicao(
     id: UUID,
     payload: MedicaoConcluirRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL))
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2))
 ):
     """Fiscal conclui (atesta) uma medição de origem fiscal — vai direto a APROVADA."""
     medicao = await portal_service.concluir_medicao_fiscal(db, id, current_user.id, payload.observacao)
@@ -255,22 +259,45 @@ async def assinar_medicao(
     return medicao
 
 
+_STATUS_LABEL = {
+    "APROVADA": "APROVADA",
+    "REPROVADA": "REPROVADA",
+    "AGUARDANDO_CHEFE": "AGUARDANDO APROVAÇÃO DO CHEFE",
+}
+
+
 @router.post("/medicoes/{id}/avaliar", response_model=MedicaoResponse)
 async def avaliar_medicao(
     id: UUID,
     payload: MedicaoFiscalRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL))
+    current_user: Usuario = Depends(require_minimum_role(Role.APOIO_N2))
 ):
     """
-    Fiscal aprova ou reprova uma medição.
-    RN02 — Resultado altera status da medição.
+    Analisa uma medição: aprova (total ou parcial — RF23) ou reprova.
+    RF24/RN08 — acima da alçada, segue para aprovação do chefe (AGUARDANDO_CHEFE).
     """
-    medicao = await portal_service.avaliar_medicao(db, id, payload.aprovada, payload.observacao_fiscal)
+    itens = [i.model_dump() for i in payload.itens] if payload.itens else None
+    medicao = await portal_service.avaliar_medicao(
+        db, id, payload.aprovada, payload.observacao_fiscal, itens_aprovados=itens,
+    )
 
-    status_label = "APROVADA" if payload.aprovada else "REPROVADA"
+    status_label = _STATUS_LABEL.get(medicao.status, medicao.status)
     await registrar_auditoria(db, current_user.id, "Medicao", str(medicao.id), "AVALIAR",
-                               descricao=f"Medição #{medicao.numero_medicao} {status_label} pelo fiscal")
+                               descricao=f"Medição #{medicao.numero_medicao} → {status_label} (apoio)")
+
+    # Acima da alçada: notificar os coordenadores para aprovação final.
+    if medicao.status == StatusMedicao.AGUARDANDO_CHEFE:
+        coordenadores = (await db.execute(
+            select(Usuario).where(Usuario.tipo == Role.COORDENADOR, Usuario.ativo == True)
+        )).scalars().all()
+        for chefe in coordenadores:
+            await criar_notificacao(
+                db=db,
+                usuario_id=chefe.id,
+                titulo=f"Medição #{medicao.numero_medicao} aguarda sua aprovação",
+                mensagem=f"Valor de R$ {medicao.valor_medido} excede a alçada e requer aprovação do chefe.",
+            )
 
     # Notificar a empresa (quando há conta vinculada)
     if medicao.empresa_usuario_id:
@@ -278,7 +305,33 @@ async def avaliar_medicao(
             db=db,
             usuario_id=medicao.empresa_usuario_id,
             titulo=f"Medição #{medicao.numero_medicao} {status_label}",
-            mensagem=payload.observacao_fiscal or f"Sua medição foi {status_label.lower()} pelo fiscal responsável.",
+            mensagem=payload.observacao_fiscal or f"Sua medição está {status_label.lower()}.",
+        )
+
+    return medicao
+
+
+@router.post("/medicoes/{id}/aprovar-chefe", response_model=MedicaoResponse)
+async def aprovar_medicao_chefe(
+    id: UUID,
+    payload: MedicaoFiscalRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.COORDENADOR))
+):
+    """Aprovação final do Coordenador para medições acima da alçada (RN08)."""
+    medicao = await portal_service.aprovar_medicao_chefe(
+        db, id, payload.aprovada, payload.observacao_fiscal,
+    )
+    status_label = _STATUS_LABEL.get(medicao.status, medicao.status)
+    await registrar_auditoria(db, current_user.id, "Medicao", str(medicao.id), "APROVAR_CHEFE",
+                               descricao=f"Medição #{medicao.numero_medicao} → {status_label} (chefe)")
+
+    if medicao.empresa_usuario_id:
+        await criar_notificacao(
+            db=db,
+            usuario_id=medicao.empresa_usuario_id,
+            titulo=f"Medição #{medicao.numero_medicao} {status_label}",
+            mensagem=payload.observacao_fiscal or f"Sua medição está {status_label.lower()}.",
         )
 
     return medicao

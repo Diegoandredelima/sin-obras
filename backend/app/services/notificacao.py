@@ -12,6 +12,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.portal import CanalNotificacao, Notificacao
+from app.models.usuario import Usuario
+from app.services.email import send_email
 
 
 async def criar_notificacao(
@@ -20,8 +22,14 @@ async def criar_notificacao(
     titulo: str,
     mensagem: str | None = None,
     canal: CanalNotificacao = CanalNotificacao.SISTEMA,
+    enviar_email: bool = True,
 ) -> Notificacao:
-    """Cria e persiste uma notificação para o usuário."""
+    """Cria e persiste uma notificação para o usuário.
+
+    Quando ``enviar_email`` é True, também dispara um e-mail best-effort (RF10).
+    O envio nunca quebra o fluxo: se o e-mail estiver desabilitado ou falhar, a
+    notificação no sistema permanece como fonte de verdade.
+    """
     notif = Notificacao(
         usuario_id=usuario_id,
         titulo=titulo,
@@ -30,6 +38,11 @@ async def criar_notificacao(
     )
     db.add(notif)
     await db.flush()
+
+    if enviar_email:
+        email = await db.scalar(select(Usuario.email).where(Usuario.id == usuario_id))
+        await send_email(email, titulo, mensagem or titulo)
+
     return notif
 
 

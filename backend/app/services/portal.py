@@ -13,6 +13,7 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import settings
 from app.models.art_rrt import ArtRrt
 from app.models.objeto import Contrato, Evento, Objeto
 from app.models.portal import (
@@ -155,6 +156,78 @@ async def _novo_item(db: AsyncSession, item_in: MedicaoItemCreate) -> MedicaoIte
     )
 
 
+async def _flags_trava_contrato(db: AsyncSession, objeto_id: UUID, contrato_id: UUID | None) -> tuple[bool, bool]:
+    """Lê as regras de trava (negativa, acima do contratado) do contrato.
+
+    Procura o contrato pela medição (``contrato_id``) ou, na falta, pelo contrato
+    do objeto. Sem contrato vinculado, aplica o default rígido (ambas ligadas).
+    """
+    alvo = contrato_id
+    if alvo is None:
+        res = await db.execute(select(Objeto.contrato_id).where(Objeto.id == objeto_id))
+        alvo = res.scalar_one_or_none()
+    if alvo is None:
+        return True, True
+    res = await db.execute(
+        select(Contrato.bloquear_quantidade_negativa, Contrato.bloquear_acima_contratado)
+        .where(Contrato.id == alvo)
+    )
+    row = res.first()
+    if row is None:
+        return True, True
+    return bool(row[0]), bool(row[1])
+
+
+async def _validar_travas_lancamento(
+    db: AsyncSession,
+    objeto_id: UUID,
+    contrato_id: UUID | None,
+    numero_medicao: int,
+    itens: list[MedicaoItemCreate],
+) -> None:
+    """Decisão 1 — trava de quantitativo NO LANÇAMENTO da medição.
+
+    Para cada item: rejeita quantidade negativa e/ou quantidade que faça o
+    acumulado (aprovado anterior + período líquido) ultrapassar o saldo
+    contratado do evento (lido da versão ativa do Planejamento). Identifica o
+    item infrator (422).
+    """
+    if not itens:
+        return
+    bloq_negativa, bloq_acima = await _flags_trava_contrato(db, objeto_id, contrato_id)
+    if not (bloq_negativa or bloq_acima):
+        return
+
+    from app.services import cronograma as cronograma_service
+
+    contratado = await cronograma_service.orcamento_contratado_por_evento(db, objeto_id)
+    anteriores = await _acumulado_anterior_por_evento(db, objeto_id, numero_medicao)
+
+    for idx, item in enumerate(itens, start=1):
+        liquido = Decimal(item.quantidade_periodo) - Decimal(item.desconto_vaos or 0)
+        if bloq_negativa and (Decimal(item.quantidade_periodo) < 0 or liquido < 0):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Item {idx}: quantidade negativa não é permitida.",
+            )
+        if not bloq_acima:
+            continue
+        contr = contratado.get(item.evento_id)
+        if contr is None:
+            continue
+        qtd_contratada = Decimal(contr[0])
+        _, qtd_ant = anteriores.get(item.evento_id, (Decimal("0"), Decimal("0")))
+        acumulado = Decimal(qtd_ant) + liquido
+        if acumulado > qtd_contratada:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Item {idx}: quantidade superior ao saldo contratado "
+                    f"(acumulado {acumulado} > contratado {qtd_contratada})."
+                ),
+            )
+
+
 async def create_medicao(
     db: AsyncSession,
     autor_id: UUID,
@@ -163,6 +236,7 @@ async def create_medicao(
 ) -> Medicao:
     numero = await _proximo_numero_medicao(db, obj_in.objeto_id)
     retencao = await _resolver_retencao(db, obj_in.contrato_id, obj_in.percentual_retencao)
+    await _validar_travas_lancamento(db, obj_in.objeto_id, obj_in.contrato_id, numero, obj_in.itens)
 
     db_obj = Medicao(
         objeto_id=obj_in.objeto_id,
@@ -304,7 +378,12 @@ async def montar_boletim(db: AsyncSession, medicao: Medicao) -> dict:
     anterior (medições aprovadas anteriores) + atual; saldo = total contratado -
     acumulado atual. Totais: bruto, retenção (% sobre o bruto) e valor líquido.
     """
+    from app.services import cronograma as cronograma_service
+
     anteriores = await _acumulado_anterior_por_evento(db, medicao.objeto_id, medicao.numero_medicao)
+    # Orçamento contratado vigente (snapshot da versão ativa do Planejamento, com
+    # fallback para as linhas vivas) — Decisão 2.
+    contratado = await cronograma_service.orcamento_contratado_por_evento(db, medicao.objeto_id)
 
     itens_out: list[dict] = []
     valor_bruto_total = Decimal("0.00")
@@ -315,12 +394,19 @@ async def montar_boletim(db: AsyncSession, medicao: Medicao) -> dict:
         acumulado_anterior = _money(valor_ant)
         acumulado_atual = _money(acumulado_anterior + valor_bruto)
         evento = item.evento
-        total_contratado = _money(evento.quantidade * evento.valor_unitario) if evento else Decimal("0.00")
+        # Quantidade e preço contratados: da versão ativa, com fallback ao evento vivo.
+        if item.evento_id in contratado:
+            qtd_contr, vu_contr, _desc_contr = contratado[item.evento_id]
+        elif evento:
+            qtd_contr, vu_contr = evento.quantidade, evento.valor_unitario
+        else:
+            qtd_contr, vu_contr = Decimal("0"), Decimal("0")
+        total_contratado = _money(qtd_contr * vu_contr)
         saldo = _money(total_contratado - acumulado_atual)
 
         # Colunas de quantidade (espelham a aba PLANILHA do boletim real).
         qtd_liquida = _qtd(item.quantidade_periodo - item.desconto_vaos)
-        qtd_prevista = _qtd(evento.quantidade) if evento else Decimal("0.0000")
+        qtd_prevista = _qtd(qtd_contr)
         qtd_acumulada = _qtd(qtd_ant + qtd_liquida)
         qtd_saldo = _qtd(qtd_prevista - qtd_acumulada)
         if qtd_prevista > 0:
@@ -356,9 +442,20 @@ async def montar_boletim(db: AsyncSession, medicao: Medicao) -> dict:
     faturamento_direto = _money(medicao.valor_faturamento_direto)
     valor_liquido = _money(valor_bruto_total - faturamento_direto - retencao)
 
+    # ART/RRT ativa do objeto — fixada no cabeçalho do boletim (a mais recente
+    # por data de emissão, quando houver mais de uma ativa).
+    art_res = await db.execute(
+        select(ArtRrt)
+        .where(ArtRrt.objeto_id == medicao.objeto_id, ArtRrt.ativa == True)
+        .order_by(ArtRrt.data_emissao.desc().nullslast())
+    )
+    art_ativa = art_res.scalars().first()
+    numero_art = art_ativa.numero if art_ativa else None
+
     return {
         "medicao_id": medicao.id,
         "numero_medicao": medicao.numero_medicao,
+        "numero_art": numero_art,
         "status": medicao.status,
         "percentual_retencao": medicao.percentual_retencao,
         "itens": itens_out,
@@ -380,6 +477,8 @@ async def upload_foto_medicao(
     latitude: float | None,
     longitude: float | None,
     file: UploadFile,
+    titulo: str | None = None,
+    descricao: str | None = None,
 ) -> FotoMedicao:
     """Sobe foto da medição: hash SHA-256, carimbo do servidor e geo (RN03)."""
     medicao = await get_medicao_by_id(db, medicao_id)
@@ -413,6 +512,8 @@ async def upload_foto_medicao(
         enviado_por_id=usuario_id,
         url_storage=url_storage,
         filename=file.filename,
+        titulo=titulo,
+        descricao=descricao,
         coordenadas=coordenadas_wkt,
         hash_sha256=hash_sha256,
         carimbo_servidor=agora,
@@ -551,22 +652,113 @@ async def _atualizar_financeiro_objeto(db: AsyncSession, objeto_id: UUID) -> Non
     await db.flush()
 
 
-async def avaliar_medicao(db: AsyncSession, medicao_id: UUID, aprovada: bool, observacao: str | None = None) -> Medicao:
-    """Fiscal aprova ou reprova a medição da empresa."""
+def _valor_liquido_aprovado(medicao: Medicao) -> Decimal:
+    """Valor líquido considerando as quantidades aprovadas por item (RF23)."""
+    valor_bruto_total = Decimal("0.00")
+    for item in medicao.itens:
+        valor_bruto_total += _money(item.valor_bruto_aprovado)
+    valor_bruto_total = _money(valor_bruto_total)
+    retencao = _money(valor_bruto_total * medicao.percentual_retencao / Decimal("100"))
+    faturamento_direto = _money(medicao.valor_faturamento_direto)
+    return _money(valor_bruto_total - faturamento_direto - retencao)
+
+
+async def _limite_alcada(db: AsyncSession, medicao: Medicao) -> Decimal:
+    """Limite de alçada aplicável à medição (RF24/RN08).
+
+    Usa o limite padrão configurado nas settings. Ponto de extensão para um
+    override por contrato no futuro.
+    """
+    return Decimal(settings.ALCADA_APROVACAO_PADRAO)
+
+
+async def avaliar_medicao(
+    db: AsyncSession,
+    medicao_id: UUID,
+    aprovada: bool,
+    observacao: str | None = None,
+    itens_aprovados: list[dict] | None = None,
+) -> Medicao:
+    """Analisa a medição da empresa: aprova (total/parcial) ou reprova.
+
+    - RF23: aprovação parcial por item via ``itens_aprovados`` (lista de
+      ``{item_id, quantidade_aprovada}``). Itens omitidos são aprovados pela
+      quantidade declarada.
+    - RF24/RN08: se o valor líquido aprovado exceder a alçada, o status vai para
+      ``AGUARDANDO_CHEFE`` e o financeiro só é atualizado após a aprovação final
+      do coordenador (ver ``aprovar_medicao_chefe``).
+    """
     db_obj = await get_medicao_by_id(db, medicao_id)
 
     if db_obj.status not in (StatusMedicao.ASSINADA, StatusMedicao.EM_FISCALIZACAO):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A medição não está disponível para fiscalização.")
 
-    db_obj.status = StatusMedicao.APROVADA if aprovada else StatusMedicao.REPROVADA
-    db_obj.observacao_fiscal = observacao
-    if aprovada:
-        boletim = await montar_boletim(db, db_obj)
-        db_obj.valor_medido = boletim["valor_liquido"]
+    aprovacao_parcial = bool(itens_aprovados)
+    if (not aprovada or aprovacao_parcial) and not (observacao and observacao.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A justificativa é obrigatória ao reprovar ou aprovar parcialmente uma medição.",
+        )
 
+    db_obj.observacao_fiscal = observacao
+
+    if not aprovada:
+        db_obj.status = StatusMedicao.REPROVADA
+        db.add(db_obj)
+        await db.flush()
+        return await get_medicao_by_id(db, medicao_id)
+
+    # Aprovação: aplica quantidades aprovadas por item (default = declarada).
+    aprovados_map = {str(i["item_id"]): i["quantidade_aprovada"] for i in (itens_aprovados or [])}
+    for item in db_obj.itens:
+        if str(item.id) in aprovados_map:
+            item.quantidade_aprovada = aprovados_map[str(item.id)]
+        elif item.quantidade_aprovada is None:
+            item.quantidade_aprovada = item.quantidade_periodo
+        db.add(item)
+
+    valor_liquido = _valor_liquido_aprovado(db_obj)
+    db_obj.valor_medido = valor_liquido
+
+    limite = await _limite_alcada(db, db_obj)
+    if valor_liquido > limite:
+        db_obj.status = StatusMedicao.AGUARDANDO_CHEFE
+        db.add(db_obj)
+        await db.flush()
+        return await get_medicao_by_id(db, medicao_id)
+
+    db_obj.status = StatusMedicao.APROVADA
     db.add(db_obj)
     await db.flush()
-    if aprovada:
-        await _atualizar_financeiro_objeto(db, db_obj.objeto_id)
-    await db.refresh(db_obj)
-    return db_obj
+    await _atualizar_financeiro_objeto(db, db_obj.objeto_id)
+    return await get_medicao_by_id(db, medicao_id)
+
+
+async def aprovar_medicao_chefe(db: AsyncSession, medicao_id: UUID, aprovada: bool, observacao: str | None = None) -> Medicao:
+    """Aprovação final do Coordenador para medições acima da alçada (RN08)."""
+    db_obj = await get_medicao_by_id(db, medicao_id)
+    if db_obj.status != StatusMedicao.AGUARDANDO_CHEFE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta medição não está aguardando aprovação do chefe.",
+        )
+    if not aprovada and not (observacao and observacao.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A justificativa é obrigatória ao reprovar a medição.",
+        )
+
+    if observacao and observacao.strip():
+        db_obj.observacao_fiscal = observacao
+
+    if not aprovada:
+        db_obj.status = StatusMedicao.REPROVADA
+        db.add(db_obj)
+        await db.flush()
+        return await get_medicao_by_id(db, medicao_id)
+
+    db_obj.status = StatusMedicao.APROVADA
+    db.add(db_obj)
+    await db.flush()
+    await _atualizar_financeiro_objeto(db, db_obj.objeto_id)
+    return await get_medicao_by_id(db, medicao_id)

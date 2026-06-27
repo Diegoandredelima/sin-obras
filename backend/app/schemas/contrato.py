@@ -37,6 +37,9 @@ class ContratoCreate(BaseModel):
     tipo_licitacao: str | None = Field(None, max_length=100)
     numero_licitacao: str | None = Field(None, max_length=100)
     matricula_cei: str | None = Field(None, max_length=50)
+    # Regras de trava do lançamento de medição (Decisão 1)
+    bloquear_quantidade_negativa: bool | None = None
+    bloquear_acima_contratado: bool | None = None
 
 class ContratoUpdate(BaseModel):
     numero_processo: str | None = Field(None, max_length=50)
@@ -61,6 +64,8 @@ class ContratoUpdate(BaseModel):
     tipo_licitacao: str | None = Field(None, max_length=100)
     numero_licitacao: str | None = Field(None, max_length=100)
     matricula_cei: str | None = Field(None, max_length=50)
+    bloquear_quantidade_negativa: bool | None = None
+    bloquear_acima_contratado: bool | None = None
 
 # ---------------------------------------------------------------------------
 # Response Schemas
@@ -101,6 +106,8 @@ class ContratoResponse(BaseModel):
     numero_licitacao: str | None = None
     matricula_cei: str | None = None
     objeto: str | None = None
+    bloquear_quantidade_negativa: bool | None = None
+    bloquear_acima_contratado: bool | None = None
     criado_em: datetime
 
     empresa_ref: EmpresaResumo | None = None

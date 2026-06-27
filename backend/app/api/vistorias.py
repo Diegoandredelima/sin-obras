@@ -6,12 +6,18 @@ Check-in georreferenciado, checklist, upload de fotos e finalização.
 from datetime import UTC
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.rbac import Role, require_minimum_role
+from app.models.alerta import Alerta, PrioridadeAlerta, TipoAlerta
+from app.models.objeto import Contrato, Objeto
+from app.models.portal import Medicao, StatusMedicao
 from app.models.usuario import Usuario
+from app.models.vistoria import Vistoria
 from app.schemas.vistoria import (
     CheckinRequest,
     ChecklistItemResponse,
@@ -22,8 +28,22 @@ from app.schemas.vistoria import (
 )
 from app.services import vistoria as vistoria_service
 from app.services.auditoria import registrar_auditoria
+from app.services.notificacao import criar_notificacao
 
 router = APIRouter(prefix="/vistorias", tags=["Vistorias (Mobile)"])
+
+# Gravidade da pendência → prioridade do alerta (RF17).
+_GRAVIDADE_PRIORIDADE = {
+    "LEVE": PrioridadeAlerta.BAIXA,
+    "GRAVE": PrioridadeAlerta.ALTA,
+    "CRITICO": PrioridadeAlerta.CRITICA,
+}
+
+
+class PendenciaRequest(BaseModel):
+    descricao: str
+    gravidade: str = "GRAVE"  # LEVE | GRAVE | CRITICO
+    prazo_dias: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -131,3 +151,118 @@ async def server_timestamp(
     """Retorna o timestamp oficial do servidor para carimbo de fotos (RN03)."""
     from datetime import datetime
     return {"timestamp": datetime.now(UTC).isoformat(), "timezone": "UTC"}
+
+
+# ---------------------------------------------------------------------------
+# RF18 — Histórico da obra no app (vistorias, medições aprovadas e pendências)
+# ---------------------------------------------------------------------------
+@router.get("/objetos/{objeto_id}/historico")
+async def historico_objeto(
+    objeto_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
+):
+    """Linha do tempo da obra para o app do fiscal (RF18)."""
+    vistorias = (await db.execute(
+        select(Vistoria).where(Vistoria.objeto_id == objeto_id).order_by(Vistoria.checkin_em.desc().nullslast())
+    )).scalars().all()
+    medicoes = (await db.execute(
+        select(Medicao).where(
+            Medicao.objeto_id == objeto_id, Medicao.status == StatusMedicao.APROVADA
+        ).order_by(Medicao.criado_em.desc())
+    )).scalars().all()
+    pendencias = (await db.execute(
+        select(Alerta).where(
+            Alerta.objeto_id == objeto_id,
+            Alerta.tipo == TipoAlerta.NOTIFICACAO_PENDENTE,
+        ).order_by(Alerta.criado_em.desc())
+    )).scalars().all()
+
+    return {
+        "vistorias": [
+            {
+                "id": str(v.id),
+                "checkin_em": v.checkin_em.isoformat() if v.checkin_em else None,
+                "resultado": v.resultado,
+                "dentro_raio": v.dentro_raio,
+                "observacoes": v.observacoes,
+            }
+            for v in vistorias
+        ],
+        "medicoes": [
+            {
+                "id": str(m.id),
+                "numero_medicao": m.numero_medicao,
+                "valor_medido": float(m.valor_medido or 0),
+                "criado_em": m.criado_em.isoformat() if m.criado_em else None,
+            }
+            for m in medicoes
+        ],
+        "pendencias": [
+            {
+                "id": str(p.id),
+                "titulo": p.titulo,
+                "descricao": p.descricao,
+                "prioridade": p.prioridade,
+                "resolvido": p.resolvido,
+                "criado_em": p.criado_em.isoformat() if p.criado_em else None,
+            }
+            for p in pendencias
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# RF17 — Registro de pendência / não conformidade + notificação
+# ---------------------------------------------------------------------------
+@router.post("/{vistoria_id}/pendencias", status_code=status.HTTP_201_CREATED)
+async def registrar_pendencia(
+    vistoria_id: UUID,
+    payload: PendenciaRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
+):
+    """Fiscal registra uma pendência e notifica empresa e apoio (RF17)."""
+    vistoria = (await db.execute(
+        select(Vistoria).where(Vistoria.id == vistoria_id)
+    )).scalar_one_or_none()
+    if not vistoria:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vistoria não encontrada.")
+
+    prioridade = _GRAVIDADE_PRIORIDADE.get(payload.gravidade.upper(), PrioridadeAlerta.MEDIA)
+    prazo = f" Prazo sugerido: {payload.prazo_dias} dias." if payload.prazo_dias else ""
+    alerta = Alerta(
+        objeto_id=vistoria.objeto_id,
+        tipo=TipoAlerta.NOTIFICACAO_PENDENTE,
+        prioridade=prioridade,
+        titulo=f"Pendência [{payload.gravidade.upper()}] registrada em vistoria",
+        descricao=f"{payload.descricao}{prazo}",
+    )
+    db.add(alerta)
+    await db.flush()
+    await registrar_auditoria(
+        db, current_user.id, "Alerta", str(alerta.id), "PENDENCIA",
+        descricao=f"Pendência registrada pelo fiscal (gravidade {payload.gravidade}).",
+    )
+
+    # Notifica apoio/coordenadores e a empresa do contrato (RF17).
+    destinatarios = (await db.execute(
+        select(Usuario).where(
+            Usuario.tipo.in_([Role.APOIO_N2.value, Role.COORDENADOR.value, Role.ENGENHEIRO.value]),
+            Usuario.ativo == True,  # noqa: E712
+        )
+    )).scalars().all()
+    empresa_id = await db.scalar(
+        select(Contrato.empresa_id).join(Objeto, Objeto.contrato_id == Contrato.id).where(Objeto.id == vistoria.objeto_id)
+    )
+    ids = {u.id for u in destinatarios}
+    if empresa_id:
+        ids.add(empresa_id)
+    for uid in ids:
+        await criar_notificacao(
+            db=db, usuario_id=uid,
+            titulo="Nova pendência registrada em vistoria",
+            mensagem=payload.descricao,
+        )
+
+    return {"id": str(alerta.id), "titulo": alerta.titulo, "prioridade": alerta.prioridade}

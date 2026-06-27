@@ -107,6 +107,7 @@ class MedicaoItemResponse(BaseModel):
     quantidade_periodo: Decimal
     valor_unitario: Decimal
     desconto_vaos: Decimal
+    quantidade_aprovada: Decimal | None = None
     observacao: str | None
     memoria: list[MemoriaLinhaResponse] = []
 
@@ -139,10 +140,21 @@ class MedicaoConcluirRequest(BaseModel):
     """Conclusão (atesto) de uma medição de origem fiscal"""
     observacao: str | None = None
 
+class MedicaoItemAvaliacao(BaseModel):
+    """Avaliação parcial de um item da medição (RF23)."""
+    item_id: UUID
+    quantidade_aprovada: Decimal = Field(ge=0)
+
 class MedicaoFiscalRequest(BaseModel):
-    """Ação do fiscal: aprovar ou reprovar"""
+    """Ação de avaliação da medição: aprovar (total/parcial) ou reprovar.
+
+    Quando ``itens`` é informado, aplica aprovação parcial por item (RF23). A
+    justificativa (``observacao_fiscal``) é obrigatória ao reprovar ou aprovar
+    parcialmente.
+    """
     aprovada: bool
     observacao_fiscal: str | None = None
+    itens: list[MedicaoItemAvaliacao] | None = None
 
 class FotoMedicaoResponse(BaseModel):
     id: UUID
@@ -150,6 +162,8 @@ class FotoMedicaoResponse(BaseModel):
     medicao_item_id: UUID | None
     url_storage: str | None
     filename: str | None
+    titulo: str | None = None
+    descricao: str | None = None
     hash_sha256: str | None
     carimbo_servidor: datetime | None
     criado_em: datetime
@@ -207,6 +221,7 @@ class BoletimItemResponse(BaseModel):
 class MedicaoBoletimResponse(BaseModel):
     medicao_id: UUID
     numero_medicao: int
+    numero_art: str | None = None
     status: StatusMedicao
     percentual_retencao: Decimal
     itens: list[BoletimItemResponse]

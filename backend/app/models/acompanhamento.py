@@ -25,6 +25,14 @@ class TipoParalisacao(str, enum.Enum):
     REINICIO = "REINICIO"
 
 
+class StatusTramitacao(str, enum.Enum):
+    """Tramitação de uma solicitação registrada pela empresa (RF12/US-E05)."""
+    RECEBIDA = "RECEBIDA"
+    EM_ANALISE = "EM_ANALISE"
+    DEFERIDA = "DEFERIDA"
+    INDEFERIDA = "INDEFERIDA"
+
+
 class TipoReadequacao(str, enum.Enum):
     COM_REFLEXO = "COM_REFLEXO"
     SEM_REFLEXO = "SEM_REFLEXO"
@@ -92,6 +100,13 @@ class AditivoPrazo(Base):
     data_assinatura: Mapped[date | None] = mapped_column(Date, nullable=True)
     data_publicacao: Mapped[date | None] = mapped_column(Date, nullable=True)
     observacao: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Tramitação quando solicitado pela empresa (RF12). NULL = cadastro interno.
+    status_tramitacao: Mapped[str | None] = mapped_column(
+        Enum(StatusTramitacao, name="status_tramitacao_enum"), nullable=True,
+    )
+    solicitado_por_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -127,6 +142,13 @@ class Paralisacao(Base):
     saldo_dias_vigencia: Mapped[int | None] = mapped_column(Integer, nullable=True)
     processo_sei: Mapped[str | None] = mapped_column(String(50), nullable=True)
     motivo: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Tramitação quando solicitado pela empresa (RF12). NULL = cadastro interno.
+    status_tramitacao: Mapped[str | None] = mapped_column(
+        Enum(StatusTramitacao, name="status_tramitacao_enum"), nullable=True,
+    )
+    solicitado_por_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
     criado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

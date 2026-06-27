@@ -122,7 +122,7 @@ def test_desconto_vaos(client: TestClient, db_session):
 def test_acumulado_entre_medicoes(client: TestClient, db_session):
     objeto_id, evento_id = _criar_objeto_com_evento(db_session)
     db_session.commit()
-    fiscal_token = _token(client, db_session, "90003", Role.FISCAL)
+    fiscal_token = _token(client, db_session, "90003", Role.APOIO_N2)
 
     # Medição 1 (origem fiscal): 30 x 10 = 300, concluída → APROVADA
     res1 = client.post(
@@ -215,7 +215,7 @@ def test_assinar_completo(client: TestClient, db_session):
 def test_fiscal_cria_e_conclui(client: TestClient, db_session):
     objeto_id, evento_id = _criar_objeto_com_evento(db_session)
     db_session.commit()
-    fiscal_token = _token(client, db_session, "90007", Role.FISCAL)
+    fiscal_token = _token(client, db_session, "90007", Role.APOIO_N2)
 
     res = client.post(
         f"/api/empresa/objetos/{objeto_id}/medicoes/fiscal",
@@ -314,7 +314,7 @@ def test_exportar_documentos_xls(client: TestClient, db_session):
     """Endpoints de documentos geram XLS válido (boletim, memória e RDO)."""
     objeto_id, evento_id = _criar_objeto_com_evento(db_session)
     db_session.commit()
-    fiscal_token = _token(client, db_session, "90012", Role.FISCAL)
+    fiscal_token = _token(client, db_session, "90012", Role.APOIO_N2)
     XLS = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
     res = client.post(
@@ -350,8 +350,86 @@ def test_exportar_documentos_xls(client: TestClient, db_session):
     assert len(rdo.content) > 100
 
 
+def _empresa_assina(client, db_session, objeto_id, evento_id, matricula, quantidade, valor_unitario):
+    """Cria objeto+evento já feito fora; aqui a empresa cria, anexa ART+foto e assina."""
+    empresa = _criar_usuario(db_session, matricula, Role.EMPRESA)
+    _criar_art(db_session, objeto_id, empresa.id)
+    db_session.commit()
+    token = client.post("/api/auth/login", json={"matricula_cnpj": matricula, "senha": "senha123"}).json()["access_token"]
+    res = client.post(
+        f"/api/empresa/objetos/{objeto_id}/medicoes",
+        json={"itens": [{"evento_id": str(evento_id), "quantidade_periodo": quantidade}]},
+        headers=_auth(token),
+    )
+    m = res.json()
+    _upload_foto(client, token, m["id"], m["itens"][0]["id"])
+    assinar = client.post(f"/api/empresa/medicoes/{m['id']}/assinar", json={"confirmado": True}, headers=_auth(token))
+    assert assinar.status_code == 200, assinar.text
+    return m
+
+
+def test_aprovacao_parcial_por_item(client: TestClient, db_session):
+    """RF23 — apoio aprova quantidade parcial; valor_medido reflete o aprovado."""
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session, quantidade=100, valor_unitario=10)
+    m = _empresa_assina(client, db_session, objeto_id, evento_id, "90020000000", 40, 10)
+    fiscal_token = _token(client, db_session, "90021", Role.APOIO_N2)
+    item_id = m["itens"][0]["id"]
+
+    aval = client.post(
+        f"/api/empresa/medicoes/{m['id']}/avaliar",
+        json={"aprovada": True, "observacao_fiscal": "Apenas 20 conformes",
+              "itens": [{"item_id": item_id, "quantidade_aprovada": 20}]},
+        headers=_auth(fiscal_token),
+    )
+    assert aval.status_code == 200, aval.text
+    body = aval.json()
+    assert body["status"] == "APROVADA"
+    assert float(body["valor_medido"]) == 200.0  # 20 x 10
+
+
+def test_aprovacao_parcial_exige_justificativa(client: TestClient, db_session):
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session, quantidade=100, valor_unitario=10)
+    m = _empresa_assina(client, db_session, objeto_id, evento_id, "90022000000", 40, 10)
+    fiscal_token = _token(client, db_session, "90023", Role.APOIO_N2)
+    item_id = m["itens"][0]["id"]
+
+    aval = client.post(
+        f"/api/empresa/medicoes/{m['id']}/avaliar",
+        json={"aprovada": True, "observacao_fiscal": "",
+              "itens": [{"item_id": item_id, "quantidade_aprovada": 20}]},
+        headers=_auth(fiscal_token),
+    )
+    assert aval.status_code == 400
+    assert "justificativa" in aval.json()["detail"].lower()
+
+
+def test_alcada_acima_do_limite_aguarda_chefe(client: TestClient, db_session):
+    """RF24/RN08 — medição acima da alçada vai para AGUARDANDO_CHEFE e o chefe finaliza."""
+    # Contratado alto; medição com valor líquido > 100.000 (limite padrão).
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session, quantidade=10000, valor_unitario=100)
+    m = _empresa_assina(client, db_session, objeto_id, evento_id, "90024000000", 2000, 100)
+    fiscal_token = _token(client, db_session, "90025", Role.APOIO_N2)
+
+    aval = client.post(
+        f"/api/empresa/medicoes/{m['id']}/avaliar",
+        json={"aprovada": True, "observacao_fiscal": "OK"},
+        headers=_auth(fiscal_token),
+    )
+    assert aval.status_code == 200, aval.text
+    assert aval.json()["status"] == "AGUARDANDO_CHEFE"  # 200.000 > 100.000
+
+    chefe_token = _token(client, db_session, "90026", Role.COORDENADOR)
+    fin = client.post(
+        f"/api/empresa/medicoes/{m['id']}/aprovar-chefe",
+        json={"aprovada": True, "observacao_fiscal": "Aprovado pela alçada"},
+        headers=_auth(chefe_token),
+    )
+    assert fin.status_code == 200, fin.text
+    assert fin.json()["status"] == "APROVADA"
+
+
 def test_empresa_nao_conclui_medicao_fiscal(client: TestClient, db_session):
-    """Endpoint de conclusão exige papel FISCAL."""
+    """Endpoint de conclusão exige papel APOIO_N2+."""
     objeto_id, evento_id = _criar_objeto_com_evento(db_session)
     db_session.commit()
     empresa_token = _token(client, db_session, "90008000000", Role.EMPRESA)
@@ -361,3 +439,52 @@ def test_empresa_nao_conclui_medicao_fiscal(client: TestClient, db_session):
         json={}, headers=_auth(empresa_token),
     )
     assert concl.status_code == 403
+
+
+def test_apoio_n1_e_fiscal_nao_criam_medicao_fiscal(client: TestClient, db_session):
+    """Decisão de produto: medições são exclusivas de APOIO_N2+ (N1 e FISCAL → 403)."""
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session)
+    db_session.commit()
+
+    for matricula, tipo in [("90040000000", Role.APOIO_N1), ("90041000000", Role.FISCAL)]:
+        token = _token(client, db_session, matricula, tipo)
+        res = client.post(
+            f"/api/empresa/objetos/{objeto_id}/medicoes/fiscal",
+            json={"itens": [{"evento_id": str(evento_id), "quantidade_periodo": 10}]},
+            headers=_auth(token),
+        )
+        assert res.status_code == 403, f"{tipo} deveria receber 403, recebeu {res.status_code}"
+
+
+def test_boletim_inclui_numero_art(client: TestClient, db_session):
+    """O cabeçalho do boletim expõe o número da ART/RRT ativa do objeto."""
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session)
+    eng = _criar_usuario(db_session, "90042000000", Role.APOIO_N2)
+    _criar_art(db_session, objeto_id, eng.id)
+    db_session.commit()
+    token = _token(client, db_session, "90043000000", Role.EMPRESA)
+
+    res = client.post(
+        f"/api/empresa/objetos/{objeto_id}/medicoes",
+        json={"itens": [{"evento_id": str(evento_id), "quantidade_periodo": 10}]},
+        headers=_auth(token),
+    )
+    medicao_id = res.json()["id"]
+    bol = client.get(f"/api/empresa/medicoes/{medicao_id}/boletim", headers=_auth(token)).json()
+    assert bol["numero_art"] == f"ART-{eng.id}"
+
+
+def test_boletim_sem_art_numero_none(client: TestClient, db_session):
+    """Sem ART ativa, numero_art é nulo (cabeçalho mostra '—')."""
+    objeto_id, evento_id = _criar_objeto_com_evento(db_session)
+    db_session.commit()
+    token = _token(client, db_session, "90044000000", Role.EMPRESA)
+
+    res = client.post(
+        f"/api/empresa/objetos/{objeto_id}/medicoes",
+        json={"itens": [{"evento_id": str(evento_id), "quantidade_periodo": 10}]},
+        headers=_auth(token),
+    )
+    medicao_id = res.json()["id"]
+    bol = client.get(f"/api/empresa/medicoes/{medicao_id}/boletim", headers=_auth(token)).json()
+    assert bol["numero_art"] is None

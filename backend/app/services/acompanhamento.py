@@ -19,6 +19,7 @@ from app.models.acompanhamento import (
     Portaria,
     Readequacao,
     Reajuste,
+    StatusTramitacao,
     TermoRecebimento,
 )
 from app.models.objeto import Contrato, Objeto
@@ -129,8 +130,14 @@ async def list_aditivos_prazo(db: AsyncSession, objeto_id: UUID):
     return result.scalars().all()
 
 
-async def create_aditivo_prazo(db: AsyncSession, objeto_id: UUID, obj_in: AditivoPrazoCreate) -> AditivoPrazo:
+async def create_aditivo_prazo(
+    db: AsyncSession, objeto_id: UUID, obj_in: AditivoPrazoCreate,
+    solicitado_por_id: UUID | None = None,
+) -> AditivoPrazo:
     db_obj = AditivoPrazo(objeto_id=objeto_id, **obj_in.model_dump())
+    if solicitado_por_id is not None:
+        db_obj.solicitado_por_id = solicitado_por_id
+        db_obj.status_tramitacao = StatusTramitacao.RECEBIDA
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)
@@ -146,8 +153,26 @@ async def list_paralisacoes(db: AsyncSession, objeto_id: UUID):
     return result.scalars().all()
 
 
-async def create_paralisacao(db: AsyncSession, objeto_id: UUID, obj_in: ParalisacaoCreate) -> Paralisacao:
+async def create_paralisacao(
+    db: AsyncSession, objeto_id: UUID, obj_in: ParalisacaoCreate,
+    solicitado_por_id: UUID | None = None,
+) -> Paralisacao:
     db_obj = Paralisacao(objeto_id=objeto_id, **obj_in.model_dump())
+    if solicitado_por_id is not None:
+        db_obj.solicitado_por_id = solicitado_por_id
+        db_obj.status_tramitacao = StatusTramitacao.RECEBIDA
+    db.add(db_obj)
+    await db.flush()
+    await db.refresh(db_obj)
+    return db_obj
+
+
+async def atualizar_status_tramitacao(
+    db: AsyncSession, model, obj_id: UUID, novo_status: StatusTramitacao,
+):
+    """Atualiza a tramitação de uma solicitação (Paralisacao/AditivoPrazo) — RF12."""
+    db_obj = await _get_or_404(db, model, obj_id)
+    db_obj.status_tramitacao = novo_status
     db.add(db_obj)
     await db.flush()
     await db.refresh(db_obj)

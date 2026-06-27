@@ -4,6 +4,7 @@ SIN-Obras — Router de Relatórios
 
 from datetime import date
 from decimal import Decimal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -16,6 +17,8 @@ from app.models.cadastro import Empresa
 from app.models.objeto import Contrato, Objeto
 from app.models.usuario import Usuario
 from app.schemas.relatorio import (
+    RelatorioCronograma,
+    RelatorioFotos,
     RelatorioObjetoRow,
     RelatorioResumo,
     ResumoPorOrgao,
@@ -23,6 +26,8 @@ from app.schemas.relatorio import (
 )
 from app.services import export_relatorio as export_svc
 from app.services.objeto import scope_objetos_por_usuario
+from app.services.relatorio_cronograma import progresso_por_meta
+from app.services.relatorio_fotos import fotos_por_objeto
 
 router = APIRouter(prefix="/relatorios", tags=["Relatórios"])
 
@@ -317,3 +322,23 @@ async def export_relatorio(
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/cronograma/{objeto_id}", response_model=RelatorioCronograma)
+async def relatorio_cronograma(
+    objeto_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
+):
+    """Progresso físico-financeiro por meta: planejado × realizado por meta."""
+    return await progresso_por_meta(db, objeto_id)
+
+
+@router.get("/fotos/{objeto_id}", response_model=RelatorioFotos)
+async def relatorio_fotos(
+    objeto_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: Usuario = Depends(require_minimum_role(Role.FISCAL)),
+):
+    """Relatório fotográfico: compila as fotos das medições do objeto."""
+    return await fotos_por_objeto(db, objeto_id)

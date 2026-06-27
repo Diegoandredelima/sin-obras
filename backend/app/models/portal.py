@@ -72,6 +72,8 @@ class StatusMedicao(str, enum.Enum):
     RASCUNHO = "RASCUNHO"
     ASSINADA = "ASSINADA"
     EM_FISCALIZACAO = "EM_FISCALIZACAO"
+    # Aprovada pelo apoio mas acima da alçada — aguarda aprovação final do chefe (RN08).
+    AGUARDANDO_CHEFE = "AGUARDANDO_CHEFE"
     APROVADA = "APROVADA"
     REPROVADA = "REPROVADA"
 
@@ -156,6 +158,9 @@ class MedicaoItem(Base):
     valor_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"), nullable=False)
     # Abatimento de quantidade (ex.: vãos de portas/janelas na alvenaria).
     desconto_vaos: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"), nullable=False)
+    # Quantidade efetivamente aprovada na análise (RF23 — aprovação parcial por item).
+    # NULL = ainda não avaliado; na aprovação total recebe a quantidade declarada.
+    quantidade_aprovada: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
     observacao: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
@@ -169,6 +174,15 @@ class MedicaoItem(Base):
     @property
     def valor_bruto(self) -> Decimal:
         return (self.quantidade_periodo - self.desconto_vaos) * self.valor_unitario
+
+    @property
+    def valor_bruto_aprovado(self) -> Decimal:
+        """Valor bruto considerando a quantidade aprovada (RF23).
+
+        Se ainda não houve avaliação parcial, usa a quantidade declarada.
+        """
+        qtd = self.quantidade_aprovada if self.quantidade_aprovada is not None else self.quantidade_periodo
+        return (qtd - self.desconto_vaos) * self.valor_unitario
 
     def __repr__(self) -> str:
         return f"<MedicaoItem medicao={self.medicao_id} evento={self.evento_id}>"
@@ -218,6 +232,10 @@ class FotoMedicao(Base):
     # Armazenamento (MinIO/S3)
     url_storage: Mapped[str | None] = mapped_column(String(500), nullable=True)
     filename: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    # Legenda da foto (exigida pela fiscalização): título curto + descrição livre.
+    titulo: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Georreferenciamento e inviolabilidade (RN03)
     coordenadas = mapped_column(Geometry("POINT", srid=4326), nullable=True)

@@ -30,6 +30,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -129,6 +130,16 @@ class Contrato(Base):
     # Percentual de retenção contratual (ex.: 1.50 = 1,5%) — devolvido ao final
     # do objeto. Pré-preenche cada medição (pode ser ajustado por medição).
     percentual_retencao: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    # --- Regras de trava do lançamento de medição (Decisão 1) ---
+    # Bloqueia, no momento do lançamento da medição, quantidade negativa e/ou
+    # quantidade acumulada acima do contratado (sem aditivo formal). Configurável
+    # por contrato — default rígido (ambas ligadas).
+    bloquear_quantidade_negativa: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+    bloquear_acima_contratado: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
     # --- Licitação ---
     tipo_licitacao: Mapped[str | None] = mapped_column(String(100), nullable=True)
     numero_licitacao: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -229,6 +240,11 @@ class Objeto(Base):
     contrato_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("contratos.id"), nullable=True, index=True
     )
+    # Orçamento (template) que originou a EAP deste objeto. Rastreabilidade: a
+    # árvore foi COPIADA (congelada) na vinculação; mudanças no template não a afetam.
+    orcamento_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orcamentos.id"), nullable=True, index=True
+    )
     responsavel_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
     )
@@ -266,6 +282,7 @@ class Objeto(Base):
         cascade="all, delete-orphan", order_by="Item.ordem",
     )
     metas = relationship("Meta", back_populates="objeto", lazy="selectin", cascade="all, delete-orphan")
+    cronograma_versoes = relationship("CronogramaVersao", back_populates="objeto", lazy="selectin", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Objeto {self.titulo} ({self.status})>"
@@ -314,15 +331,22 @@ class Meta(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    objeto_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
+    # Uma Meta pertence a um Objeto (EAP de execução) OU a um Orçamento (template,
+    # módulo separado). Exatamente um dos dois é preenchido — por isso ambos são
+    # nullable. A cópia template→objeto clona a árvore trocando o pai.
+    objeto_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=True
+    )
+    orcamento_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("orcamentos.id", ondelete="CASCADE"), nullable=True, index=True
     )
     descricao: Mapped[str] = mapped_column(String(500), nullable=False)
     valor: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=Decimal("0.00"))
     ordem: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
-    objeto = relationship("Objeto", back_populates="metas")
+    objeto = relationship("Objeto", back_populates="metas", foreign_keys=[objeto_id])
+    orcamento = relationship("Orcamento", back_populates="metas", foreign_keys=[orcamento_id])
     submetas = relationship("Submeta", back_populates="meta", lazy="selectin", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -373,15 +397,27 @@ class Evento(Base):
     catalogo_item_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("catalogo_itens.id"), nullable=True, index=True
     )
+    # Código do serviço no catálogo oficial (ex.: SINAPI 87529).
+    codigo_referencia: Mapped[str | None] = mapped_column(String(50), nullable=True)
     descricao: Mapped[str] = mapped_column(String(500), nullable=False)
     quantidade: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"))
     unidade: Mapped[str] = mapped_column(String(20), default="un")
+    # No orçamento (template) guarda o CUSTO DIRETO unitário; ao copiar para o
+    # objeto, recebe o preço final com BDI embutido (custo × (1 + BDI)).
     valor_unitario: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"))
+    # Regra que a fiscalização segue no campo (ex.: "área líquida, descontando vãos").
+    criterio_medicao: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
     submeta = relationship("Submeta", back_populates="eventos")
     catalogo_item = relationship(
         "CatalogoItem", back_populates="eventos", lazy="selectin"
+    )
+    # Memória de cálculo CONTRATADA (justificativa matemática da quantidade do
+    # orçamento). Espelha a memória executada da medição (MedicaoItemMemoria).
+    memoria = relationship(
+        "EventoMemoria", back_populates="evento", lazy="selectin",
+        cascade="all, delete-orphan", order_by="EventoMemoria.ordem",
     )
 
     @property
@@ -390,3 +426,116 @@ class Evento(Base):
 
     def __repr__(self) -> str:
         return f"<Evento {self.descricao[:40]}>"
+
+
+# ---------------------------------------------------------------------------
+# Memória de Cálculo Contratada (justificativa da quantidade do orçamento)
+# ---------------------------------------------------------------------------
+class EventoMemoria(Base):
+    """Linha estruturada da memória de cálculo CONTRATADA de um evento.
+
+    Espelha ``MedicaoItemMemoria`` (a memória executada da medição): cada linha
+    registra as dimensões (comprimento/perímetro, largura, altura), o nº de
+    repetições e um fator percentual, resultando na quantidade (área/volume). A
+    soma das linhas justifica a ``Evento.quantidade`` contratada.
+    """
+    __tablename__ = "evento_memoria"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    evento_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("eventos.id", ondelete="CASCADE"), nullable=False
+    )
+    ordem: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    descricao: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comprimento: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)  # C/P
+    largura: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)       # L
+    altura: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)        # H
+    percentual: Mapped[Decimal | None] = mapped_column(Numeric(7, 4), nullable=True)      # %
+    n_repeticoes: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("1"), nullable=False)  # N
+    quantidade: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"), nullable=False)    # A/V resultante
+
+    evento = relationship("Evento", back_populates="memoria")
+
+    def __repr__(self) -> str:
+        return f"<EventoMemoria evento={self.evento_id} ordem={self.ordem}>"
+
+
+# ---------------------------------------------------------------------------
+# Cronograma (Versionamento)
+# ---------------------------------------------------------------------------
+class CronogramaVersao(Base):
+    __tablename__ = "cronograma_versoes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    objeto_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("objetos.id", ondelete="CASCADE"), nullable=False
+    )
+    numero_versao: Mapped[int] = mapped_column(Integer, nullable=False)
+    ativa: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    linha_de_base: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    justificativa: Mapped[str | None] = mapped_column(Text, nullable=True)
+    total_periodos: Mapped[int] = mapped_column(Integer, nullable=False)
+    criado_por_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("usuarios.id"), nullable=True
+    )
+    criado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("objeto_id", "numero_versao", name="uq_cronograma_versao_numero"),
+    )
+
+    # Relationships
+    objeto = relationship("Objeto", back_populates="cronograma_versoes")
+    criado_por = relationship("Usuario", foreign_keys=[criado_por_id])
+    # lazy="selectin": indispensável para serializar `parcelas` no contexto async
+    # (lazy-load fora do greenlet estoura com MissingGreenlet).
+    parcelas = relationship(
+        "CronogramaParcela",
+        back_populates="versao",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CronogramaVersao {self.numero_versao} (Objeto: {self.objeto_id})>"
+
+
+class CronogramaParcela(Base):
+    __tablename__ = "cronograma_parcelas"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    versao_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cronograma_versoes.id", ondelete="CASCADE"), nullable=False
+    )
+    evento_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("eventos.id", ondelete="CASCADE"), nullable=False
+    )
+    periodo_numero: Mapped[int] = mapped_column(Integer, nullable=False)
+    quantidade_prevista: Mapped[Decimal] = mapped_column(Numeric(12, 4), default=Decimal("0"))
+    # --- Snapshot do orçamento no congelamento da versão (Decisão 2 — Planejamento) ---
+    # Fotografia dos valores contratados do evento NO MOMENTO desta versão. Não
+    # referenciam a linha viva de `Evento` (que pode ser editada): preservam a
+    # "fotografia" original para auditoria do TCE. Nullable por compatibilidade
+    # com versões criadas antes do snapshot.
+    quantidade_contratada: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    valor_unitario: Mapped[Decimal | None] = mapped_column(Numeric(12, 4), nullable=True)
+    descricao_evento: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("versao_id", "evento_id", "periodo_numero", name="uq_cronograma_parcela"),
+    )
+
+    # Relationships
+    versao = relationship("CronogramaVersao", back_populates="parcelas")
+    evento = relationship("Evento")
+
+    def __repr__(self) -> str:
+        return f"<CronogramaParcela P{self.periodo_numero} Evento:{self.evento_id}>"
