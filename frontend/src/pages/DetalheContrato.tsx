@@ -6,7 +6,7 @@ import {
   TrendingUp, Calendar, FileText, Hash, AlertTriangle,
   Activity, CheckCircle2, Pause, Clock, BookOpen, ChartBar,
   ChevronDown, ChevronUp, ExternalLink, ShieldCheck, History, CalendarDays, Pencil,
-  Boxes, Printer,
+  Boxes, Printer, Sparkles, FolderDown, Plus,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/services/api";
@@ -19,6 +19,9 @@ import { ArtRrtContent } from "@/components/ArtRrtContent";
 import { EventosContratuaisContent } from "@/components/EventosContratuaisContent";
 import { CronogramaContent } from "@/components/CronogramaContent";
 import { CurvaSContent } from "@/components/CurvaSContent";
+import { SolicitacoesContent } from "@/components/SolicitacoesContent";
+import { AssistenteIAContent } from "@/components/AssistenteIAContent";
+import { DocumentosContent } from "@/components/DocumentosContent";
 
 interface LabelConfig { label: string; cls: string }
 interface StatusConfig { label: string; icon: LucideIcon; cls: string }
@@ -145,12 +148,11 @@ const DetalheContrato = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
-  const isApoioN1 = user?.tipo === "APOIO_N1";
   const podeEditarContrato = ["APOIO_N1", "APOIO_N2", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"].includes(user?.tipo || "");
-  const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") || "detalhes";
-  const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s">(initialTab);
+  const initialTab = (searchParams.get("tab") as "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s" | "solicitacoes" | "ia" | "documentos") || "detalhes";
+  const [activeTab, setActiveTab] = useState<"detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s" | "solicitacoes" | "ia" | "documentos">(initialTab);
 
-  const handleTabChange = (tab: "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s") => {
+  const handleTabChange = (tab: "detalhes" | "diario" | "medicoes" | "art-rrt" | "eventos" | "cronograma" | "curva-s" | "solicitacoes" | "ia" | "documentos") => {
     setActiveTab(tab);
     if (tab === "detalhes") {
       searchParams.delete("tab");
@@ -160,7 +162,7 @@ const DetalheContrato = () => {
     setSearchParams(searchParams, { replace: true });
   };
 
-  const [selectedObjetoId, setSelectedObjetoId] = useState<string | null>(searchParams.get("objeto"));
+  const [selectedObjetoId, _setSelectedObjetoId] = useState<string | null>(searchParams.get("objeto"));
 
   const { data: contrato, isLoading: contratoLoading, error: contratoError } = useQuery<ContratoDetail>({
     queryKey: ["contrato", id],
@@ -217,11 +219,15 @@ const DetalheContrato = () => {
     return { text: `${diff}d restantes`, cls: "text-slate-500" };
   })() : null;
 
-  const visibleTabs: ("detalhes" | "cronograma" | "diario" | "medicoes" | "art-rrt" | "eventos" | "curva-s")[] = ["detalhes", "cronograma"];
-  if (!isApoioN1) { visibleTabs.push("diario", "medicoes"); }
-  visibleTabs.push("art-rrt", "eventos", "curva-s");
-  const tabIcons: Record<string, LucideIcon> = { detalhes: FileText, cronograma: CalendarDays, diario: BookOpen, medicoes: ChartBar, "art-rrt": ShieldCheck, eventos: History, "curva-s": TrendingUp };
-  const tabLabels: Record<string, string> = { detalhes: "Detalhes", cronograma: "Cronograma", diario: "Diário", medicoes: "Medições", "art-rrt": "ART/RRT", eventos: "Eventos", "curva-s": "Curva S" };
+  // Medições, Diário e Assistente IA são exclusivos de APOIO_N2+ (N1 e FISCAL não acessam).
+  const podeMedicoes = ["APOIO_N2", "ENGENHEIRO", "COORDENADOR", "SECRETARIO"].includes(user?.tipo || "");
+  const podeIA = podeMedicoes;
+  const visibleTabs: ("detalhes" | "cronograma" | "diario" | "medicoes" | "art-rrt" | "eventos" | "curva-s" | "solicitacoes" | "ia" | "documentos")[] = ["detalhes", "cronograma"];
+  if (podeMedicoes) { visibleTabs.push("diario", "medicoes"); }
+  visibleTabs.push("art-rrt", "documentos", "eventos", "solicitacoes", "curva-s");
+  if (podeIA) { visibleTabs.push("ia"); }
+  const tabIcons: Record<string, LucideIcon> = { detalhes: FileText, cronograma: CalendarDays, diario: BookOpen, medicoes: ChartBar, "art-rrt": ShieldCheck, documentos: FolderDown, eventos: History, solicitacoes: Pause, "curva-s": TrendingUp, ia: Sparkles };
+  const tabLabels: Record<string, string> = { detalhes: "Detalhes", cronograma: "Cronograma", diario: "Diário", medicoes: "Medições", "art-rrt": "ART/RRT", documentos: "Documentos", eventos: "Eventos", solicitacoes: "Solicitações", "curva-s": "Curva S", ia: "Assistente IA" };
 
   return (
     <div className="space-y-6">
@@ -235,6 +241,14 @@ const DetalheContrato = () => {
           >
             <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>
+          {podeEditarContrato && (
+            <Link
+              to={`/objetos/nova?contrato_id=${c.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 rounded-lg shadow-sm hover:bg-brand-100 transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" /> Cadastrar objeto
+            </Link>
+          )}
           {objeto && podeEditarContrato && (
             <Link
               to={`/contratos/${c.id}/editar`}
@@ -389,6 +403,9 @@ const DetalheContrato = () => {
       {activeTab === "medicoes" && objeto && <MedicoesContent objetoId={objeto.id} />}
       {activeTab === "art-rrt" && objeto && <ArtRrtContent objetoId={objeto.id} />}
       {activeTab === "eventos" && objeto && <EventosContratuaisContent objetoId={objeto.id} />}
+      {activeTab === "solicitacoes" && objeto && <SolicitacoesContent objetoId={objeto.id} />}
+      {activeTab === "documentos" && objeto && <DocumentosContent objetoId={objeto.id} />}
+      {activeTab === "ia" && objeto && <AssistenteIAContent objetoId={objeto.id} />}
       {activeTab === "curva-s" && objeto && <CurvaSContent objetoId={objeto.id} />}
     </div>
   );

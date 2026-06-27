@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Briefcase, ChevronDown, ChevronRight, MapPin, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, Briefcase, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { AxiosError } from "axios";
 import api from "@/services/api";
-import type { EmpresaListItem, Objeto } from "@/types";
-import CatalogoItensManager from "@/components/CatalogoItensManager";
+import type { EmpresaListItem } from "@/types";
 
 interface OrgaoOption {
   id: string;
@@ -19,7 +18,7 @@ interface UsuarioOption {
   nome: string;
 }
 
-const Field = ({ label, id, type = "text", placeholder, required, error, registration, step, readOnly }: any) => (
+const Field = ({ label, id, type = "text", placeholder, required, error, registration, step }: any) => (
   <div className="space-y-1.5">
     <label htmlFor={id} className="block text-sm font-medium text-slate-700">
       {label}{required && <span className="text-rose-500 ml-0.5">*</span>}
@@ -38,17 +37,13 @@ const Field = ({ label, id, type = "text", placeholder, required, error, registr
         type={type}
         step={step}
         placeholder={placeholder}
-        readOnly={readOnly}
         {...registration}
-        className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${error ? "border-rose-400 bg-rose-50" : readOnly ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
+        className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${error ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
       />
     )}
     {error && <p className="text-xs text-rose-600 mt-0.5">{error}</p>}
   </div>
 );
-
-const statusLabel = (s?: string) =>
-  s === "EM_EXECUCAO" ? "Em Execução" : s === "PARALISADA" ? "Paralisada" : s === "CONCLUIDA" ? "Concluída" : "Planejada";
 
 const Section = ({ title, children, defaultOpen = true }: any) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -72,10 +67,9 @@ const CadastrarContrato = () => {
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState("");
 
-  // Cadastro contínuo: após criar o contrato + objeto principal, a tela
-  // permanece e libera itens e objetos adicionais (sem trocar de página).
+  // O contrato é o documento-mãe. Os objetos são cadastrados em separado
+  // (tela "Cadastrar objeto"), vinculando este contrato já criado.
   const [createdId, setCreatedId] = useState<string | null>(null);
-  const [createdObjetoId, setCreatedObjetoId] = useState<string | null>(null);
 
   const { data: empresas = [] } = useQuery<EmpresaListItem[]>({
     queryKey: ["empresas"],
@@ -101,118 +95,9 @@ const CadastrarContrato = () => {
     },
   });
 
-  const { data: municipios = [] } = useQuery<string[]>({
-    queryKey: ["municipios"],
-    queryFn: async () => {
-      const { data } = await api.get("/objetos/municipios/lista");
-      return Array.isArray(data) ? data : [];
-    },
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
+    defaultValues: { bloquear_quantidade_negativa: true, bloquear_acima_contratado: true },
   });
-
-  // Objetos do contrato recém-criado (Contrato 1—N Objeto). Só busca após criar.
-  const { data: objetos = [] } = useQuery<Objeto[]>({
-    queryKey: ["contrato-objetos", createdId],
-    queryFn: async () => {
-      const { data } = await api.get(`/contratos/${createdId}/objetos`);
-      return Array.isArray(data) ? data : [];
-    },
-    enabled: !!createdId,
-  });
-
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<any>({
-    defaultValues: { objeto_status: "PLANEJADA" },
-  });
-
-  // Autocompletar endereço pelo CEP (ViaCEP). CEP = 8 dígitos.
-  const [cepStatus, setCepStatus] = useState<"idle" | "loading" | "error">("idle");
-  // Ao preencher pelo CEP, os campos ficam travados; apague o CEP para editar.
-  const [enderecoTravado, setEnderecoTravado] = useState(false);
-  // Espelha a edição: endereço também aparece na Section 3 (opcional, via checkbox).
-  const [incluirEndereco, setIncluirEndereco] = useState(false);
-
-  // Cadastro inline de objetos adicionais (libera-se após criar o contrato).
-  const NOVO_OBJETO_VAZIO = { titulo: "", descricao: "", municipio: "", status: "PLANEJADA", data_inicio: "", data_fim_prevista: "" };
-  const [addingObjeto, setAddingObjeto] = useState(false);
-  const [savingObjeto, setSavingObjeto] = useState(false);
-  const [novoObjeto, setNovoObjeto] = useState(NOVO_OBJETO_VAZIO);
-  // Quando o usuário clica em "Adicionar objeto" antes de o contrato existir,
-  // criamos o contrato e abrimos o formulário assim que o ID estiver disponível.
-  const [pendingAddObjeto, setPendingAddObjeto] = useState(false);
-
-  useEffect(() => {
-    if (createdId && pendingAddObjeto) {
-      setAddingObjeto(true);
-      setPendingAddObjeto(false);
-    }
-  }, [createdId, pendingAddObjeto]);
-
-  // Botão "Adicionar objeto": se o contrato ainda não existe, cria primeiro
-  // (a tela continua aberta) e então abre o formulário do novo objeto.
-  const handleAddObjetoClick = () => {
-    if (createdId) {
-      setAddingObjeto(true);
-    } else {
-      setPendingAddObjeto(true);
-      handleSubmit(onSubmit)();
-    }
-  };
-
-  const buscarCep = async (raw: string) => {
-    const cep = (raw || "").replace(/\D/g, "");
-    if (cep.length !== 8) {
-      if (cep.length > 0) setCepStatus("error");
-      return;
-    }
-    setCepStatus("loading");
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (data.erro) {
-        setCepStatus("error");
-        return;
-      }
-      setCepStatus("idle");
-      if (data.logradouro) setValue("objeto_logradouro", data.logradouro);
-      if (data.bairro) setValue("objeto_bairro", data.bairro);
-      if (data.localidade) setValue("objeto_municipio", data.localidade);
-      if (data.uf) setValue("objeto_uf", data.uf);
-      setEnderecoTravado(true);
-    } catch {
-      setCepStatus("error");
-    }
-  };
-
-  const handleCepChange = (value: string) => {
-    if ((value || "").replace(/\D/g, "").length < 8) {
-      setEnderecoTravado(false);
-      if (cepStatus !== "idle") setCepStatus("idle");
-    }
-  };
-
-  const buildObjetoPayload = (data: any) => {
-    // Compõe o `endereco` legado a partir das partes estruturadas.
-    const enderecoComposto = [
-      data.objeto_logradouro,
-      data.objeto_numero && `nº ${data.objeto_numero}`,
-      data.objeto_conjunto,
-      data.objeto_bairro,
-    ].filter(Boolean).join(", ");
-    return {
-      titulo: data.objeto_titulo,
-      descricao: data.objeto_descricao || null,
-      cep: data.objeto_cep || null,
-      logradouro: data.objeto_logradouro || null,
-      numero: data.objeto_numero || null,
-      bairro: data.objeto_bairro || null,
-      conjunto: data.objeto_conjunto || null,
-      uf: (data.objeto_uf || "").toUpperCase() || null,
-      endereco: enderecoComposto || null,
-      municipio: data.objeto_municipio || null,
-      status: data.objeto_status || "PLANEJADA",
-      data_inicio: data.objeto_data_inicio || null,
-      data_fim_prevista: data.objeto_data_fim_prevista || null,
-    };
-  };
 
   const buildContratoPayload = (data: any) => ({
     numero_processo: data.numero_processo,
@@ -232,58 +117,27 @@ const CadastrarContrato = () => {
     recurso_estadual: data.recurso_estadual ? Number(data.recurso_estadual) : null,
     percentual_retencao: data.percentual_retencao ? Number(data.percentual_retencao) : null,
     numero_licitacao: data.numero_licitacao || null,
+    // Regras de trava do lançamento de medição (Decisão 1). Default rígido.
+    bloquear_quantidade_negativa: data.bloquear_quantidade_negativa ?? true,
+    bloquear_acima_contratado: data.bloquear_acima_contratado ?? true,
   });
 
   const onSubmit = async (data: any) => {
     setApiError("");
     try {
       if (!createdId) {
-        // Fase 1: cria contrato + objeto principal e CONTINUA na mesma tela.
+        // Fase 1: cria SOMENTE o contrato e continua na mesma tela.
         const { data: contrato } = await api.post("/contratos", buildContratoPayload(data));
-        const { data: objeto } = await api.post("/objetos", { ...buildObjetoPayload(data), contrato_id: contrato.id });
         queryClient.invalidateQueries({ queryKey: ["contratos"] });
-        queryClient.invalidateQueries({ queryKey: ["objetos"] });
         setCreatedId(contrato.id);
-        setCreatedObjetoId(objeto.id);
       } else {
-        // Fase 2: salva alterações dos dados básicos (contrato + objeto principal).
-        await Promise.all([
-          api.put(`/contratos/${createdId}`, buildContratoPayload(data)),
-          createdObjetoId ? api.put(`/objetos/${createdObjetoId}`, buildObjetoPayload(data)) : Promise.resolve(),
-        ]);
+        // Fase 2: salva alterações dos dados do contrato.
+        await api.put(`/contratos/${createdId}`, buildContratoPayload(data));
         queryClient.invalidateQueries({ queryKey: ["contrato", createdId] });
-        queryClient.invalidateQueries({ queryKey: ["contrato-objetos", createdId] });
       }
     } catch (err) {
       const ax = err as AxiosError<{ detail?: string }>;
       setApiError(ax.response?.data?.detail || "Erro ao salvar o contrato. Tente novamente.");
-    }
-  };
-
-  // Cria um objeto adicional vinculado ao contrato recém-criado.
-  const salvarNovoObjeto = async () => {
-    if (!createdId || !novoObjeto.titulo.trim()) return;
-    setSavingObjeto(true);
-    setApiError("");
-    try {
-      await api.post("/objetos", {
-        titulo: novoObjeto.titulo,
-        descricao: novoObjeto.descricao || null,
-        municipio: novoObjeto.municipio || null,
-        status: novoObjeto.status,
-        data_inicio: novoObjeto.data_inicio || null,
-        data_fim_prevista: novoObjeto.data_fim_prevista || null,
-        contrato_id: createdId,
-      });
-      queryClient.invalidateQueries({ queryKey: ["contrato-objetos", createdId] });
-      queryClient.invalidateQueries({ queryKey: ["objetos"] });
-      setNovoObjeto(NOVO_OBJETO_VAZIO);
-      setAddingObjeto(false);
-    } catch (err) {
-      const ax = err as AxiosError<{ detail?: string }>;
-      setApiError(ax.response?.data?.detail || "Erro ao adicionar o objeto. Tente novamente.");
-    } finally {
-      setSavingObjeto(false);
     }
   };
 
@@ -298,8 +152,8 @@ const CadastrarContrato = () => {
           <Briefcase className="h-6 w-6 text-sky-600" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Cadastrar Contrato e Objeto</h1>
-          <p className="text-sm text-slate-500">O documento-mãe que formaliza a execução de um ou mais objetos.</p>
+          <h1 className="text-xl font-bold text-slate-800">Cadastrar Contrato</h1>
+          <p className="text-sm text-slate-500">O documento-mãe que formaliza a execução de um ou mais objetos. Os objetos são cadastrados à parte e vinculados a este contrato.</p>
         </div>
       </div>
 
@@ -307,8 +161,8 @@ const CadastrarContrato = () => {
         <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-100 rounded-xl p-3">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
           <p className="text-xs text-emerald-700">
-            Contrato criado. Agora adicione os <strong>itens do projeto</strong> a cada objeto e, se precisar, os
-            <strong> demais objetos</strong>. Ao terminar, clique em <strong>Concluir</strong>.
+            Contrato criado. Agora cadastre os <strong>objetos</strong> deste contrato pelo botão
+            <strong> "Cadastrar objeto"</strong>, ou clique em <strong>Concluir</strong> para abrir o contrato.
           </p>
         </div>
       )}
@@ -331,82 +185,10 @@ const CadastrarContrato = () => {
             <Field label="Número do processo SEI" id="numero_processo" required error={errors.numero_processo?.message as string} registration={register("numero_processo", { required: "Informe o número do processo" })} />
             <Field label="Link do processo (SEI)" id="link_processo" type="url" placeholder="https://sei.exemplo.gov.br/..." registration={register("link_processo")} />
           </div>
-          <Field label="Resumo" id="objeto" type="textarea" registration={register("objeto")} />
+          <Field label="Resumo do objeto contratado" id="objeto" type="textarea" placeholder="Descrição livre do objeto do contrato (texto)." registration={register("objeto")} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Data de assinatura" id="data_assinatura" type="date" registration={register("data_assinatura")} />
             <Field label="Vigência (fim)" id="data_vigencia" type="date" registration={register("data_vigencia")} />
-          </div>
-
-          <div className="pt-2 space-y-4">
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-              <MapPin className="h-4 w-4 text-slate-400" />Endereço da obra
-            </p>
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="objeto_cep" className="block text-sm font-medium text-slate-700">CEP</label>
-                  <div className="relative">
-                    {(() => {
-                      const cepReg = register("objeto_cep");
-                      return (
-                        <input
-                          id="objeto_cep"
-                          inputMode="numeric"
-                          maxLength={9}
-                          placeholder="00000-000"
-                          {...cepReg}
-                          onChange={(e) => { cepReg.onChange(e); handleCepChange(e.target.value); }}
-                          onBlur={(e) => { cepReg.onBlur(e); buscarCep(e.target.value); }}
-                          className={`block w-full rounded-xl border ${cepStatus === "error" ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
-                        />
-                      );
-                    })()}
-                    {cepStatus === "loading" && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />}
-                  </div>
-                  {cepStatus === "error"
-                    ? <p className="text-xs text-rose-600 mt-0.5">CEP inválido ou não encontrado.</p>
-                    : enderecoTravado
-                      ? <p className="text-xs text-slate-500 mt-0.5">Endereço preenchido pelo CEP. Apague o CEP para editar.</p>
-                      : <p className="text-xs text-slate-400 mt-0.5">8 dígitos — preenche o endereço automaticamente.</p>}
-                </div>
-                <div className="sm:col-span-2">
-                  <Field label="Logradouro" id="objeto_logradouro" placeholder="Rua, avenida, etc." readOnly={enderecoTravado} registration={register("objeto_logradouro")} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Field label="Número" id="objeto_numero" registration={register("objeto_numero")} />
-                <Field label="Conjunto" id="objeto_conjunto" placeholder="Bloco, quadra, lote..." registration={register("objeto_conjunto")} />
-                <Field label="Bairro" id="objeto_bairro" readOnly={enderecoTravado} registration={register("objeto_bairro")} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label htmlFor="objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
-                  <input
-                    id="objeto_municipio"
-                    list="municipios-list"
-                    readOnly={enderecoTravado}
-                    {...register("objeto_municipio")}
-                    className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                  />
-                  <datalist id="municipios-list">
-                    {municipios.map((m) => <option key={m} value={m} />)}
-                  </datalist>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="objeto_uf" className="block text-sm font-medium text-slate-700">Estado (UF)</label>
-                  <input
-                    id="objeto_uf"
-                    maxLength={2}
-                    placeholder="UF"
-                    readOnly={enderecoTravado}
-                    {...register("objeto_uf")}
-                    className={`block w-full rounded-xl border py-2.5 px-3 text-sm uppercase placeholder:text-slate-400 placeholder:normal-case transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </Section>
 
@@ -443,265 +225,7 @@ const CadastrarContrato = () => {
           </div>
         </Section>
 
-        <Section title="3. Dados do Objeto">
-          {/* Núcleo do objeto principal: campos + (após criar) itens deste objeto */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">1</span>
-              <h3 className="text-sm font-bold text-slate-800">Objeto principal</h3>
-            </div>
-
-            <Field label="Título do objeto" id="objeto_titulo" required error={errors.objeto_titulo?.message as string} registration={register("objeto_titulo", { required: "Informe o título do objeto" })} />
-            <Field label="Descrição do objeto" id="objeto_descricao" type="textarea" registration={register("objeto_descricao")} />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-700">Status</label>
-                <select {...register("objeto_status")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
-                  <option value="PLANEJADA">Planejada</option>
-                  <option value="EM_EXECUCAO">Em Execução</option>
-                  <option value="PARALISADA">Paralisada</option>
-                  <option value="CONCLUIDA">Concluída</option>
-                </select>
-              </div>
-              <Field label="Data Início" id="objeto_data_inicio" type="date" registration={register("objeto_data_inicio")} />
-              <Field label="Previsão Fim" id="objeto_data_fim_prevista" type="date" registration={register("objeto_data_fim_prevista")} />
-            </div>
-
-            <label className="flex items-center gap-2.5 cursor-pointer w-fit">
-              <input
-                type="checkbox"
-                checked={incluirEndereco}
-                onChange={(e) => setIncluirEndereco(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer"
-              />
-              <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                <MapPin className="h-4 w-4 text-slate-400" />
-                Incluir endereço
-              </span>
-            </label>
-
-            {incluirEndereco && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="s3-objeto_cep" className="block text-sm font-medium text-slate-700">CEP</label>
-                    <div className="relative">
-                      {(() => {
-                        const cepReg = register("objeto_cep");
-                        return (
-                          <input
-                            id="s3-objeto_cep"
-                            inputMode="numeric"
-                            maxLength={9}
-                            placeholder="00000-000"
-                            {...cepReg}
-                            onChange={(e) => { cepReg.onChange(e); handleCepChange(e.target.value); }}
-                            onBlur={(e) => { cepReg.onBlur(e); buscarCep(e.target.value); }}
-                            className={`block w-full rounded-xl border ${cepStatus === "error" ? "border-rose-400 bg-rose-50" : "border-slate-200 bg-slate-50"} py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all`}
-                          />
-                        );
-                      })()}
-                      {cepStatus === "loading" && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />}
-                    </div>
-                    {cepStatus === "error"
-                      ? <p className="text-xs text-rose-600 mt-0.5">CEP inválido ou não encontrado.</p>
-                      : enderecoTravado
-                        ? <p className="text-xs text-slate-500 mt-0.5">Endereço preenchido pelo CEP. Apague o CEP para editar.</p>
-                        : <p className="text-xs text-slate-400 mt-0.5">8 dígitos — preenche o endereço automaticamente.</p>}
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field label="Logradouro" id="s3-objeto_logradouro" placeholder="Rua, avenida, etc." readOnly={enderecoTravado} registration={register("objeto_logradouro")} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Field label="Número" id="s3-objeto_numero" registration={register("objeto_numero")} />
-                  <Field label="Conjunto" id="s3-objeto_conjunto" placeholder="Bloco, quadra, lote..." registration={register("objeto_conjunto")} />
-                  <Field label="Bairro" id="s3-objeto_bairro" readOnly={enderecoTravado} registration={register("objeto_bairro")} />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="sm:col-span-2 space-y-1.5">
-                    <label htmlFor="s3-objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
-                    <input
-                      id="s3-objeto_municipio"
-                      list="municipios-list-s3"
-                      readOnly={enderecoTravado}
-                      {...register("objeto_municipio")}
-                      className={`block w-full rounded-xl border py-2.5 px-3 text-sm placeholder:text-slate-400 transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                    />
-                    <datalist id="municipios-list-s3">
-                      {municipios.map((m) => <option key={m} value={m} />)}
-                    </datalist>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label htmlFor="s3-objeto_uf" className="block text-sm font-medium text-slate-700">Estado (UF)</label>
-                    <input
-                      id="s3-objeto_uf"
-                      maxLength={2}
-                      placeholder="UF"
-                      readOnly={enderecoTravado}
-                      {...register("objeto_uf")}
-                      className={`block w-full rounded-xl border py-2.5 px-3 text-sm uppercase placeholder:text-slate-400 placeholder:normal-case transition-all focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 ${enderecoTravado ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed" : "border-slate-200 bg-slate-50 focus:bg-white"}`}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-slate-200">
-              <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
-              {createdObjetoId ? (
-                <CatalogoItensManager objetoId={createdObjetoId} />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleSubmit(onSubmit)()}
-                  className="flex items-center justify-center w-full gap-2 px-4 py-3 text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 border-dashed rounded-xl transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar item do catálogo
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Núcleos dos demais objetos (todos menos o principal, por id —
-              a ordem da listagem não é garantida) */}
-          {objetos.filter((o) => o.id !== createdObjetoId).map((obj, idx) => (
-            <div key={obj.id} className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-600">{idx + 2}</span>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-bold text-slate-800 truncate">{obj.titulo}</h3>
-                    {obj.municipio && <p className="text-xs text-slate-500">{obj.municipio}</p>}
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 text-slate-600">
-                  {statusLabel(obj.status)}
-                </span>
-              </div>
-              <div className="pt-4 border-t border-slate-200">
-                <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
-                <CatalogoItensManager objetoId={obj.id} />
-              </div>
-            </div>
-          ))}
-
-          {/* Cadastro inline de novo objeto (cria o contrato antes, se preciso) */}
-          {addingObjeto ? (
-            <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">{objetos.length + 1}</span>
-                <h3 className="text-sm font-bold text-brand-800">Novo objeto do contrato</h3>
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="novo_objeto_titulo" className="block text-sm font-medium text-slate-700">Título do objeto<span className="text-rose-500 ml-0.5">*</span></label>
-                <input
-                  id="novo_objeto_titulo"
-                  value={novoObjeto.titulo}
-                  onChange={(e) => setNovoObjeto({ ...novoObjeto, titulo: e.target.value })}
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="novo_objeto_descricao" className="block text-sm font-medium text-slate-700">Descrição do objeto</label>
-                <textarea
-                  id="novo_objeto_descricao"
-                  rows={3}
-                  value={novoObjeto.descricao}
-                  onChange={(e) => setNovoObjeto({ ...novoObjeto, descricao: e.target.value })}
-                  className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="novo_objeto_municipio" className="block text-sm font-medium text-slate-700">Cidade</label>
-                  <input
-                    id="novo_objeto_municipio"
-                    list="municipios-list"
-                    value={novoObjeto.municipio}
-                    onChange={(e) => setNovoObjeto({ ...novoObjeto, municipio: e.target.value })}
-                    className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="novo_objeto_status" className="block text-sm font-medium text-slate-700">Status</label>
-                  <select
-                    id="novo_objeto_status"
-                    value={novoObjeto.status}
-                    onChange={(e) => setNovoObjeto({ ...novoObjeto, status: e.target.value })}
-                    className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700"
-                  >
-                    <option value="PLANEJADA">Planejada</option>
-                    <option value="EM_EXECUCAO">Em Execução</option>
-                    <option value="PARALISADA">Paralisada</option>
-                    <option value="CONCLUIDA">Concluída</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="novo_objeto_data_inicio" className="block text-sm font-medium text-slate-700">Data Início</label>
-                  <input
-                    id="novo_objeto_data_inicio"
-                    type="date"
-                    value={novoObjeto.data_inicio}
-                    onChange={(e) => setNovoObjeto({ ...novoObjeto, data_inicio: e.target.value })}
-                    className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="novo_objeto_data_fim" className="block text-sm font-medium text-slate-700">Previsão Fim</label>
-                  <input
-                    id="novo_objeto_data_fim"
-                    type="date"
-                    value={novoObjeto.data_fim_prevista}
-                    onChange={(e) => setNovoObjeto({ ...novoObjeto, data_fim_prevista: e.target.value })}
-                    className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
-                  />
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-500">Salve o objeto para liberar o cadastro dos itens dele.</p>
-
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setAddingObjeto(false); setNovoObjeto(NOVO_OBJETO_VAZIO); }}
-                  className="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={salvarNovoObjeto}
-                  disabled={savingObjeto || !novoObjeto.titulo.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl disabled:opacity-50 transition-colors"
-                >
-                  {savingObjeto ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Salvar objeto
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleAddObjetoClick}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand-700 hover:text-brand-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Adicionar objeto ao contrato
-            </button>
-          )}
-        </Section>
-
-        <Section title="4. Financeiro">
+        <Section title="3. Financeiro">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Valor global inicial (R$)" id="valor_global" type="number" step="0.01" required error={errors.valor_global?.message as string} registration={register("valor_global", { required: "Informe o valor global" })} />
             <Field label="Valor reajustado (R$)" id="valor_reajustado" type="number" step="0.01" registration={register("valor_reajustado")} />
@@ -710,6 +234,27 @@ const CadastrarContrato = () => {
             <Field label="Recurso Estadual (R$)" id="recurso_estadual" type="number" step="0.01" registration={register("recurso_estadual")} />
             <Field label="Percentual Retenção (%)" id="percentual_retencao" type="number" step="0.01" registration={register("percentual_retencao")} />
           </div>
+        </Section>
+
+        <Section title="4. Regras de Medição (Travas)">
+          <p className="text-xs text-slate-500">
+            Controlam o lançamento de medições. Recomenda-se manter ambas ativas: em obra pública
+            não se paga volume acima do contratado sem aditivo formal.
+          </p>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" {...register("bloquear_acima_contratado")} className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer" />
+            <span className="text-sm text-slate-700">
+              <span className="font-medium">Bloquear quantidade acima do contratado</span>
+              <span className="block text-xs text-slate-500">Impede que o acumulado de um item ultrapasse o saldo contratado já no lançamento.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" {...register("bloquear_quantidade_negativa")} className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer" />
+            <span className="text-sm text-slate-700">
+              <span className="font-medium">Bloquear quantidade negativa</span>
+              <span className="block text-xs text-slate-500">Impede o lançamento de quantidades negativas em qualquer item.</span>
+            </span>
+          </label>
         </Section>
 
         <div className="flex items-center gap-3 pt-6 border-t border-slate-200 mt-6">
@@ -740,6 +285,14 @@ const CadastrarContrato = () => {
               >
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 Salvar alterações
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/objetos/nova?contrato_id=${createdId}`)}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-brand-700 bg-brand-50 border border-brand-200 hover:bg-brand-100 rounded-xl transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                Cadastrar objeto
               </button>
               <button
                 type="button"

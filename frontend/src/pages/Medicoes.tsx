@@ -9,7 +9,7 @@ import {
 import api from "@/services/api";
 import { fmtCurrency, fmtDate } from "@/utils/format";
 
-type MedicaoStatus = "RASCUNHO" | "ASSINADA" | "EM_FISCALIZACAO" | "APROVADA" | "REPROVADA";
+type MedicaoStatus = "RASCUNHO" | "ASSINADA" | "EM_FISCALIZACAO" | "AGUARDANDO_CHEFE" | "APROVADA" | "REPROVADA";
 
 interface Medicao {
   id: string;
@@ -108,6 +108,7 @@ const STATUS_CONFIG: Record<MedicaoStatus, { label: string; cls: string; icon: L
   RASCUNHO: { label: "Rascunho", cls: "bg-slate-100 text-slate-600", icon: Clock },
   ASSINADA: { label: "Aguardando Fiscalização", cls: "bg-sky-100 text-sky-700", icon: Shield },
   EM_FISCALIZACAO: { label: "Em Fiscalização", cls: "bg-amber-100 text-amber-700", icon: AlertCircle },
+  AGUARDANDO_CHEFE: { label: "Aguardando Chefe", cls: "bg-purple-100 text-purple-700", icon: Shield },
   APROVADA: { label: "Aprovada", cls: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
   REPROVADA: { label: "Reprovada", cls: "bg-rose-100 text-rose-700", icon: XCircle },
 };
@@ -135,6 +136,8 @@ const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalPro
   const [observacao, setObservacao] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Quantidade aprovada por item (RF23). Default = declarada; editável.
+  const [aprovados, setAprovados] = useState<Record<string, string>>({});
 
   const { data: vistoria, isLoading: vistoriaLoading } = useQuery<VistoriaResumo | null>({
     queryKey: ["vistoria-medicao", medicao.id],
@@ -145,6 +148,22 @@ const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalPro
     enabled: !!medicao.id,
   });
 
+  const { data: boletim } = useQuery<Boletim>({
+    queryKey: ["boletim", medicao.id],
+    queryFn: async () => {
+      const { data } = await api.get(`/empresa/medicoes/${medicao.id}/boletim`);
+      return data;
+    },
+    enabled: !!medicao.id,
+  });
+
+  const itens = boletim?.itens ?? [];
+  const aprovadoDe = (it: BoletimItem) =>
+    aprovados[it.id] ?? String(Number(it.quantidade_periodo));
+  const houvePartial = itens.some(
+    (it) => Number(aprovadoDe(it)) !== Number(it.quantidade_periodo),
+  );
+
   const handleSubmit = async () => {
     if (!observacao.trim()) {
       setError("A justificativa é obrigatória.");
@@ -153,10 +172,18 @@ const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalPro
     setLoading(true);
     setError(null);
     try {
-      await api.post(`/empresa/medicoes/${medicao.id}/avaliar`, {
-        aprovada,
-        observacao_fiscal: observacao,
-      });
+      const payload: {
+        aprovada: boolean;
+        observacao_fiscal: string;
+        itens?: { item_id: string; quantidade_aprovada: number }[];
+      } = { aprovada, observacao_fiscal: observacao };
+      if (aprovada && houvePartial) {
+        payload.itens = itens.map((it) => ({
+          item_id: it.id,
+          quantidade_aprovada: Number(aprovadoDe(it)),
+        }));
+      }
+      await api.post(`/empresa/medicoes/${medicao.id}/avaliar`, payload);
       queryClient.invalidateQueries({ queryKey: ["medicoes", objetoId] });
       onSuccess();
     } catch {
@@ -254,6 +281,50 @@ const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalPro
           </div>
         </div>
 
+        {aprovada && itens.length > 0 && (
+          <div className="px-6 pb-2">
+            <div className="rounded-xl border border-slate-100 overflow-hidden">
+              <div className="px-4 py-2 bg-slate-50 text-[11px] uppercase text-slate-400 font-semibold">
+                Aprovação por item (RF23) — ajuste a quantidade aprovada se necessário
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-[11px] uppercase text-slate-400">
+                    <tr>
+                      <th className="text-left p-2.5">Item</th>
+                      <th className="text-right p-2.5">Declarada</th>
+                      <th className="text-right p-2.5">Aprovada</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itens.map((it) => (
+                      <tr key={it.id} className="border-t border-slate-50">
+                        <td className="p-2.5 text-slate-700">
+                          {it.descricao} <span className="text-slate-400">({it.unidade})</span>
+                        </td>
+                        <td className="p-2.5 text-right text-slate-500">{Number(it.quantidade_periodo)}</td>
+                        <td className="p-2.5 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            max={Number(it.quantidade_periodo)}
+                            step="0.0001"
+                            value={aprovadoDe(it)}
+                            onChange={(e) =>
+                              setAprovados((prev) => ({ ...prev, [it.id]: e.target.value }))
+                            }
+                            className="w-24 text-right rounded-lg border border-slate-200 py-1 px-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/10"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-4">
           <div className="flex gap-2">
             <button
@@ -310,9 +381,94 @@ const AvaliarModal = ({ medicao, objetoId, onClose, onSuccess }: AvaliarModalPro
               className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Confirmar {aprovada ? "Aprovação" : "Reprovação"}
+              Confirmar {aprovada ? (houvePartial ? "Aprovação Parcial" : "Aprovação") : "Reprovação"}
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface ChefeModalProps {
+  medicao: Medicao;
+  objetoId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const ChefeModal = ({ medicao, objetoId, onClose, onSuccess }: ChefeModalProps) => {
+  const queryClient = useQueryClient();
+  const [aprovada, setAprovada] = useState(true);
+  const [observacao, setObservacao] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    if (!aprovada && !observacao.trim()) {
+      setError("A justificativa é obrigatória ao reprovar.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await api.post(`/empresa/medicoes/${medicao.id}/aprovar-chefe`, {
+        aprovada,
+        observacao_fiscal: observacao || null,
+      });
+      queryClient.invalidateQueries({ queryKey: ["medicoes", objetoId] });
+      onSuccess();
+    } catch {
+      setError("Erro ao processar a aprovação. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-50 border border-purple-100">
+            <Shield className="h-6 w-6 text-purple-700" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Aprovação do Chefe — Medição #{medicao.numero_medicao}</h3>
+            <p className="text-sm text-slate-500">Valor acima da alçada (RN08)</p>
+          </div>
+        </div>
+        <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-sm flex justify-between">
+          <span className="text-slate-500">Valor líquido</span>
+          <b className="text-slate-800">{fmtCurrency(medicao.valor_medido ?? 0)}</b>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setAprovada(true)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${aprovada ? "bg-emerald-600 text-white shadow-md shadow-emerald-200" : "bg-white border border-slate-200 text-slate-600 hover:border-emerald-300"}`}>
+            <CheckCircle2 className="h-4 w-4 inline mr-1.5" /> Aprovar
+          </button>
+          <button onClick={() => setAprovada(false)}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${!aprovada ? "bg-rose-600 text-white shadow-md shadow-rose-200" : "bg-white border border-slate-200 text-slate-600 hover:border-rose-300"}`}>
+            <XCircle className="h-4 w-4 inline mr-1.5" /> Reprovar
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-slate-700">
+            Justificativa {!aprovada && <span className="text-rose-500">*</span>}
+          </label>
+          <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={3}
+            placeholder="Parecer do chefe de setor..."
+            className="block w-full rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all resize-none" />
+        </div>
+        {error && <p className="text-xs text-rose-500">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl transition-all">
+            Cancelar
+          </button>
+          <button onClick={handleSubmit} disabled={loading}
+            className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            Confirmar {aprovada ? "Aprovação" : "Reprovação"}
+          </button>
         </div>
       </div>
     </div>
@@ -365,6 +521,7 @@ export const MedicoesContent = ({ objetoId }: { objetoId: string }) => {
   const queryClient = useQueryClient();
   const [assinarModal, setAssinarModal] = useState<Medicao | null>(null);
   const [avaliarModal, setAvaliarModal] = useState<Medicao | null>(null);
+  const [chefeModal, setChefeModal] = useState<Medicao | null>(null);
   const [boletimModal, setBoletimModal] = useState<Medicao | null>(null);
   const [assinarLoading, setAssinarLoading] = useState(false);
 
@@ -468,6 +625,12 @@ export const MedicoesContent = ({ objetoId }: { objetoId: string }) => {
                     <Eye className="h-3.5 w-3.5" /> Avaliar
                   </button>
                 )}
+                {m.status === "AGUARDANDO_CHEFE" && (
+                  <button onClick={() => setChefeModal(m)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-xl transition-all">
+                    <Shield className="h-3.5 w-3.5" /> Aprovar (Chefe)
+                  </button>
+                )}
                 <button onClick={() => setBoletimModal(m)}
                   className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl transition-all">
                   <Table2 className="h-3.5 w-3.5" /> Boletim
@@ -496,6 +659,15 @@ export const MedicoesContent = ({ objetoId }: { objetoId: string }) => {
           objetoId={objetoId}
           onClose={() => setAvaliarModal(null)}
           onSuccess={() => setAvaliarModal(null)}
+        />
+      )}
+
+      {chefeModal && (
+        <ChefeModal
+          medicao={chefeModal}
+          objetoId={objetoId}
+          onClose={() => setChefeModal(null)}
+          onSuccess={() => setChefeModal(null)}
         />
       )}
 

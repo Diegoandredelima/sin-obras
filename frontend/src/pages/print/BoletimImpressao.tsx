@@ -11,7 +11,7 @@ interface BoletimItem {
   valor_unitario: string; valor_bruto: string; acumulado_atual: string; saldo: string;
 }
 interface Boletim {
-  numero_medicao: number; percentual_retencao: string; itens: BoletimItem[];
+  numero_medicao: number; numero_art: string | null; percentual_retencao: string; itens: BoletimItem[];
   valor_bruto_total: string; valor_faturamento_direto: string; retencao: string; valor_liquido: string;
 }
 interface Medicao { objeto_id: string; data_inicio_periodo?: string; data_fim_periodo?: string }
@@ -52,7 +52,10 @@ const BoletimImpressao = () => {
         <p className="text-sm text-slate-400">Carregando boletim...</p>
       ) : (
         <div className="space-y-4">
-          <p className="text-xs text-slate-500">Período: {periodo}</p>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+            <span>Período: {periodo}</span>
+            <span>ART/RRT: <b className="text-slate-700">{boletim.numero_art || "—"}</b></span>
+          </div>
           <table className="w-full text-[10px] border-collapse">
             <thead>
               <tr className="bg-slate-100 text-slate-600">

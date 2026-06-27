@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, BookOpen, CloudSun, AlertCircle, Users, Loader2, Trash2, Wrench, HardHat, CloudRain } from "lucide-react";
+import { Plus, BookOpen, CloudSun, AlertCircle, Users, Loader2, Trash2, Wrench, HardHat, CloudRain, FileText } from "lucide-react";
 import api from "@/services/api";
 import { fmtDate } from "@/utils/format";
+import { MedicoesContent } from "@/pages/Medicoes";
 
 // Condições de tempo do RDO (espelham o enum CondicaoTempo do backend).
 const TEMPO_OPTIONS = [
@@ -358,6 +359,12 @@ export const DiarioContent = ({ objetoId }: { objetoId: string }) => {
 const DiarioObras = () => {
   const { objetoId } = useParams<{ objetoId: string }>();
   const id = objetoId || "1";
+  const [tab, setTab] = useState<"diario" | "medicoes">("diario");
+
+  const tabs = [
+    { key: "diario" as const, label: "Diário", icon: BookOpen },
+    { key: "medicoes" as const, label: "Medições", icon: FileText },
+  ];
 
   return (
     <div className="space-y-6">
@@ -365,7 +372,29 @@ const DiarioObras = () => {
         <h2 className="text-2xl font-bold text-slate-900">Diário de Obras</h2>
         <p className="text-sm text-slate-500 mt-0.5">Objeto: CRAS Cidade Nova</p>
       </div>
-      <DiarioContent objetoId={id} />
+
+      {/* Sub-abas: Medições passou a viver dentro da área de Diário de Obra. */}
+      <div className="flex border-b border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden">
+        {tabs.map((t) => {
+          const TabIcon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px ${
+                tab === t.key
+                  ? "text-brand-700 border-brand-600 bg-brand-50/50"
+                  : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <TabIcon className="h-4 w-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "diario" ? <DiarioContent objetoId={id} /> : <MedicoesContent objetoId={id} />}
     </div>
   );
 };

@@ -8,7 +8,7 @@ import type { UseFormRegisterReturn } from "react-hook-form";
 import { HardHat, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { AxiosError } from "axios";
 import api from "@/services/api";
-import type { Contrato } from "@/types";
+import type { Contrato, OrcamentoResumo } from "@/types";
 
 const schema = z.object({
   titulo: z.string().min(3, "Informe o título do objeto"),
@@ -59,21 +59,44 @@ const CadastrarObjeto = () => {
   const contratoId = searchParams.get("contrato_id");
   const [apiError, setApiError] = useState("");
 
+  // Contrato (documento-mãe) ao qual o objeto será vinculado. Vem por query
+  // param (quando aberto a partir do contrato) ou é escolhido no seletor abaixo.
+  const [vinculoContratoId, setVinculoContratoId] = useState<string>(contratoId || "");
+
+  const { data: contratos = [] } = useQuery<Contrato[]>({
+    queryKey: ["contratos"],
+    queryFn: async () => {
+      const { data } = await api.get("/contratos?limit=500");
+      return Array.isArray(data) ? data : (data?.items ?? []);
+    },
+  });
+
   // Quando vindo do detalhe de um contrato, exibe a qual documento-mãe o objeto
   // será vinculado.
   const { data: contrato } = useQuery<Contrato>({
-    queryKey: ["contrato", contratoId],
+    queryKey: ["contrato", vinculoContratoId],
     queryFn: async () => {
-      const { data } = await api.get(`/contratos/${contratoId}`);
+      const { data } = await api.get(`/contratos/${vinculoContratoId}`);
       return data;
     },
-    enabled: !!contratoId,
+    enabled: !!vinculoContratoId,
   });
 
   const { data: municipios = [] } = useQuery<string[]>({
     queryKey: ["municipios"],
     queryFn: async () => {
       const { data } = await api.get("/objetos/municipios/lista");
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  // Orçamento (template) a vincular: ao salvar, sua EAP é COPIADA para o objeto
+  // com o BDI embutido no preço (cópia congelada).
+  const [orcamentoId, setOrcamentoId] = useState<string>("");
+  const { data: orcamentos = [] } = useQuery<OrcamentoResumo[]>({
+    queryKey: ["orcamentos"],
+    queryFn: async () => {
+      const { data } = await api.get("/orcamentos?limit=500");
       return Array.isArray(data) ? data : [];
     },
   });
@@ -102,13 +125,14 @@ const CadastrarObjeto = () => {
         status: data.status,
         data_inicio: data.data_inicio || null,
         data_fim_prevista: data.data_fim_prevista || null,
-        contrato_id: contratoId || null,
+        contrato_id: vinculoContratoId || null,
+        orcamento_id: orcamentoId || null,
       });
       queryClient.invalidateQueries({ queryKey: ["objetos"] });
-      if (contratoId) {
+      if (vinculoContratoId) {
         // Volta ao documento-mãe, que passa a listar este objeto.
-        queryClient.invalidateQueries({ queryKey: ["contrato-objetos", contratoId] });
-        navigate(`/contratos/${contratoId}`);
+        queryClient.invalidateQueries({ queryKey: ["contrato-objetos", vinculoContratoId] });
+        navigate(`/contratos/${vinculoContratoId}`);
       } else {
         navigate(`/objetos/${objeto.id}`);
       }
@@ -123,6 +147,8 @@ const CadastrarObjeto = () => {
       <Link to={contratoId ? `/contratos/${contratoId}` : "/objetos"} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />{contratoId ? "Voltar para o contrato" : "Voltar para Objetos"}
       </Link>
+      {/* contratoId (query param) controla apenas a navegação de retorno; o
+          vínculo efetivo usa `vinculoContratoId` (seletor acima). */}
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100">
@@ -158,6 +184,47 @@ const CadastrarObjeto = () => {
 
           <section className="space-y-4">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Identificação</h2>
+            <div className="space-y-1.5">
+              <label htmlFor="vinculo_contrato" className="block text-sm font-medium text-slate-700">
+                Contrato vinculado <span className="text-slate-400 font-normal">(documento-mãe)</span>
+              </label>
+              <select
+                id="vinculo_contrato"
+                value={vinculoContratoId}
+                onChange={(e) => setVinculoContratoId(e.target.value)}
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
+              >
+                <option value="">Sem contrato (vincular depois)</option>
+                {contratos.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    Nº {c.numero_contrato}{c.objeto ? ` — ${c.objeto.slice(0, 60)}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400">Escolha o contrato já cadastrado ao qual este objeto pertence.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="vinculo_orcamento" className="block text-sm font-medium text-slate-700">
+                Orçamento vinculado <span className="text-slate-400 font-normal">(banco de dados técnico)</span>
+              </label>
+              <select
+                id="vinculo_orcamento"
+                value={orcamentoId}
+                onChange={(e) => setOrcamentoId(e.target.value)}
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-700/10 transition-all"
+              >
+                <option value="">Sem orçamento (cadastrar EAP depois)</option>
+                {orcamentos.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.codigo} — {o.titulo.slice(0, 60)} (BDI {Number(o.bdi_percentual)}%)
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400">
+                Ao vincular, a EAP do orçamento (metas, serviços, memória e critérios) é copiada para este
+                objeto com o BDI já embutido no preço. A cópia é congelada — alterar o orçamento depois não afeta este objeto.
+              </p>
+            </div>
             <Field label="Título do objeto" id="titulo" required placeholder="Ex.: Construção da Escola Estadual Cidade Nova"
               error={errors.titulo?.message} registration={register("titulo")} />
             <div className="space-y-1.5">

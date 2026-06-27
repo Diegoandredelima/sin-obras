@@ -7,8 +7,6 @@ import { AxiosError } from "axios";
 import api from "@/services/api";
 import type { EmpresaListItem, Objeto, Contrato } from "@/types";
 
-import CatalogoItensManager from "@/components/CatalogoItensManager";
-
 interface OrgaoOption {
   id: string;
   sigla: string;
@@ -128,6 +126,23 @@ const EditarContrato = () => {
     },
   });
 
+  const { data: temMedicoesValidas = false, isLoading: isMedicoesLoading } = useQuery<boolean>({
+    queryKey: ["contrato-medicoes-status", id, objetos],
+    queryFn: async () => {
+      if (!objetos || objetos.length === 0) return false;
+      const promises = objetos.map((obj) => api.get(`/empresa/objetos/${obj.id}/medicoes`));
+      const responses = await Promise.all(promises);
+      for (const res of responses) {
+        const medicoes = Array.isArray(res.data) ? res.data : [];
+        if (medicoes.some((m: any) => m.status !== "RASCUNHO")) {
+          return true;
+        }
+      }
+      return false;
+    },
+    enabled: !!id && objetos.length > 0,
+  });
+
   const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm();
 
   // Autocompletar endereço pelo CEP (ViaCEP). CEP = 8 dígitos.
@@ -212,6 +227,8 @@ const EditarContrato = () => {
         recurso_federal: contrato.recurso_federal || "",
         recurso_estadual: contrato.recurso_estadual || "",
         percentual_retencao: contrato.percentual_retencao || "",
+        bloquear_quantidade_negativa: contrato.bloquear_quantidade_negativa ?? true,
+        bloquear_acima_contratado: contrato.bloquear_acima_contratado ?? true,
       });
       const temEndereco = !!(objeto.cep || objeto.logradouro || objeto.endereco);
       setIncluirEndereco(temEndereco);
@@ -241,6 +258,8 @@ const EditarContrato = () => {
         recurso_estadual: data.recurso_estadual ? Number(data.recurso_estadual) : null,
         percentual_retencao: data.percentual_retencao ? Number(data.percentual_retencao) : null,
         numero_licitacao: data.numero_licitacao || null,
+        bloquear_quantidade_negativa: data.bloquear_quantidade_negativa ?? true,
+        bloquear_acima_contratado: data.bloquear_acima_contratado ?? true,
       };
 
       // 2. Update Objeto
@@ -310,7 +329,7 @@ const EditarContrato = () => {
     }
   };
 
-  if (isContratoLoading || isObjetoLoading) {
+  if (isContratoLoading || isObjetoLoading || isMedicoesLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
   }
 
@@ -334,6 +353,20 @@ const EditarContrato = () => {
         </div>
       </div>
 
+      {temMedicoesValidas && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-800">Contrato com Medições em Andamento/Aprovadas</h4>
+            <p className="text-xs text-amber-700 mt-1">
+              Como este contrato já possui medições enviadas, assinadas ou aprovadas, os campos de escopo financeiro,
+              datas de vigência/execução e o cadastro de novos objetos foram bloqueados para edição.
+              Apenas os campos administrativos (responsáveis, processo SEI, endereço e observações) podem ser modificados.
+            </p>
+          </div>
+        </div>
+      )}
+
       {apiError && (
         <div className="flex items-center gap-2.5 bg-rose-50 border border-rose-200 rounded-xl p-4">
           <AlertCircle className="h-5 w-5 text-rose-500 shrink-0" />
@@ -354,8 +387,8 @@ const EditarContrato = () => {
           </div>
           <Field label="Resumo" id="objeto" type="textarea" registration={register("objeto")} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Data de assinatura" id="data_assinatura" type="date" registration={register("data_assinatura")} />
-            <Field label="Vigência (fim)" id="data_vigencia" type="date" registration={register("data_vigencia")} />
+            <Field label="Data de assinatura" id="data_assinatura" type="date" readOnly={temMedicoesValidas} registration={register("data_assinatura")} />
+            <Field label="Vigência (fim)" id="data_vigencia" type="date" readOnly={temMedicoesValidas} registration={register("data_vigencia")} />
           </div>
 
           <div className="pt-2 space-y-4">
@@ -435,14 +468,30 @@ const EditarContrato = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Empresa executora</label>
-              <select {...register("empresa_ref_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+              <select
+                disabled={temMedicoesValidas}
+                {...register("empresa_ref_id")}
+                className={`block w-full rounded-xl border py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none ${
+                  temMedicoesValidas
+                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
                 <option value="">Selecione...</option>
                 {empresas.map((e) => <option key={e.id} value={e.id}>{e.razao_social}</option>)}
               </select>
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Órgão demandante</label>
-              <select {...register("orgao_id")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+              <select
+                disabled={temMedicoesValidas}
+                {...register("orgao_id")}
+                className={`block w-full rounded-xl border py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none ${
+                  temMedicoesValidas
+                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
                 <option value="">Selecione...</option>
                 {orgaos.map((o) => <option key={o.id} value={o.id}>{o.sigla}</option>)}
               </select>
@@ -465,7 +514,7 @@ const EditarContrato = () => {
         </Section>
 
         <Section title="3. Dados do Objeto">
-          {/* Núcleo do objeto principal: campos + itens deste objeto */}
+          {/* Núcleo do objeto principal */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 text-xs font-bold text-brand-700">1</span>
@@ -477,15 +526,23 @@ const EditarContrato = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-700">Status</label>
-              <select {...register("objeto_status")} className="block w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3 text-sm focus:border-brand-700">
+              <select
+                disabled={temMedicoesValidas}
+                {...register("objeto_status")}
+                className={`block w-full rounded-xl border py-2.5 px-3 text-sm focus:border-brand-700 focus:outline-none ${
+                  temMedicoesValidas
+                    ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
                 <option value="PLANEJADA">Planejada</option>
                 <option value="EM_EXECUCAO">Em Execução</option>
                 <option value="PARALISADA">Paralisada</option>
                 <option value="CONCLUIDA">Concluída</option>
               </select>
             </div>
-            <Field label="Data Início" id="objeto_data_inicio" type="date" registration={register("objeto_data_inicio")} />
-            <Field label="Previsão Fim" id="objeto_data_fim_prevista" type="date" registration={register("objeto_data_fim_prevista")} />
+            <Field label="Data Início" id="objeto_data_inicio" type="date" readOnly={temMedicoesValidas} registration={register("objeto_data_inicio")} />
+            <Field label="Previsão Fim" id="objeto_data_fim_prevista" type="date" readOnly={temMedicoesValidas} registration={register("objeto_data_fim_prevista")} />
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer w-fit">
@@ -569,14 +626,9 @@ const EditarContrato = () => {
               </div>
             </div>
           )}
-
-          <div className="pt-4 border-t border-slate-200">
-            <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
-            <CatalogoItensManager objetoId={objetoId} />
-          </div>
           </div>
 
-          {/* Núcleos dos demais objetos do contrato (cada um com seus itens) */}
+          {/* Núcleos dos demais objetos do contrato */}
           {objetos.slice(1).map((obj, idx) => (
             <div key={obj.id} className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
               <div className="flex items-center justify-between gap-3">
@@ -591,15 +643,11 @@ const EditarContrato = () => {
                   {statusLabel(obj.status)}
                 </span>
               </div>
-              <div className="pt-4 border-t border-slate-200">
-                <h4 className="text-sm font-semibold text-slate-800 mb-4">Itens deste objeto</h4>
-                <CatalogoItensManager objetoId={obj.id} />
-              </div>
             </div>
           ))}
 
           {/* Cadastro inline de novo objeto */}
-          {addingObjeto ? (
+          {!temMedicoesValidas && addingObjeto ? (
             <div className="rounded-xl border border-brand-200 bg-brand-50/40 p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">{objetos.length + 1}</span>
@@ -680,8 +728,6 @@ const EditarContrato = () => {
                 </div>
               </div>
 
-              <p className="text-xs text-slate-500">Salve o objeto para liberar o cadastro dos itens dele.</p>
-
               <div className="flex items-center gap-2 pt-1">
                 <button
                   type="button"
@@ -704,8 +750,13 @@ const EditarContrato = () => {
           ) : (
             <button
               type="button"
+              disabled={temMedicoesValidas}
               onClick={() => setAddingObjeto(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-medium text-slate-500 hover:border-brand-700 hover:text-brand-700 transition-colors"
+              className={`w-full flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium transition-all duration-200 ${
+                temMedicoesValidas
+                  ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+                  : "border-slate-300 text-slate-500 hover:border-brand-700 hover:text-brand-700"
+              }`}
             >
               <Plus className="h-4 w-4" />
               Adicionar objeto ao contrato
@@ -715,13 +766,34 @@ const EditarContrato = () => {
 
         <Section title="4. Financeiro">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Valor global inicial (R$)" id="valor_global" type="number" step="0.01" required registration={register("valor_global")} />
-            <Field label="Valor reajustado (R$)" id="valor_reajustado" type="number" step="0.01" registration={register("valor_reajustado")} />
-            <Field label="Valor final (R$)" id="valor_final" type="number" step="0.01" registration={register("valor_final")} />
-            <Field label="Recurso Federal (R$)" id="recurso_federal" type="number" step="0.01" registration={register("recurso_federal")} />
-            <Field label="Recurso Estadual (R$)" id="recurso_estadual" type="number" step="0.01" registration={register("recurso_estadual")} />
-            <Field label="Percentual Retenção (%)" id="percentual_retencao" type="number" step="0.01" registration={register("percentual_retencao")} />
+            <Field label="Valor global inicial (R$)" id="valor_global" type="number" step="0.01" required readOnly={temMedicoesValidas} registration={register("valor_global")} />
+            <Field label="Valor reajustado (R$)" id="valor_reajustado" type="number" step="0.01" readOnly={temMedicoesValidas} registration={register("valor_reajustado")} />
+            <Field label="Valor final (R$)" id="valor_final" type="number" step="0.01" readOnly={temMedicoesValidas} registration={register("valor_final")} />
+            <Field label="Recurso Federal (R$)" id="recurso_federal" type="number" step="0.01" readOnly={temMedicoesValidas} registration={register("recurso_federal")} />
+            <Field label="Recurso Estadual (R$)" id="recurso_estadual" type="number" step="0.01" readOnly={temMedicoesValidas} registration={register("recurso_estadual")} />
+            <Field label="Percentual Retenção (%)" id="percentual_retencao" type="number" step="0.01" readOnly={temMedicoesValidas} registration={register("percentual_retencao")} />
           </div>
+        </Section>
+
+        <Section title="5. Regras de Medição (Travas)">
+          <p className="text-xs text-slate-500">
+            Controlam o lançamento de medições. Recomenda-se manter ambas ativas: em obra pública
+            não se paga volume acima do contratado sem aditivo formal.
+          </p>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" {...register("bloquear_acima_contratado")} className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer" />
+            <span className="text-sm text-slate-700">
+              <span className="font-medium">Bloquear quantidade acima do contratado</span>
+              <span className="block text-xs text-slate-500">Impede que o acumulado de um item ultrapasse o saldo contratado já no lançamento.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" {...register("bloquear_quantidade_negativa")} className="mt-0.5 w-4 h-4 rounded border-slate-300 accent-brand-700 cursor-pointer" />
+            <span className="text-sm text-slate-700">
+              <span className="font-medium">Bloquear quantidade negativa</span>
+              <span className="block text-xs text-slate-500">Impede o lançamento de quantidades negativas em qualquer item.</span>
+            </span>
+          </label>
         </Section>
 
         <div className="flex items-center gap-3 pt-6 border-t border-slate-200 mt-6">

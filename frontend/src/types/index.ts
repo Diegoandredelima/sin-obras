@@ -117,6 +117,9 @@ export interface Contrato {
   recurso_federal?: number;
   recurso_estadual?: number;
   percentual_retencao?: number;
+  /** Regras de trava do lançamento de medição (Decisão 1). */
+  bloquear_quantidade_negativa?: boolean;
+  bloquear_acima_contratado?: boolean;
   data_assinatura?: string;
   data_vigencia?: string;
   empresa_id?: string;
@@ -135,6 +138,17 @@ export interface Contrato {
   orgao_ref?: { id: string; sigla: string; nome?: string };
   /** Objetos vinculados a este contrato (Contrato 1—N Objeto). */
   objetos?: Objeto[];
+}
+
+/** Orçamento (módulo separado / banco de dados técnico). */
+export interface OrcamentoResumo {
+  id: string;
+  codigo: string;
+  titulo: string;
+  data_base?: string | null;
+  bdi_percentual: number;
+  status: "RASCUNHO" | "FINALIZADO";
+  criado_em: string;
 }
 
 export interface CatalogoClasse {

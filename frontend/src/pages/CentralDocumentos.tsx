@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, FolderDown, FileText, FileSpreadsheet, Loader2, Building2,
-  BookOpen, Camera, Ruler, ClipboardList, ChevronRight,
+  BookOpen, Camera, Ruler, ClipboardList, ChevronRight, BarChart3,
 } from "lucide-react";
 import api from "@/services/api";
 
@@ -225,10 +225,20 @@ const PainelDocumentos = ({ objeto }: { objeto: ObjetoRow }) => {
       {/* Documentos do objeto */}
       <section className="space-y-2">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Documentos do objeto</p>
-        <DocCard icon={<ClipboardList className="h-5 w-5" />} titulo="Relatório do Objeto"
-          descricao="Resumo institucional do objeto.">
-          <BtnPdf onClick={() => abrirPdf(`/objetos/${objeto.objeto_id}/relatorio`)} />
-        </DocCard>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <DocCard icon={<ClipboardList className="h-5 w-5" />} titulo="Relatório do Objeto"
+            descricao="Resumo institucional do objeto.">
+            <BtnPdf onClick={() => abrirPdf(`/objetos/${objeto.objeto_id}/relatorio`)} />
+          </DocCard>
+          <DocCard icon={<BarChart3 className="h-5 w-5" />} titulo="Progresso do Cronograma"
+            descricao="Planejado × realizado por meta.">
+            <BtnPdf onClick={() => abrirPdf(`/objetos/${objeto.objeto_id}/cronograma-progresso`)} />
+          </DocCard>
+          <DocCard icon={<Camera className="h-5 w-5" />} titulo="Relatório Fotográfico (objeto)"
+            descricao="Todas as fotos das medições do objeto.">
+            <BtnPdf onClick={() => abrirPdf(`/objetos/${objeto.objeto_id}/relatorio-fotografico`)} />
+          </DocCard>
+        </div>
       </section>
 
       {/* Por medição */}

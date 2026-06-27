@@ -88,7 +88,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
           ) : (
             <div className="flex items-center gap-6">
               <div className="relative h-44 w-44 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <PieChart>
                     <Pie
                       data={saudeData} dataKey="value" nameKey="name"
@@ -146,7 +146,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
           {statusData.length === 0 ? (
             <p className="text-sm text-slate-400 italic py-12 text-center">Nenhum dado disponível.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={176}>
+            <ResponsiveContainer width="100%" height={176} minWidth={0} minHeight={0}>
               <BarChart data={statusData} layout="vertical" margin={{ left: 4, right: 24 }}>
                 <XAxis type="number" hide />
                 <YAxis
@@ -166,7 +166,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
       {resumo && orgaoData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card icon={Building2} title="Objetos por órgão">
-            <ResponsiveContainer width="100%" height={Math.max(176, orgaoData.length * 32)}>
+            <ResponsiveContainer width="100%" height={Math.max(176, orgaoData.length * 32)} minWidth={0} minHeight={0}>
               <BarChart data={orgaoData} layout="vertical" margin={{ left: 4, right: 24 }}>
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="orgao" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />
@@ -179,7 +179,7 @@ const DashboardCharts = ({ porStatus, porSaude, filtroSaude, onToggleSaude, resu
           </Card>
 
           <Card icon={DollarSign} title="Valor contratado por órgão">
-            <ResponsiveContainer width="100%" height={Math.max(176, orgaoData.length * 32)}>
+            <ResponsiveContainer width="100%" height={Math.max(176, orgaoData.length * 32)} minWidth={0} minHeight={0}>
               <BarChart data={orgaoData} layout="vertical" margin={{ left: 4, right: 24 }}>
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="orgao" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#64748b" }} />

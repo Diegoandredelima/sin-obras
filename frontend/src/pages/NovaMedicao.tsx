@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   FileText, Plus, Trash2, Camera, Shield, Loader2, CheckCircle2,
-  ArrowLeft, AlertCircle, Ruler, ChevronDown, ChevronRight,
+  ArrowLeft, AlertCircle, Ruler, ChevronDown, ChevronRight, CalendarDays,
 } from "lucide-react";
 import api from "@/services/api";
 import { fmtCurrency } from "@/utils/format";
@@ -104,6 +104,7 @@ const NovaMedicao = () => {
   const [medicao, setMedicao] = useState<MedicaoCriada | null>(null);
   const [boletim, setBoletim] = useState<Boletim | null>(null);
   const [fotos, setFotos] = useState<Record<string, string>>({}); // item_id -> filename
+  const [fotoMeta, setFotoMeta] = useState<Record<string, { titulo: string; descricao: string }>>({}); // item_id -> legenda
   const [error, setError] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [finalizando, setFinalizando] = useState(false);
@@ -123,10 +124,111 @@ const NovaMedicao = () => {
     enabled: !!objetoId,
   });
 
+  // Previsão do cronograma ativo (para o botão "Preencher conforme previsto")
+  // O período = número da próxima medição. Buscamos pelo endpoint de previsão.
+  const [previsaoUsada, setPrevisaoUsada] = useState(false);
+  const [previsaoPeriodo, setPrevisaoPeriodo] = useState<number | null>(null);
+
+  // Detecta quantas medições já existem para descobrir o próximo número
+  const { data: medicoesExistentes = [] } = useQuery<{ id: string; numero_medicao: number }[]>({
+    queryKey: ["medicoes-list", objetoId],
+    queryFn: async (): Promise<{ id: string; numero_medicao: number }[]> => {
+      const { data } = await api.get(`/empresa/objetos/${objetoId}/medicoes`);
+      return (Array.isArray(data) ? data : (data?.items ?? [])) as { id: string; numero_medicao: number }[];
+    },
+    enabled: !!objetoId,
+  });
+
+  // Sincroniza o período após carregar as medições
+  useEffect(() => {
+    if (previsaoPeriodo === null && medicoesExistentes.length >= 0) {
+      const maxNum = medicoesExistentes.reduce(
+        (max: number, m: { numero_medicao: number }) => Math.max(max, m.numero_medicao),
+        0
+      );
+      setPrevisaoPeriodo(maxNum + 1);
+    }
+  }, [medicoesExistentes, previsaoPeriodo]);
+
+
+  const previsaoPeriodoFinal = previsaoPeriodo ?? (medicoesExistentes.reduce((max, m) => Math.max(max, m.numero_medicao), 0) + 1);
+
+  const { data: previsaoCronograma } = useQuery<{
+    periodo: number;
+    versao_id?: string;
+    parcelas: { evento_id: string; quantidade_prevista: string }[];
+  }>({
+    queryKey: ["cronograma-previsao", objetoId, previsaoPeriodoFinal],
+    queryFn: async () => {
+      const { data } = await api.get(`/cronograma/objetos/${objetoId}/previsao?periodo=${previsaoPeriodoFinal}`);
+      return data;
+    },
+    enabled: !!objetoId && previsaoPeriodoFinal > 0,
+  });
+
+  const handlePreencherPrevisto = () => {
+    if (!previsaoCronograma || previsaoCronograma.parcelas.length === 0) return;
+    // Monta os itens a partir das parcelas do cronograma
+    const novosItens = previsaoCronograma.parcelas
+      .filter((p) => eventoById[p.evento_id]) // só os eventos que existem
+      .map((p) => ({
+        evento_id: p.evento_id,
+        quantidade_periodo: String(p.quantidade_prevista),
+        desconto_vaos: "0",
+        observacao: "",
+        memoria: [],
+      }));
+    if (novosItens.length > 0) {
+      setItens(novosItens);
+      setPrevisaoUsada(true);
+    }
+  };
+
   const eventoById = useMemo(
     () => Object.fromEntries(eventos.map((e) => [e.id, e])),
     [eventos]
   );
+
+  // Previsto do período por evento (para os alertas de desvio).
+  const previstoByEvento = useMemo<Record<string, number>>(
+    () => Object.fromEntries(
+      (previsaoCronograma?.parcelas ?? []).map((p) => [p.evento_id, Number(p.quantidade_prevista)])
+    ),
+    [previsaoCronograma]
+  );
+
+  // Diagnóstico por item: trava de lançamento (Decisão 1) + alerta de desvio
+  // (Passo 4). A trava é client-side para feedback imediato; o servidor é a
+  // autoridade final. O alerta compara o líquido lançado com o previsto do período.
+  const diagnosticos = useMemo(
+    () => itens.map((it) => {
+      const ev = eventoById[it.evento_id];
+      if (!ev || it.quantidade_periodo === "") {
+        return { travaErro: null as string | null, alerta: null as { tipo: "abaixo" | "excedente"; msg: string } | null };
+      }
+      const contratado = Number(ev.quantidade);
+      const liquido = Number(it.quantidade_periodo || 0) - Number(it.desconto_vaos || 0);
+      let travaErro: string | null = null;
+      if (Number(it.quantidade_periodo) < 0 || liquido < 0) {
+        travaErro = "Quantidade negativa não é permitida.";
+      } else if (contratado > 0 && liquido > contratado) {
+        travaErro = `Quantidade superior ao saldo contratado (${contratado} ${ev.unidade}).`;
+      }
+      let alerta: { tipo: "abaixo" | "excedente"; msg: string } | null = null;
+      const previsto = previstoByEvento[it.evento_id];
+      if (!travaErro && previsto !== undefined && previsto > 0 && liquido > 0) {
+        if (liquido < previsto) {
+          alerta = { tipo: "abaixo", msg: `Medição abaixo do previsto (${previsto} ${ev.unidade}) para o período.` };
+        } else if (liquido > previsto) {
+          alerta = { tipo: "excedente", msg: `Medição excedente acima do previsto (${previsto} ${ev.unidade}) para o período.` };
+        }
+      }
+      return { travaErro, alerta };
+    }),
+    [itens, eventoById, previstoByEvento]
+  );
+
+  const temTrava = diagnosticos.some((d) => d.travaErro);
 
   // Prévia client-side dos totais (antes de salvar)
   const previa = useMemo(() => {
@@ -216,6 +318,9 @@ const NovaMedicao = () => {
     const form = new FormData();
     form.append("file", file);
     form.append("medicao_item_id", itemId);
+    const meta = fotoMeta[itemId];
+    if (meta?.titulo) form.append("titulo", meta.titulo);
+    if (meta?.descricao) form.append("descricao", meta.descricao);
     try {
       await api.post(`/empresa/medicoes/${medicao.id}/fotos`, form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -288,9 +393,24 @@ const NovaMedicao = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Itens do boletim</h3>
-              <button onClick={addLinha} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-xl">
-                <Plus className="h-3.5 w-3.5" /> Adicionar item
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Botão Preencher conforme previsto */}
+                {previsaoCronograma && previsaoCronograma.parcelas.length > 0 && (
+                  <button
+                    onClick={handlePreencherPrevisto}
+                    disabled={previsaoUsada}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    title={`Preencher com as quantidades previstas para o Mês/Período ${previsaoPeriodoFinal}`}
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    Preencher conforme previsto
+                    <span className="text-[10px] opacity-70">(Mês {previsaoPeriodoFinal})</span>
+                  </button>
+                )}
+                <button onClick={addLinha} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-xl">
+                  <Plus className="h-3.5 w-3.5" /> Adicionar item
+                </button>
+              </div>
             </div>
             {eventos.length === 0 && (
               <p className="text-xs text-amber-600">Esta objeto ainda não tem eventos cadastrados no cronograma.</p>
@@ -335,6 +455,19 @@ const NovaMedicao = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Trava de lançamento / alerta de desvio do item */}
+                    {diagnosticos[idx]?.travaErro ? (
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-rose-600">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {diagnosticos[idx].travaErro}
+                      </div>
+                    ) : diagnosticos[idx]?.alerta ? (
+                      <div className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                        diagnosticos[idx].alerta!.tipo === "abaixo" ? "text-sky-600" : "text-amber-600"
+                      }`}>
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {diagnosticos[idx].alerta!.msg}
+                      </div>
+                    ) : null}
 
                     {/* Memória de cálculo do item */}
                     <button type="button"
@@ -403,11 +536,14 @@ const NovaMedicao = () => {
             <TotaisResumo bruto={previa.bruto} retencao={previa.ret} faturamento={Number(faturamentoDireto || 0)} liquido={previa.liquido} />
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex items-center justify-end gap-3">
+            {temTrava && (
+              <span className="text-xs text-rose-600">Corrija os itens acima do saldo contratado para continuar.</span>
+            )}
             <button onClick={() => navigate(-1)} className="px-4 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl">
               Cancelar
             </button>
-            <button onClick={handleCriarRascunho} disabled={salvando}
+            <button onClick={handleCriarRascunho} disabled={salvando || temTrava}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-brand-700 hover:bg-brand-500 rounded-xl shadow-md shadow-brand-700/20 disabled:opacity-50">
               {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
               Criar rascunho
@@ -455,11 +591,25 @@ const NovaMedicao = () => {
                           fotos[it.id] ? (
                             <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><CheckCircle2 className="h-4 w-4" /> Enviada</span>
                           ) : (
-                            <label className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 cursor-pointer hover:underline">
-                              <Camera className="h-4 w-4" /> Anexar
-                              <input type="file" accept="image/*" capture="environment" className="hidden"
-                                onChange={(e) => e.target.files?.[0] && handleUploadFoto(it.id, e.target.files[0])} />
-                            </label>
+                            <div className="flex flex-col items-stretch gap-1.5 min-w-[180px]">
+                              <input
+                                value={fotoMeta[it.id]?.titulo ?? ""}
+                                placeholder="Título da foto"
+                                onChange={(e) => setFotoMeta((p) => ({ ...p, [it.id]: { titulo: e.target.value, descricao: p[it.id]?.descricao ?? "" } }))}
+                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-1 px-2 text-xs focus:border-brand-700 focus:outline-none"
+                              />
+                              <input
+                                value={fotoMeta[it.id]?.descricao ?? ""}
+                                placeholder="Descrição (opcional)"
+                                onChange={(e) => setFotoMeta((p) => ({ ...p, [it.id]: { titulo: p[it.id]?.titulo ?? "", descricao: e.target.value } }))}
+                                className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-1 px-2 text-xs focus:border-brand-700 focus:outline-none"
+                              />
+                              <label className="inline-flex items-center justify-center gap-1 text-xs font-semibold text-brand-700 cursor-pointer hover:underline">
+                                <Camera className="h-4 w-4" /> Anexar foto
+                                <input type="file" accept="image/*" capture="environment" className="hidden"
+                                  onChange={(e) => e.target.files?.[0] && handleUploadFoto(it.id, e.target.files[0])} />
+                              </label>
+                            </div>
                           )
                         ) : <span className="text-slate-300">—</span>}
                       </td>

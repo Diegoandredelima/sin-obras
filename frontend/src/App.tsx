@@ -2,8 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import Layout from "@/components/layout/Layout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Executivo from "@/pages/Executivo";
+import MapaCalor from "@/pages/MapaCalor";
 import Objetos from "@/pages/Objetos";
 import CadastrarObjeto from "@/pages/CadastrarObjeto";
+import Orcamentos from "@/pages/Orcamentos";
+import CadastrarOrcamento from "@/pages/CadastrarOrcamento";
 import CadastrarContrato from "@/pages/CadastrarContrato";
 import Contratos from "@/pages/Contratos";
 import Quadro from "@/pages/Quadro";
@@ -22,6 +26,8 @@ import Gestao from "@/pages/Gestao";
 import Alertas from "@/pages/Alertas";
 import Privacidade from "@/pages/Privacidade";
 import NotFound from "@/pages/NotFound";
+import CronogramaSelector from "@/pages/CronogramaSelector";
+import EditarCronograma from "@/pages/EditarCronograma";
 import CookieBanner from "@/components/CookieBanner";
 import RelatorioImpressao from "@/pages/print/RelatorioImpressao";
 import ObjetoImpressao from "@/pages/print/ObjetoImpressao";
@@ -31,6 +37,8 @@ import RdoImpressao from "@/pages/print/RdoImpressao";
 import BoletimImpressao from "@/pages/print/BoletimImpressao";
 import MemoriaCalculoImpressao from "@/pages/print/MemoriaCalculoImpressao";
 import RelatorioFotograficoImpressao from "@/pages/print/RelatorioFotograficoImpressao";
+import CronogramaProgressoImpressao from "@/pages/print/CronogramaProgressoImpressao";
+import RelatorioFotograficoObjetoImpressao from "@/pages/print/RelatorioFotograficoObjetoImpressao";
 
 /**
  * Redirect de compatibilidade: URLs legadas com "/obras" passam a apontar para
@@ -52,8 +60,12 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/executivo" element={<Executivo />} />
+          <Route path="/mapa" element={<MapaCalor />} />
           <Route path="/objetos" element={<Objetos />} />
           <Route path="/objetos/nova" element={<CadastrarObjeto />} />
+          <Route path="/orcamentos" element={<Orcamentos />} />
+          <Route path="/orcamentos/novo" element={<CadastrarOrcamento />} />
           <Route path="/objetos/:id" element={<RedirectObjeto />} />
           <Route path="/contratos" element={<Contratos />} />
           <Route path="/contratos/novo" element={<CadastrarContrato />} />
@@ -71,6 +83,9 @@ function App() {
           <Route path="/empresas/nova" element={<EmpresaForm />} />
           <Route path="/empresas/:id" element={<DetalheEmpresa />} />
           <Route path="/empresas/:id/editar" element={<EmpresaForm />} />
+          <Route path="/cronograma" element={<CronogramaSelector />} />
+          <Route path="/cronograma/novo/:objetoId" element={<EditarCronograma />} />
+          <Route path="/cronograma/:versaoId/editar" element={<EditarCronograma />} />
         </Route>
 
         {/* Rotas de impressão — standalone, sem o Layout (sidebar) */}
@@ -79,6 +94,8 @@ function App() {
         <Route path="/objetos/:id/relatorio" element={<ObjetoImpressao />} />
         <Route path="/contratos/:id/relatorio" element={<ContratoImpressao />} />
         <Route path="/objetos/:objetoId/diario/:diarioId/rdo" element={<RdoImpressao />} />
+        <Route path="/objetos/:objetoId/cronograma-progresso" element={<CronogramaProgressoImpressao />} />
+        <Route path="/objetos/:objetoId/relatorio-fotografico" element={<RelatorioFotograficoObjetoImpressao />} />
         <Route path="/medicoes/:medicaoId/boletim" element={<BoletimImpressao />} />
         <Route path="/medicoes/:medicaoId/memoria-calculo" element={<MemoriaCalculoImpressao />} />
         <Route path="/medicoes/:medicaoId/relatorio-fotografico" element={<RelatorioFotograficoImpressao />} />
