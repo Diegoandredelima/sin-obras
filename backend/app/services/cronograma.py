@@ -12,13 +12,16 @@ Esses itens formam a base para a declaração de medições e avanço de objetos
 from decimal import Decimal
 from uuid import UUID
 
+import sqlalchemy as sa
 from fastapi import HTTPException, status
 from sqlalchemy import select
-import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.objeto import Evento, EventoMemoria, Meta, Submeta
 from app.schemas.objeto import EventoBase, EventoCreate, MetaCreate, SubmetaCreate
+from app.models.objeto import CronogramaParcela, CronogramaVersao
+from app.models.portal import Medicao, StatusMedicao
+from app.schemas.objeto import CronogramaVersaoCreate
 
 
 def _linhas_memoria_evento(memoria) -> list[EventoMemoria]:
@@ -117,7 +120,7 @@ async def update_evento(db: AsyncSession, evento_id: UUID, obj_in: EventoBase) -
     # Memória de cálculo contratada é tratada à parte (replace-all): só substitui
     # quando o campo veio explicitamente no payload.
     substituir_memoria = "memoria" in update_data
-    nova_memoria = update_data.pop("memoria", None)
+    update_data.pop("memoria", None)
 
     for field, value in update_data.items():
         setattr(db_obj, field, value)
@@ -140,9 +143,7 @@ async def delete_evento(db: AsyncSession, evento_id: UUID) -> None:
 # ---------------------------------------------------------------------------
 # Cronograma (Versões e Parcelas)
 # ---------------------------------------------------------------------------
-from app.models.objeto import CronogramaVersao, CronogramaParcela
-from app.models.portal import Medicao, StatusMedicao
-from app.schemas.objeto import CronogramaVersaoCreate
+
 
 # Medições "em andamento" — bloqueiam o replanejamento do cronograma (Passo 3 do
 # fluxo). Medições já finalizadas (APROVADA/REPROVADA) NÃO bloqueiam: o

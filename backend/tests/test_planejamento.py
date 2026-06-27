@@ -178,7 +178,6 @@ def test_snapshot_congela_orcamento_na_versao(client: TestClient, db_session):
 
 
 def test_editar_evento_com_medicao_aberta_bloqueia(client: TestClient, db_session):
-    import uuid
     from app.models.portal import Medicao, StatusMedicao
 
     objeto_id, _submeta_id, evento_id = _criar_objeto_com_evento(db_session)

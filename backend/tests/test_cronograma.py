@@ -1,10 +1,10 @@
-import pytest
 from starlette.testclient import TestClient
 
 from app.core.rbac import Role
 from app.core.security import get_password_hash
-from app.models.objeto import Objeto, Meta, Submeta, Evento
+from app.models.objeto import Evento, Meta, Objeto, Submeta
 from app.models.usuario import Usuario
+
 
 def _criar_usuario(db_session, matricula, tipo):
     usuario = Usuario(
@@ -55,7 +55,7 @@ def test_cronograma_versionamento(client: TestClient, db_session):
             {"evento_id": evento_id, "periodo_numero": 2, "quantidade_prevista": 50}
         ]
     }
-    
+
     response_versao = client.post(
         f"/api/cronograma/objetos/{objeto_id}/versoes",
         json=payload_versao,
@@ -88,6 +88,7 @@ def test_cronograma_versionamento(client: TestClient, db_session):
 
     # Lock: uma medição EM ANDAMENTO (ASSINADA) bloqueia o replanejamento.
     import uuid
+
     from app.models.portal import Medicao, StatusMedicao
 
     med = Medicao(
@@ -110,6 +111,7 @@ def test_cronograma_versionamento(client: TestClient, db_session):
 def test_cronograma_lock_ignora_medicao_finalizada(client: TestClient, db_session):
     """Medições finalizadas (APROVADA) NÃO bloqueiam o replanejamento (Passo 5)."""
     import uuid
+
     from app.models.portal import Medicao, StatusMedicao
 
     token = _token(client, db_session, "22222", Role.APOIO_N2)

@@ -65,12 +65,11 @@ def client(sync_engine):
     conexão no event loop atual do TestClient (evita reuso de conexão asyncpg
     entre loops distintos).
     """
-    from app.main import app
-
     # Desliga o rate limiter de login: em testes todas as requisições vêm do
     # mesmo endereço e compartilham o bucket "20/minute" da sessão inteira,
     # estourando o limite conforme a suíte cresce (429 → login sem token).
     from app.api.auth import limiter
+    from app.main import app
     limiter.enabled = False
 
     async_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)

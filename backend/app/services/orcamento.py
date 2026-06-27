@@ -15,7 +15,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.objeto import Evento, EventoMemoria, Meta, Objeto, Submeta
-from app.models.orcamento import Orcamento, StatusOrcamento
+from app.models.orcamento import Orcamento
 from app.schemas.orcamento import (
     OrcamentoCreate,
     OrcamentoEventoCreate,
@@ -37,16 +37,16 @@ def _q4(value: Decimal) -> Decimal:
 def _build_memoria(linhas) -> list[EventoMemoria]:
     return [
         EventoMemoria(
-            ordem=l.ordem if l.ordem is not None else i,
-            descricao=l.descricao,
-            comprimento=l.comprimento,
-            largura=l.largura,
-            altura=l.altura,
-            percentual=l.percentual,
-            n_repeticoes=l.n_repeticoes,
-            quantidade=l.quantidade,
+            ordem=linha.ordem if linha.ordem is not None else i,
+            descricao=linha.descricao,
+            comprimento=linha.comprimento,
+            largura=linha.largura,
+            altura=linha.altura,
+            percentual=linha.percentual,
+            n_repeticoes=linha.n_repeticoes,
+            quantidade=linha.quantidade,
         )
-        for i, l in enumerate(linhas or [])
+        for i, linha in enumerate(linhas or [])
     ]
 
 

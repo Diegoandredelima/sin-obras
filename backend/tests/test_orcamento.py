@@ -5,7 +5,6 @@ Cobre: criação com EAP aninhada + geração de código legível, busca, crité
 obrigatório, e a cópia template→objeto com BDI embutido no preço (Opção A).
 """
 
-from decimal import Decimal
 
 from starlette.testclient import TestClient
 

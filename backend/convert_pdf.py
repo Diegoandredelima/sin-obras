@@ -1,8 +1,9 @@
 """Converte arquivos .md para PDF usando weasyprint."""
+import os
+import sys
+
 import markdown
 import weasyprint
-import sys
-import os
 
 CSS = """
 body {
@@ -71,7 +72,7 @@ hr {
 """
 
 def convert(md_path: str):
-    with open(md_path, "r", encoding="utf-8") as f:
+    with open(md_path, encoding="utf-8") as f:
         md_content = f.read()
 
     html_body = markdown.markdown(
