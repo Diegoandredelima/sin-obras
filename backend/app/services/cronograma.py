@@ -17,11 +17,22 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.objeto import Evento, EventoMemoria, Meta, Submeta
-from app.schemas.objeto import EventoBase, EventoCreate, MetaCreate, SubmetaCreate
-from app.models.objeto import CronogramaParcela, CronogramaVersao
+from app.models.objeto import (
+    CronogramaParcela,
+    CronogramaVersao,
+    Evento,
+    EventoMemoria,
+    Meta,
+    Submeta,
+)
 from app.models.portal import Medicao, StatusMedicao
-from app.schemas.objeto import CronogramaVersaoCreate
+from app.schemas.objeto import (
+    CronogramaVersaoCreate,
+    EventoBase,
+    EventoCreate,
+    MetaCreate,
+    SubmetaCreate,
+)
 
 
 def _linhas_memoria_evento(memoria) -> list[EventoMemoria]:
