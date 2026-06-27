@@ -153,8 +153,14 @@ export default function ChecklistScreen({ route, navigation }: ChecklistScreenPr
         )}
       />
 
-      {/* Botão de finalizar */}
+      {/* Ações finais */}
       <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.pendenciaBtn}
+          onPress={() => navigation?.navigate('Pendencia', { vistoriaId })}
+        >
+          <Text style={styles.pendenciaText}>⚠ Registrar Pendência</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.finalizarBtn} onPress={handleFinalizar}>
           <Text style={styles.finalizarText}>Ir para Resultado →</Text>
         </TouchableOpacity>
@@ -206,7 +212,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center',
   },
   fotoBtnText: { fontSize: 13, fontWeight: '600', color: '#15803d' },
-  footer: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f1f5f9' },
+  footer: { padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f1f5f9', gap: 10 },
+  pendenciaBtn: { borderRadius: 14, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#f59e0b', backgroundColor: '#fffbeb' },
+  pendenciaText: { color: '#b45309', fontSize: 15, fontWeight: '700' },
   finalizarBtn: {
     backgroundColor: '#15803d', borderRadius: 14, paddingVertical: 16,
     alignItems: 'center', shadowColor: '#15803d', shadowOffset: { width: 0, height: 4 },

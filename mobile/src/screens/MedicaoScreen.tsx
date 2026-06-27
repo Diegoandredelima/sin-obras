@@ -20,8 +20,8 @@ import {
 import { medicaoAPI } from '../../services/api';
 import { capturarFotoVistoria, uploadFotoMedicao } from '../../services/camera';
 
-// Mock — em produção viria de navigation params ou contexto (como nas demais telas)
-const OBJETO_MOCK = { id: '1', titulo: 'CRAS Cidade Nova' };
+// Fallback usado apenas se a tela for aberta sem objeto (ex.: deep link / demo).
+const OBJETO_FALLBACK = { id: '1', titulo: 'Obra (demo)' };
 
 interface Evento {
   id: string;
@@ -35,7 +35,8 @@ interface ItemCriado {
   evento_id: string;
 }
 
-export default function MedicaoScreen({ navigation }: any) {
+export default function MedicaoScreen({ navigation, route }: any) {
+  const objeto = route?.params?.objeto ?? OBJETO_FALLBACK;
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [quantidades, setQuantidades] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ export default function MedicaoScreen({ navigation }: any) {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await medicaoAPI.getEventos(OBJETO_MOCK.id);
+        const { data } = await medicaoAPI.getEventos(objeto.id);
         const flat: Evento[] = [];
         for (const meta of data) {
           for (const sub of meta.submetas || []) {
@@ -73,7 +74,7 @@ export default function MedicaoScreen({ navigation }: any) {
     }
     setSalvando(true);
     try {
-      const { data } = await medicaoAPI.criarFiscal(OBJETO_MOCK.id, {
+      const { data } = await medicaoAPI.criarFiscal(objeto.id, {
         itens: itensValidos.map((e) => ({
           evento_id: e.id,
           quantidade_periodo: Number(quantidades[e.id]),
@@ -123,7 +124,7 @@ export default function MedicaoScreen({ navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={styles.titulo}>{OBJETO_MOCK.titulo}</Text>
+      <Text style={styles.titulo}>{objeto.titulo}</Text>
 
       {!medicaoId ? (
         <>

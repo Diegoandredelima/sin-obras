@@ -16,10 +16,13 @@ import { Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/store/auth';
+import ObrasFiscalScreen from './src/screens/ObrasFiscalScreen';
 import CheckinScreen from './src/screens/CheckinScreen';
 import ChecklistScreen from './src/screens/ChecklistScreen';
 import ResultadoVistoriaScreen from './src/screens/ResultadoVistoriaScreen';
 import MedicaoScreen from './src/screens/MedicaoScreen';
+import HistoricoScreen from './src/screens/HistoricoScreen';
+import PendenciaScreen from './src/screens/PendenciaScreen';
 import SyncScreen from './src/screens/SyncScreen';
 
 // Placeholder screens
@@ -29,19 +32,12 @@ function HomeScreen({ navigation }: any) {
   return (
     <View style={styles.centered}>
       <Text style={styles.homeTitle}>SIN-Objetos Fiscal</Text>
-      <Text style={styles.homeSub}>Selecione uma vistoria para iniciar</Text>
-      {/* Botão de check-in para demo */}
+      <Text style={styles.homeSub}>Selecione uma obra para iniciar</Text>
       <Text
         style={styles.homeBtn}
-        onPress={() => navigation.navigate('Checkin')}
+        onPress={() => navigation.navigate('ObrasFiscal')}
       >
-        📍 Iniciar Check-in
-      </Text>
-      <Text
-        style={styles.homeBtn}
-        onPress={() => navigation.navigate('Medicao')}
-      >
-        📋 Nova Medição
+        🏗 Minhas Obras
       </Text>
     </View>
   );
@@ -100,10 +96,13 @@ export default function App() {
             }}
           >
             <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+            <Stack.Screen name="ObrasFiscal" component={ObrasFiscalScreen} options={{ title: 'Minhas Obras' }} />
             <Stack.Screen name="Checkin" component={CheckinScreen} options={{ title: 'Check-in no Objeto' }} />
             <Stack.Screen name="Checklist" component={ChecklistScreen} options={{ title: 'Checklist de Vistoria' }} />
             <Stack.Screen name="ResultadoVistoria" component={ResultadoVistoriaScreen} options={{ title: 'Resultado da Vistoria' }} />
             <Stack.Screen name="Medicao" component={MedicaoScreen} options={{ title: 'Nova Medição' }} />
+            <Stack.Screen name="Historico" component={HistoricoScreen} options={{ title: 'Histórico da Obra' }} />
+            <Stack.Screen name="Pendencia" component={PendenciaScreen} options={{ title: 'Registrar Pendência' }} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

@@ -24,16 +24,25 @@ import { vistoriaAPI } from '../../services/api';
 import { salvarCheckinOffline } from '../../db/offline';
 import NetInfo from '@react-native-community/netinfo';
 
-// Mock — em produção viria de navigation params ou contexto
-const OBJETO_MOCK = {
+// Fallback usado apenas se a tela for aberta sem objeto (ex.: deep link / demo).
+const OBJETO_FALLBACK = {
   id: '1',
-  titulo: 'CRAS Cidade Nova',
+  titulo: 'Obra (demo)',
   latitude: -5.7945,
   longitude: -35.2110,
   raio_geofencing_metros: 200,
 };
 
-export default function CheckinScreen({ navigation }: any) {
+export default function CheckinScreen({ navigation, route }: any) {
+  const params = route?.params?.objeto;
+  const objeto = {
+    id: params?.id ?? OBJETO_FALLBACK.id,
+    titulo: params?.titulo ?? OBJETO_FALLBACK.titulo,
+    latitude: params?.latitude ?? OBJETO_FALLBACK.latitude,
+    longitude: params?.longitude ?? OBJETO_FALLBACK.longitude,
+    raio_geofencing_metros: params?.raio_geofencing_metros ?? OBJETO_FALLBACK.raio_geofencing_metros,
+  };
+
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState<{
     dentro: boolean;
@@ -48,9 +57,9 @@ export default function CheckinScreen({ navigation }: any) {
       const pos = await obterLocalizacao();
       const distancia = calcularDistancia(
         pos.latitude, pos.longitude,
-        OBJETO_MOCK.latitude, OBJETO_MOCK.longitude,
+        objeto.latitude, objeto.longitude,
       );
-      const dentro = distancia <= OBJETO_MOCK.raio_geofencing_metros;
+      const dentro = distancia <= objeto.raio_geofencing_metros;
 
       // Verificar conectividade
       const netState = await NetInfo.fetch();
@@ -60,7 +69,7 @@ export default function CheckinScreen({ navigation }: any) {
 
       if (online) {
         const { data } = await vistoriaAPI.checkin({
-          objeto_id: OBJETO_MOCK.id,
+          objeto_id: objeto.id,
           latitude: pos.latitude,
           longitude: pos.longitude,
         });
@@ -70,7 +79,7 @@ export default function CheckinScreen({ navigation }: any) {
         const id = `offline-${Date.now()}`;
         await salvarCheckinOffline({
           id,
-          objeto_id: OBJETO_MOCK.id,
+          objeto_id: objeto.id,
           latitude: pos.latitude,
           longitude: pos.longitude,
         });
@@ -98,20 +107,20 @@ export default function CheckinScreen({ navigation }: any) {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: OBJETO_MOCK.latitude,
-          longitude: OBJETO_MOCK.longitude,
+          latitude: objeto.latitude,
+          longitude: objeto.longitude,
           latitudeDelta: 0.005,
           longitudeDelta: 0.005,
         }}
       >
         <Marker
-          coordinate={{ latitude: OBJETO_MOCK.latitude, longitude: OBJETO_MOCK.longitude }}
-          title={OBJETO_MOCK.titulo}
+          coordinate={{ latitude: objeto.latitude, longitude: objeto.longitude }}
+          title={objeto.titulo}
           pinColor="#15803d"
         />
         <Circle
-          center={{ latitude: OBJETO_MOCK.latitude, longitude: OBJETO_MOCK.longitude }}
-          radius={OBJETO_MOCK.raio_geofencing_metros}
+          center={{ latitude: objeto.latitude, longitude: objeto.longitude }}
+          radius={objeto.raio_geofencing_metros}
           strokeColor="#15803d"
           fillColor="rgba(21,128,61,0.12)"
           strokeWidth={2}
@@ -120,8 +129,8 @@ export default function CheckinScreen({ navigation }: any) {
 
       {/* Bottom Sheet */}
       <View style={styles.bottomSheet}>
-        <Text style={styles.objetoTitle}>{OBJETO_MOCK.titulo}</Text>
-        <Text style={styles.objetoSub}>Raio permitido: {OBJETO_MOCK.raio_geofencing_metros}m</Text>
+        <Text style={styles.objetoTitle}>{objeto.titulo}</Text>
+        <Text style={styles.objetoSub}>Raio permitido: {objeto.raio_geofencing_metros}m</Text>
 
         {resultado ? (
           <View style={[styles.resultBox, resultado.dentro ? styles.resultOk : styles.resultWarn]}>

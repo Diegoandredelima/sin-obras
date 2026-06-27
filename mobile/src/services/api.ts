@@ -105,6 +105,10 @@ export const vistoriaAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 30000,
     }),
+  // RF18 — histórico da obra; RF17 — registro de pendência
+  getHistorico: (objetoId: string) => api.get(`/vistorias/objetos/${objetoId}/historico`),
+  registrarPendencia: (vistoriaId: string, payload: any) =>
+    api.post(`/vistorias/${vistoriaId}/pendencias`, payload),
 };
 
 // Endpoints da Empresa
